@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'theme/app_theme.dart';
+
 class CitiesWalkApp extends StatelessWidget {
   const CitiesWalkApp({super.key});
 
@@ -8,15 +10,12 @@ class CitiesWalkApp extends StatelessWidget {
     return MaterialApp(
       title: 'CitiesWalk',
       debugShowCheckedModeBanner: false,
-      home: Scaffold(
+
+      theme: AppTheme.lightTheme,
+
+      home: const Scaffold(
         body: Center(
-          child: Text(
-            'CitiesWalk',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          child: Text('CitiesWalk'),
         ),
       ),
     );
