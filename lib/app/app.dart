@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'theme/app_theme.dart';
+import '../features/authentication/presentation/pages/login_page.dart';
 
 class CitiesWalkApp extends StatelessWidget {
   const CitiesWalkApp({super.key});
@@ -13,11 +14,7 @@ class CitiesWalkApp extends StatelessWidget {
 
       theme: AppTheme.lightTheme,
 
-      home: const Scaffold(
-        body: Center(
-          child: Text('CitiesWalk'),
-        ),
-      ),
+      home: const LoginPage(),
     );
   }
-}
+}
