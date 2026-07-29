@@ -50,3 +50,6 @@ android/.kotlin/
 # Android Studio
 .idea/
 *.iml
+
+# Environment
+.env
