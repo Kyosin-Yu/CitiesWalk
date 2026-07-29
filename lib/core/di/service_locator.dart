@@ -6,6 +6,7 @@ import '../../features/authentication/domain/repositories/auth_repository.dart';
 import '../../features/authentication/data/repositories/auth_repository_impl.dart';
 import '../../features/authentication/data/datasources/profile_datasource.dart';
 import '../../features/authentication/data/datasources/supabase_auth_datasource.dart';
+import '../../features/authentication/presentation/controllers/auth_controller.dart';
 
 final sl = GetIt.instance;
 
@@ -30,6 +31,12 @@ Future<void> setupServiceLocator() async {
         () => AuthRepositoryImpl(
       sl<SupabaseAuthDataSource>(),
       sl<ProfileDataSource>(),
+    ),
+  );
+
+  sl.registerLazySingleton<AuthController>(
+        () => AuthController(
+      sl<AuthRepository>(),
     ),
   );
 }
