@@ -135,6 +135,15 @@ established. Do not introduce a second state-management library without team
 approval.
 
 ## 7. UI and Accessibility
+### Design System
+
+Before implementing any UI:
+
+1. Read `DESIGN.md`.
+2. Follow its color palette, typography, spacing, and component guidelines.
+3. Reuse AppTheme and AppColors instead of hardcoding values.
+4. Use Material 3 widgets.
+5. Maintain a consistent eco-friendly visual identity across all screens.
 
 - Use shared theme colours, typography, spacing, and components.
 - Do not hard-code colours or text styles repeatedly inside feature screens.
