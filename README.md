@@ -165,7 +165,7 @@ docs/update-readme
 | Member | Role | Assigned Module |
 |---|---|---|
 | Chua Thiam Poh | Project Manager / Developer | Eco-Route Navigation |
-| To be completed | Developer | User Authentication and Profile |
+| KOH HUAI YU | Requirement Leader / Developer | User Authentication and Profile |
 | To be completed | Developer | Fitness and Carbon Analytics |
 | To be completed | Developer | Rewards and Leaderboard |
 | To be completed | Developer | Community Reviews |
