@@ -164,13 +164,11 @@ docs/update-readme
 
 | Member | Role | Assigned Module |
 |---|---|---|
-| Chua Thiam Poh | Project Manager / Developer | Eco-Route Navigation |
+| CHUA THIAM POH | Project Manager / Developer | Eco-Route Navigation |
 | KOH HUAI YU | Requirement Leader / Developer | User Authentication and Profile |
-| To be completed | Developer | Fitness and Carbon Analytics |
-| To be completed | Developer | Rewards and Leaderboard |
-| To be completed | Developer | Community Reviews |
-
-Replace the placeholder rows with the confirmed team member names and roles.
+| ENG ZHEN XIN |  / Coding Developer | Fitness and Carbon Analytics |
+| LAI YU WAI | Design Leader / Developer | Rewards and Leaderboard |
+| TAN YAN ZUN | Testing Leader / Developer | Community Reviews |
 
 ## Scope and Limitations
 
