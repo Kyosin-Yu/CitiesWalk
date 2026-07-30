@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../features/reviews/presentation/reviews_screen.dart';
 import 'theme/app_theme.dart';
 
 class CitiesWalkApp extends StatelessWidget {
@@ -13,11 +14,7 @@ class CitiesWalkApp extends StatelessWidget {
 
       theme: AppTheme.lightTheme,
 
-      home: const Scaffold(
-        body: Center(
-          child: Text('CitiesWalk'),
-        ),
-      ),
+      home: const ReviewsScreen(),
     );
   }
 }
