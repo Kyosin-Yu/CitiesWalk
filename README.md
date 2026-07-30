@@ -64,15 +64,20 @@ Tunku Abdul Rahman University of Management and Technology (TAR UMT).
 > API availability, data coverage, usage policies, quotas, hosting requirements,
 > and costs must be reviewed before production deployment.
 
-## Suggested Project Structure
+## Project Architecture
 
 ```text
 lib/
+├── app/
+│   ├── theme/
+│   │   ├── app_colors.dart
+│   │   ├── app_text_theme.dart
+│   │   └── app_theme.dart
+│   └── app.dart
 ├── core/
 │   ├── constants/
 │   ├── models/
 │   ├── services/
-│   ├── theme/
 │   └── utils/
 ├── features/
 │   ├── authentication/
@@ -91,8 +96,7 @@ the team agrees on the application architecture.
 
 ### Prerequisites
 
-- Flutter SDK
-- Dart SDK
+- Flutter SDK 3.44.2, which includes Dart SDK 3.12.2
 - Android Studio or Visual Studio Code
 - Android emulator or physical Android device
 - Git
@@ -102,7 +106,7 @@ the team agrees on the application architecture.
 ### Installation
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/Kyosin-Yu/CitiesWalk.git
 cd CitiesWalk
 flutter pub get
 ```
@@ -191,7 +195,9 @@ docs/update-readme
 - Background location tracking is an advanced feature and depends on Android and
   iOS restrictions.
 - Carbon savings are estimates based on a documented comparison with car travel.
-- Transit route quality and availability depend on the selected external API.
+- Transit route quality and availability depend on OpenStreetMap coverage,
+  Malaysian GTFS feed availability, and the deployed OpenTripPlanner
+  configuration.
 
 ## Documentation
 
