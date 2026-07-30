@@ -43,14 +43,26 @@ Tunku Abdul Rahman University of Management and Technology (TAR UMT).
 - **Backend:** Supabase
 - **Database:** PostgreSQL through Supabase
 - **Authentication:** Supabase Auth
-- **Maps and Routing:** To be confirmed by the team
-- **State Management:** To be confirmed by the team
+- **Map Display:** OpenStreetMap with `flutter_map`
+- **Location Services:** Device GPS with `geolocator`
+- **Place Search:** Nominatim
+- **Walking and Public-Transport Routing:** OpenTripPlanner
+- **Transit Schedule Data:** Malaysia GTFS Static
+- **Live Transit Data:** Malaysia GTFS Realtime, where available
+- **State Management:** Provider with `ChangeNotifier`
 - **Version Control:** Git and GitHub
 - **Project Management:** Trello
 
-> The team must confirm the selected map, place-search, and routing services
-> before implementation because API availability, transit coverage, quotas, and
-> costs may change.
+> OpenTripPlanner combines OpenStreetMap walking-network data with Malaysia
+> GTFS transit schedules to generate walking and public-transport routes.
+> External map, search, routing, and Supabase operations must be placed behind
+> replaceable services or repositories so providers can be changed without
+> rewriting the application UI.
+>
+> During early development, sample routing data may be used until the
+> OpenTripPlanner server and required Malaysian GTFS feeds are configured.
+> API availability, data coverage, usage policies, quotas, hosting requirements,
+> and costs must be reviewed before production deployment.
 
 ## Suggested Project Structure
 
