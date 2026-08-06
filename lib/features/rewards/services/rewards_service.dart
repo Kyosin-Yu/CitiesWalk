@@ -200,5 +200,27 @@ class RewardsService {
       type: JourneyType.walk,
       icon: 'leaf',
     ),
+    PointTransaction(
+      id: '5',
+      title: 'Bukit Bintang Green Walk',
+      completedAt: DateTime(2026, 6, 27, 17, 20),
+      points: 145,
+      carbonSavedKg: 0.9,
+      calories: 350,
+      distanceKm: 2.9,
+      type: JourneyType.walk,
+      icon: 'city',
+    ),
+    PointTransaction(
+      id: '6',
+      title: 'River of Life Transit Route',
+      completedAt: DateTime(2026, 6, 12, 9, 10),
+      points: 190,
+      carbonSavedKg: 1.3,
+      calories: 460,
+      distanceKm: 3.8,
+      type: JourneyType.transit,
+      icon: 'accountBalance',
+    ),
   ];
 }
