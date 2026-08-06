@@ -169,7 +169,7 @@ class _WalkingPainter extends CustomPainter {
       ),
       textDirection: TextDirection.ltr,
     )..layout();
-    if (background != null)
+    if (background != null) {
       c.drawRRect(
         RRect.fromRectAndRadius(
           Rect.fromCenter(
@@ -181,6 +181,7 @@ class _WalkingPainter extends CustomPainter {
         ),
         Paint()..color = background,
       );
+    }
     p.paint(c, Offset(x - p.width / 2, y - p.height / 2));
   }
 
