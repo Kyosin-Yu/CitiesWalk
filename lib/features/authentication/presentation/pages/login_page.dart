@@ -4,7 +4,7 @@ import '../../../../core/di/service_locator.dart';
 import '../../../../core/utils/validators.dart';
 import '../../presentation/controllers/auth_controller.dart';
 import 'register_page.dart';
-import 'home_page.dart';
+import '../../../../app/app_shell.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -53,7 +53,7 @@ class _LoginPageState extends State<LoginPage> {
 
     if (_authController.currentUser != null) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomePage()),
+        MaterialPageRoute(builder: (_) => const AppShell()),
       );
     }
   }
