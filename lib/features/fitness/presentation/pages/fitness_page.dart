@@ -14,10 +14,8 @@ class FitnessPage extends StatelessWidget {
   const FitnessPage({super.key});
 
   @override
-  Widget build(BuildContext context) => BlocProvider(
-        create: (_) => FitnessCubit(),
-        child: const _FitnessView(),
-      );
+  Widget build(BuildContext context) =>
+      BlocProvider(create: (_) => FitnessCubit(), child: const _FitnessView());
 }
 
 class _FitnessView extends StatelessWidget {
@@ -87,15 +85,33 @@ class _FitnessNavigation extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: active ? const Color(0xFFE5F4E7) : Colors.transparent,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Icon(item.$1, size: 21, color: active ? const Color(0xFF2E7D32) : const Color(0xFFADADAD)),
+                child: Icon(
+                  item.$1,
+                  size: 21,
+                  color: active
+                      ? const Color(0xFF2E7D32)
+                      : const Color(0xFFADADAD),
+                ),
               ),
               const SizedBox(height: 2),
-              Text(item.$2, style: TextStyle(fontSize: 9, fontWeight: active ? FontWeight.w700 : FontWeight.w500, color: active ? const Color(0xFF2E7D32) : const Color(0xFF8D8D8D))),
+              Text(
+                item.$2,
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                  color: active
+                      ? const Color(0xFF2E7D32)
+                      : const Color(0xFF8D8D8D),
+                ),
+              ),
             ],
           );
         }).toList(),

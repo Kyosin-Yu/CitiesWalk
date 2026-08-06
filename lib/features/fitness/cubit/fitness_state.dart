@@ -4,6 +4,6 @@ class FitnessState {
   final bool notificationsEnabled;
 
   FitnessState copyWith({bool? notificationsEnabled}) => FitnessState(
-        notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
-      );
+    notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+  );
 }
