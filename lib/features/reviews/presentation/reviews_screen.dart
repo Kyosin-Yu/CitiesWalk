@@ -624,7 +624,7 @@ class _HeroHeader extends StatelessWidget {
   final VoidCallback? onBack;
   @override
   Widget build(BuildContext context) => Container(
-    height: 128,
+    height: 136,
     padding: const EdgeInsets.fromLTRB(18, 17, 18, 16),
     decoration: const BoxDecoration(
       color: AppColors.primary,
