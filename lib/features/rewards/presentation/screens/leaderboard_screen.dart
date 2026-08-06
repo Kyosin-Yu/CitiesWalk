@@ -132,13 +132,12 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                         ],
                       ),
                       const SizedBox(height: 4),
-                      ...visibleRankedEntries
-                          .map(
-                            (entry) => Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: _RankRow(entry: entry),
-                            ),
-                          ),
+                      ...visibleRankedEntries.map(
+                        (entry) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _RankRow(entry: entry),
+                        ),
+                      ),
                     ]),
                   ),
                 ),

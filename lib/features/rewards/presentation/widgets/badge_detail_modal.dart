@@ -18,10 +18,8 @@ class BadgeDetailModal extends StatelessWidget {
     return showDialog<void>(
       context: context,
       barrierDismissible: true,
-      builder: (_) => BadgeDetailModal(
-        badge: badge,
-        onStartJourney: onStartJourney,
-      ),
+      builder: (_) =>
+          BadgeDetailModal(badge: badge, onStartJourney: onStartJourney),
     );
   }
 

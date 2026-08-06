@@ -47,13 +47,15 @@ class _PointsHistoryScreenState extends State<PointsHistoryScreen> {
 
             final transactions = snapshot.data!;
             final months = _availableMonths(transactions);
-            final activeMonth = _selectedMonth ??
-                (months.isEmpty ? null : months.first);
+            final activeMonth =
+                _selectedMonth ?? (months.isEmpty ? null : months.first);
             final visibleTransactions = _showAllActivity || activeMonth == null
                 ? transactions
                 : transactions
-                    .where((item) => _isInMonth(item.completedAt, activeMonth))
-                    .toList(growable: false);
+                      .where(
+                        (item) => _isInMonth(item.completedAt, activeMonth),
+                      )
+                      .toList(growable: false);
             final total = visibleTransactions.fold<int>(
               0,
               (sum, item) => sum + item.points,
@@ -65,8 +67,8 @@ class _PointsHistoryScreenState extends State<PointsHistoryScreen> {
             final periodLabel = _showAllActivity
                 ? 'All activity'
                 : activeMonth == null
-                    ? 'This month'
-                    : _monthLabel(activeMonth);
+                ? 'This month'
+                : _monthLabel(activeMonth);
 
             return CustomScrollView(
               slivers: <Widget>[
@@ -111,7 +113,8 @@ class _PointsHistoryScreenState extends State<PointsHistoryScreen> {
                                 months.length,
                                 (index) => CheckedPopupMenuItem<int>(
                                   value: index,
-                                  checked: !_showAllActivity &&
+                                  checked:
+                                      !_showAllActivity &&
                                       _isSameMonth(activeMonth, months[index]),
                                   child: Text(_monthLabel(months[index])),
                                 ),
@@ -228,17 +231,34 @@ class _HistoryHeader extends StatelessWidget {
               children: <Widget>[
                 Row(
                   children: <Widget>[
-                    _Metric(label: 'Total Earned', value: '+${_formatPoints(total)}', unit: 'pts'),
-                    _Metric(label: 'Journeys', value: '$journeys', unit: 'completed'),
-                    _Metric(label: 'CO₂ Saved', value: carbon.toStringAsFixed(1), unit: 'kg'),
+                    _Metric(
+                      label: 'Total Earned',
+                      value: '+${_formatPoints(total)}',
+                      unit: 'pts',
+                    ),
+                    _Metric(
+                      label: 'Journeys',
+                      value: '$journeys',
+                      unit: 'completed',
+                    ),
+                    _Metric(
+                      label: 'CO₂ Saved',
+                      value: carbon.toStringAsFixed(1),
+                      unit: 'kg',
+                    ),
                   ],
                 ),
                 const SizedBox(height: 14),
                 Row(
                   children: <Widget>[
                     Text(
-                      showsAllActivity ? 'All-time activity' : 'Monthly Goal ($periodLabel)',
-                      style: const TextStyle(color: Color(0xFFDDF2DF), fontSize: 11),
+                      showsAllActivity
+                          ? 'All-time activity'
+                          : 'Monthly Goal ($periodLabel)',
+                      style: const TextStyle(
+                        color: Color(0xFFDDF2DF),
+                        fontSize: 11,
+                      ),
                     ),
                     const Spacer(),
                     Text(
@@ -286,9 +306,26 @@ class _Metric extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Text(label, style: const TextStyle(color: Color(0xFFDDF2DF), fontSize: 10)),
-        Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 22)),
-        Text(unit, style: const TextStyle(color: Color(0xFF9BE5A0), fontWeight: FontWeight.w600, fontSize: 10)),
+        Text(
+          label,
+          style: const TextStyle(color: Color(0xFFDDF2DF), fontSize: 10),
+        ),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+            fontSize: 22,
+          ),
+        ),
+        Text(
+          unit,
+          style: const TextStyle(
+            color: Color(0xFF9BE5A0),
+            fontWeight: FontWeight.w600,
+            fontSize: 10,
+          ),
+        ),
       ],
     ),
   );
@@ -310,9 +347,19 @@ class _PeriodButton extends StatelessWidget {
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        const Icon(Icons.calendar_month_outlined, size: 17, color: AppColors.primary),
+        const Icon(
+          Icons.calendar_month_outlined,
+          size: 17,
+          color: AppColors.primary,
+        ),
         const SizedBox(width: 8),
-        Text(label, style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
+        Text(
+          label,
+          style: const TextStyle(
+            color: AppColors.primary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.primary),
       ],
     ),
@@ -329,7 +376,13 @@ class _TransactionCard extends StatelessWidget {
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(20),
-      boxShadow: const <BoxShadow>[BoxShadow(color: Color(0x0C000000), blurRadius: 12, offset: Offset(0, 4))],
+      boxShadow: const <BoxShadow>[
+        BoxShadow(
+          color: Color(0x0C000000),
+          blurRadius: 12,
+          offset: Offset(0, 4),
+        ),
+      ],
     ),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -337,7 +390,10 @@ class _TransactionCard extends StatelessWidget {
         CircleAvatar(
           radius: 23,
           backgroundColor: const Color(0xFFE1F3E3),
-          child: Icon(_iconForTransaction(transaction.icon), color: AppColors.primary),
+          child: Icon(
+            _iconForTransaction(transaction.icon),
+            color: AppColors.primary,
+          ),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -348,7 +404,15 @@ class _TransactionCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Expanded(
-                    child: Text(transaction.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, height: 1.15)),
+                    child: Text(
+                      transaction.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        height: 1.15,
+                      ),
+                    ),
                   ),
                   _PointsChip(points: transaction.points),
                 ],
@@ -356,16 +420,29 @@ class _TransactionCard extends StatelessWidget {
               const SizedBox(height: 7),
               Text(
                 '${_dateTimeLabel(transaction.completedAt)}  •  ${transaction.type == JourneyType.walk ? 'Walk' : 'Transit'}',
-                style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 11,
+                ),
               ),
               const SizedBox(height: 9),
               Wrap(
                 spacing: 6,
                 runSpacing: 5,
                 children: <Widget>[
-                  _Chip(label: '🌿 ${transaction.carbonSavedKg.toStringAsFixed(1)} kg CO₂', color: const Color(0xFFE8F5E9)),
-                  _Chip(label: '🔥 ${transaction.calories} kcal', color: const Color(0xFFFFF3E0)),
-                  _Chip(label: '📍 ${transaction.distanceKm.toStringAsFixed(1)} km', color: const Color(0xFFF4E9F8)),
+                  _Chip(
+                    label:
+                        '🌿 ${transaction.carbonSavedKg.toStringAsFixed(1)} kg CO₂',
+                    color: const Color(0xFFE8F5E9),
+                  ),
+                  _Chip(
+                    label: '🔥 ${transaction.calories} kcal',
+                    color: const Color(0xFFFFF3E0),
+                  ),
+                  _Chip(
+                    label: '📍 ${transaction.distanceKm.toStringAsFixed(1)} km',
+                    color: const Color(0xFFF4E9F8),
+                  ),
                 ],
               ),
             ],
@@ -383,8 +460,19 @@ class _PointsChip extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     margin: const EdgeInsets.only(left: 8),
     padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-    decoration: BoxDecoration(color: const Color(0xFFE3F4E5), border: Border.all(color: const Color(0xFFA8D9AC)), borderRadius: BorderRadius.circular(9)),
-    child: Text('+$points pts', style: const TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w800)),
+    decoration: BoxDecoration(
+      color: const Color(0xFFE3F4E5),
+      border: Border.all(color: const Color(0xFFA8D9AC)),
+      borderRadius: BorderRadius.circular(9),
+    ),
+    child: Text(
+      '+$points pts',
+      style: const TextStyle(
+        color: AppColors.primary,
+        fontSize: 12,
+        fontWeight: FontWeight.w800,
+      ),
+    ),
   );
 }
 
@@ -395,15 +483,28 @@ class _Chip extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-    decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(7)),
-    child: Text(label, style: const TextStyle(fontSize: 10, color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+    decoration: BoxDecoration(
+      color: color,
+      borderRadius: BorderRadius.circular(7),
+    ),
+    child: Text(
+      label,
+      style: const TextStyle(
+        fontSize: 10,
+        color: AppColors.textPrimary,
+        fontWeight: FontWeight.w600,
+      ),
+    ),
   );
 }
 
 List<DateTime> _availableMonths(List<PointTransaction> transactions) {
   final months = <String, DateTime>{};
   for (final transaction in transactions) {
-    final month = DateTime(transaction.completedAt.year, transaction.completedAt.month);
+    final month = DateTime(
+      transaction.completedAt.year,
+      transaction.completedAt.month,
+    );
     months.putIfAbsent('${month.year}-${month.month}', () => month);
   }
   final result = months.values.toList(growable: false);
@@ -411,8 +512,10 @@ List<DateTime> _availableMonths(List<PointTransaction> transactions) {
   return result;
 }
 
-bool _isInMonth(DateTime date, DateTime month) => date.year == month.year && date.month == month.month;
-bool _isSameMonth(DateTime? first, DateTime second) => first != null && _isInMonth(first, second);
+bool _isInMonth(DateTime date, DateTime month) =>
+    date.year == month.year && date.month == month.month;
+bool _isSameMonth(DateTime? first, DateTime second) =>
+    first != null && _isInMonth(first, second);
 
 IconData _iconForTransaction(String icon) => switch (icon) {
   'city' => Icons.location_city_rounded,
@@ -421,14 +524,47 @@ IconData _iconForTransaction(String icon) => switch (icon) {
   _ => Icons.eco_rounded,
 };
 
-String _formatPoints(int value) => value.toString().replaceAllMapped(RegExp(r'(?=(\d{3})+(?!\d))'), (_) => ',');
+String _formatPoints(int value) => value.toString().replaceAllMapped(
+  RegExp(r'(?=(\d{3})+(?!\d))'),
+  (_) => ',',
+);
 String _monthLabel(DateTime month) {
-  const names = <String>['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const names = <String>[
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
   return '${names[month.month - 1]} ${month.year}';
 }
 
 String _dateTimeLabel(DateTime date) {
-  const names = <String>['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  final hour = date.hour == 0 ? 12 : date.hour > 12 ? date.hour - 12 : date.hour;
+  const names = <String>[
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  final hour = date.hour == 0
+      ? 12
+      : date.hour > 12
+      ? date.hour - 12
+      : date.hour;
   return '${names[date.month - 1]} ${date.day}, ${date.year} • $hour:${date.minute.toString().padLeft(2, '0')} ${date.hour >= 12 ? 'PM' : 'AM'}';
 }

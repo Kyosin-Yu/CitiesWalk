@@ -12,9 +12,7 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(body: RewardsHubScreen()),
-      ),
+      const MaterialApp(home: Scaffold(body: RewardsHubScreen())),
     );
     await tester.pumpAndSettle();
 
@@ -28,37 +26,38 @@ void main() {
     );
   });
 
-  testWidgets('Standalone leaderboard back button returns to the previous page', (
-    WidgetTester tester,
-  ) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Builder(
-          builder: (BuildContext context) {
-            return Scaffold(
-              body: Center(
-                child: FilledButton(
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const LeaderboardScreen(),
+  testWidgets(
+    'Standalone leaderboard back button returns to the previous page',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (BuildContext context) {
+              return Scaffold(
+                body: Center(
+                  child: FilledButton(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const LeaderboardScreen(),
+                      ),
                     ),
+                    child: const Text('Open rewards'),
                   ),
-                  child: const Text('Open rewards'),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
-      ),
-    );
+      );
 
-    await tester.tap(find.text('Open rewards'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Back'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Open rewards'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Back'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Open rewards'), findsOneWidget);
-  });
+      expect(find.text('Open rewards'), findsOneWidget);
+    },
+  );
 
   testWidgets('Points history filters transactions by month', (
     WidgetTester tester,
