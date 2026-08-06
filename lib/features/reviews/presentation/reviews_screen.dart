@@ -7,6 +7,15 @@ import '../models/review_destination.dart';
 
 enum _ReviewPage { list, detail, write, submitted, mine, edit }
 
+String ratingDescription(int rating) => switch (rating) {
+  1 => 'Poor',
+  2 => 'Fair',
+  3 => 'Good',
+  4 => 'Very Good',
+  5 => 'Excellent',
+  _ => '',
+};
+
 class ReviewsScreen extends StatefulWidget {
   const ReviewsScreen({super.key, this.initialDestinationId});
 
@@ -297,7 +306,7 @@ class _ReviewEditorPageState extends State<_ReviewEditorPage> {
     Expanded(child: ListView(padding: const EdgeInsets.all(18), children: [
       Card(child: ListTile(leading: const CircleAvatar(backgroundColor: Color(0xFFBA8B62), child: Icon(Icons.location_city, color: Colors.white)), title: const Text('EDITING REVIEW FOR', style: TextStyle(fontSize: 9, color: AppColors.secondary)), subtitle: Text(widget.destination.name, style: const TextStyle(fontWeight: FontWeight.bold)))),
       const SizedBox(height: 10),
-      Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Your Rating', style: TextStyle(fontWeight: FontWeight.bold)), const SizedBox(height: 8), Row(children: [for (var i = 1; i <= 5; i++) IconButton(tooltip: 'Give $i stars', onPressed: () => setState(() => _rating = i), icon: Icon(i <= _rating ? Icons.star_rounded : Icons.star_outline_rounded, color: const Color(0xFFF59A00), size: 31)), const Spacer(), Text(_rating == 0 ? '' : 'Very Good', style: const TextStyle(fontSize: 11, color: Color(0xFFF59A00)))] )]))),
+      Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Your Rating', style: TextStyle(fontWeight: FontWeight.bold)), const SizedBox(height: 8), Row(children: [for (var i = 1; i <= 5; i++) IconButton(tooltip: 'Give $i stars', onPressed: () => setState(() => _rating = i), icon: Icon(i <= _rating ? Icons.star_rounded : Icons.star_outline_rounded, color: const Color(0xFFF59A00), size: 31)), const Spacer(), Text(ratingDescription(_rating), style: const TextStyle(fontSize: 11, color: Color(0xFFF59A00)))] )]))),
       const SizedBox(height: 10),
       Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Row(children: [const Text('Your Review', style: TextStyle(fontWeight: FontWeight.bold)), const Spacer(), Text('${_controller.text.length}/500', style: const TextStyle(fontSize: 10, color: AppColors.textSecondary))]), TextField(controller: _controller, minLines: 5, maxLines: 7, maxLength: 500, onChanged: (_) => setState(() {}), decoration: const InputDecoration(border: InputBorder.none, hintText: 'Share your experience...'))]))),
       const SizedBox(height: 10),

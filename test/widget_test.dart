@@ -48,6 +48,20 @@ void main() {
     );
   });
 
+  testWidgets('rating description matches the selected star count', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const CitiesWalkApp());
+
+    await tester.tap(find.text('Write a Review'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Give 1 stars'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Poor'), findsOneWidget);
+    expect(find.text('Very Good'), findsNothing);
+  });
+
   testWidgets('user can view review detail and manage their review', (
     WidgetTester tester,
   ) async {
