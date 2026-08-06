@@ -3,7 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:citieswalk/features/reviews/presentation/reviews_screen.dart';
 
 void main() {
-  testWidgets('reviews list follows the Community Review design', (WidgetTester tester) async {
+  testWidgets('reviews list follows the Community Review design', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(const MaterialApp(home: ReviewsScreen()));
 
     expect(find.text('Reviews'), findsOneWidget);
@@ -25,11 +27,11 @@ void main() {
     await tester.tap(find.text('Submit Review'));
     await tester.pumpAndSettle();
 
+    expect(find.text('Review Submitted'), findsOneWidget);
     expect(
-      find.text('Review Submitted'),
+      find.text('Your review is now visible to fellow walkers.'),
       findsOneWidget,
     );
-    expect(find.text('Your review is now visible to fellow walkers.'), findsOneWidget);
 
     await tester.tap(find.text('Back to Reviews'));
     await tester.pumpAndSettle();
