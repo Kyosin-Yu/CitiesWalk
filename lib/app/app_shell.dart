@@ -4,9 +4,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../core/di/service_locator.dart';
 import '../features/authentication/presentation/controllers/auth_controller.dart';
 import '../features/authentication/presentation/pages/login_page.dart';
+import '../features/eco_route/presentation/pages/eco_route_module.dart';
 import '../features/fitness/cubit/fitness_cubit.dart';
 import '../features/fitness/presentation/pages/fitness_page.dart';
 import '../features/rewards/presentation/screens/rewards_hub_screen.dart';
+import 'home_dashboard.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -19,20 +21,9 @@ class _AppShellState extends State<AppShell> {
   int _selectedIndex = 0;
 
   late final List<Widget> _pages = [
-    const _PlaceholderPage(
-      title: 'Home',
-      icon: Icons.home_rounded,
-      message: 'Home module is under development.',
-    ),
-    const _PlaceholderPage(
-      title: 'Explore',
-      icon: Icons.explore_rounded,
-      message: 'Eco Route module is under development.',
-    ),
-    BlocProvider(
-      create: (_) => FitnessCubit(),
-      child: const FitnessPage(),
-    ),
+    HomeDashboard(onNavigate: _selectDestination),
+    const _EcoRouteEntryPage(),
+    BlocProvider(create: (_) => FitnessCubit(), child: const FitnessPage()),
     const RewardsHubScreen(),
     const _ProfilePage(),
   ];
@@ -40,17 +31,10 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _pages,
-      ),
+      body: IndexedStack(index: _selectedIndex, children: _pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
+        onDestinationSelected: _selectDestination,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
@@ -81,36 +65,11 @@ class _AppShellState extends State<AppShell> {
       ),
     );
   }
-}
 
-class _PlaceholderPage extends StatelessWidget {
-  const _PlaceholderPage({
-    required this.title,
-    required this.icon,
-    required this.message,
-  });
-
-  final String title;
-  final IconData icon;
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(title),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 72),
-            const SizedBox(height: 16),
-            Text(message),
-          ],
-        ),
-      ),
-    );
+  void _selectDestination(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
   }
 }
 
@@ -122,9 +81,7 @@ class _ProfilePage extends StatelessWidget {
     final authController = sl<AuthController>();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
-      ),
+      appBar: AppBar(title: const Text('Profile')),
       body: ListenableBuilder(
         listenable: authController,
         builder: (context, _) {
@@ -155,10 +112,8 @@ class _ProfilePage extends StatelessWidget {
                       if (!context.mounted) return;
 
                       Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(
-                          builder: (_) => const LoginPage(),
-                        ),
-                            (_) => false,
+                        MaterialPageRoute(builder: (_) => const LoginPage()),
+                        (_) => false,
                       );
                     },
                     icon: const Icon(Icons.logout),
@@ -170,6 +125,30 @@ class _ProfilePage extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+}
+
+class _EcoRouteEntryPage extends StatelessWidget {
+  const _EcoRouteEntryPage();
+
+  @override
+  Widget build(BuildContext context) {
+    final authController = sl<AuthController>();
+
+    return ListenableBuilder(
+      listenable: authController,
+      builder: (context, _) {
+        final user = authController.currentUser;
+
+        if (user == null) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        return EcoRouteModule(userId: user.id);
+      },
     );
   }
 }
