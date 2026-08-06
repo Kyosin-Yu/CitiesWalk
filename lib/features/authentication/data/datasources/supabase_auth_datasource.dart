@@ -14,10 +14,7 @@ class SupabaseAuthDataSource {
     return _client.auth.signUp(
       email: email,
       password: password,
-      data: {
-        'full_name': fullName,
-        'phone_number': phoneNumber,
-      },
+      data: {'full_name': fullName, 'phone_number': phoneNumber},
     );
   }
 
@@ -25,19 +22,14 @@ class SupabaseAuthDataSource {
     required String email,
     required String password,
   }) {
-    return _client.auth.signInWithPassword(
-      email: email,
-      password: password,
-    );
+    return _client.auth.signInWithPassword(email: email, password: password);
   }
 
   Future<void> signOut() {
     return _client.auth.signOut();
   }
 
-  Future<void> sendPasswordResetEmail({
-    required String email,
-  }) {
+  Future<void> sendPasswordResetEmail({required String email}) {
     return _client.auth.resetPasswordForEmail(email);
   }
 
@@ -47,12 +39,7 @@ class SupabaseAuthDataSource {
     return _client.auth.onAuthStateChange;
   }
 
-  Future<void> resendEmailVerification({
-    required String email,
-  }) {
-    return _client.auth.resend(
-      type: OtpType.signup,
-      email: email,
-    );
+  Future<void> resendEmailVerification({required String email}) {
+    return _client.auth.resend(type: OtpType.signup, email: email);
   }
 }

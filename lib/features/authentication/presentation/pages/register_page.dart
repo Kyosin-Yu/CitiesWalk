@@ -60,15 +60,13 @@ class _RegisterPageState extends State<RegisterPage> {
     if (_authController.currentUser != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Account created! Please check your email to verify.',
-          ),
+          content: Text('Account created! Please check your email to verify.'),
         ),
       );
 
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const LoginPage()),
-      );
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginPage()));
     }
   }
 
@@ -224,8 +222,9 @@ class _RegisterPageState extends State<RegisterPage> {
 
                       // Register Button
                       ElevatedButton(
-                        onPressed:
-                            _authController.isLoading ? null : _onRegister,
+                        onPressed: _authController.isLoading
+                            ? null
+                            : _onRegister,
                         child: _authController.isLoading
                             ? const SizedBox(
                                 height: 20,

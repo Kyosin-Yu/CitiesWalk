@@ -5,7 +5,6 @@ import 'fitness_state.dart';
 class FitnessCubit extends Cubit<FitnessState> {
   FitnessCubit() : super(const FitnessState());
 
-  void toggleNotifications() => emit(
-        state.copyWith(notificationsEnabled: !state.notificationsEnabled),
-      );
+  void toggleNotifications() =>
+      emit(state.copyWith(notificationsEnabled: !state.notificationsEnabled));
 }

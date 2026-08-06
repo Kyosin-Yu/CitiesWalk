@@ -31,14 +31,15 @@ class FitnessHeader extends StatelessWidget {
                 builder: (context, state) {
                   return Row(
                     children: [
-                    _headerButton(
-                      state.notificationsEnabled
-                          ? Icons.notifications_rounded
-                          : Icons.notifications_off_rounded,
-                      () => context.read<FitnessCubit>().toggleNotifications(),
-                    ),
-                    const SizedBox(width: 8),
-                    _headerButton(Icons.priority_high_rounded, null),
+                      _headerButton(
+                        state.notificationsEnabled
+                            ? Icons.notifications_rounded
+                            : Icons.notifications_off_rounded,
+                        () =>
+                            context.read<FitnessCubit>().toggleNotifications(),
+                      ),
+                      const SizedBox(width: 8),
+                      _headerButton(Icons.priority_high_rounded, null),
                     ],
                   );
                 },
@@ -69,8 +70,65 @@ class FitnessHeader extends StatelessWidget {
     );
   }
 
-  Widget _avatar() => Container(width: 42, height: 42, alignment: Alignment.center, decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFF66BB6A), border: Border.all(color: const Color(0xFFBDE5BF), width: 2)), child: Text('A', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 18)));
-  Widget _greeting() => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Good Morning,', style: GoogleFonts.poppins(color: Colors.white70, fontSize: 10)), Text('Alex Rahman', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 17)), const SizedBox(height: 10), Text('Tuesday, 29 July 2026', style: GoogleFonts.poppins(color: Colors.white70, fontSize: 10))]);
-  Widget _headerButton(IconData icon, VoidCallback? onTap) => InkWell(onTap: onTap, borderRadius: BorderRadius.circular(12), child: Container(width: 38, height: 38, decoration: BoxDecoration(color: Colors.white.withValues(alpha: .14), borderRadius: BorderRadius.circular(12)), child: Icon(icon, color: Colors.white, size: 18)));
-  Widget _ring(double size) => Container(width: size, height: size, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.white.withValues(alpha: .08))));
+  Widget _avatar() => Container(
+    width: 42,
+    height: 42,
+    alignment: Alignment.center,
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      color: const Color(0xFF66BB6A),
+      border: Border.all(color: const Color(0xFFBDE5BF), width: 2),
+    ),
+    child: Text(
+      'A',
+      style: GoogleFonts.poppins(
+        color: Colors.white,
+        fontWeight: FontWeight.w700,
+        fontSize: 18,
+      ),
+    ),
+  );
+  Widget _greeting() => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        'Good Morning,',
+        style: GoogleFonts.poppins(color: Colors.white70, fontSize: 10),
+      ),
+      Text(
+        'Alex Rahman',
+        style: GoogleFonts.poppins(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+          fontSize: 17,
+        ),
+      ),
+      const SizedBox(height: 10),
+      Text(
+        'Tuesday, 29 July 2026',
+        style: GoogleFonts.poppins(color: Colors.white70, fontSize: 10),
+      ),
+    ],
+  );
+  Widget _headerButton(IconData icon, VoidCallback? onTap) => InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(12),
+    child: Container(
+      width: 38,
+      height: 38,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: .14),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Icon(icon, color: Colors.white, size: 18),
+    ),
+  );
+  Widget _ring(double size) => Container(
+    width: size,
+    height: size,
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      border: Border.all(color: Colors.white.withValues(alpha: .08)),
+    ),
+  );
 }

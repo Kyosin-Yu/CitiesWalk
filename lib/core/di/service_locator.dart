@@ -11,32 +11,24 @@ import '../../features/authentication/presentation/controllers/auth_controller.d
 final sl = GetIt.instance;
 
 Future<void> setupServiceLocator() async {
-  sl.registerLazySingleton<SupabaseClient>(
-        () => SupabaseConfig.client,
-  );
+  sl.registerLazySingleton<SupabaseClient>(() => SupabaseConfig.client);
 
   sl.registerLazySingleton<SupabaseAuthDataSource>(
-        () => SupabaseAuthDataSource(
-      sl<SupabaseClient>(),
-    ),
+    () => SupabaseAuthDataSource(sl<SupabaseClient>()),
   );
 
   sl.registerLazySingleton<ProfileDataSource>(
-        () => ProfileDataSource(
-      sl<SupabaseClient>(),
-    ),
+    () => ProfileDataSource(sl<SupabaseClient>()),
   );
 
   sl.registerLazySingleton<AuthRepository>(
-        () => AuthRepositoryImpl(
+    () => AuthRepositoryImpl(
       sl<SupabaseAuthDataSource>(),
       sl<ProfileDataSource>(),
     ),
   );
 
   sl.registerLazySingleton<AuthController>(
-        () => AuthController(
-      sl<AuthRepository>(),
-    ),
+    () => AuthController(sl<AuthRepository>()),
   );
 }

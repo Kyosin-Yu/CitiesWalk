@@ -29,10 +29,7 @@ class _AppShellState extends State<AppShell> {
       icon: Icons.explore_rounded,
       message: 'Eco Route module is under development.',
     ),
-    BlocProvider(
-      create: (_) => FitnessCubit(),
-      child: const FitnessPage(),
-    ),
+    BlocProvider(create: (_) => FitnessCubit(), child: const FitnessPage()),
     const RewardsHubScreen(),
     const _ProfilePage(),
   ];
@@ -40,10 +37,7 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _pages,
-      ),
+      body: IndexedStack(index: _selectedIndex, children: _pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) {
@@ -97,9 +91,7 @@ class _PlaceholderPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(title),
-      ),
+      appBar: AppBar(title: Text(title)),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -122,9 +114,7 @@ class _ProfilePage extends StatelessWidget {
     final authController = sl<AuthController>();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
-      ),
+      appBar: AppBar(title: const Text('Profile')),
       body: ListenableBuilder(
         listenable: authController,
         builder: (context, _) {
@@ -155,10 +145,8 @@ class _ProfilePage extends StatelessWidget {
                       if (!context.mounted) return;
 
                       Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(
-                          builder: (_) => const LoginPage(),
-                        ),
-                            (_) => false,
+                        MaterialPageRoute(builder: (_) => const LoginPage()),
+                        (_) => false,
                       );
                     },
                     icon: const Icon(Icons.logout),
