@@ -43,24 +43,41 @@ Tunku Abdul Rahman University of Management and Technology (TAR UMT).
 - **Backend:** Supabase
 - **Database:** PostgreSQL through Supabase
 - **Authentication:** Supabase Auth
-- **Maps and Routing:** To be confirmed by the team
-- **State Management:** To be confirmed by the team
+- **Map Display:** OpenStreetMap with `flutter_map`
+- **Location Services:** Device GPS with `geolocator`
+- **Place Search:** Nominatim
+- **Walking and Public-Transport Routing:** OpenTripPlanner
+- **Transit Schedule Data:** Malaysia GTFS Static
+- **Live Transit Data:** Malaysia GTFS Realtime, where available
+- **State Management:** Provider with `ChangeNotifier`
 - **Version Control:** Git and GitHub
 - **Project Management:** Trello
 
-> The team must confirm the selected map, place-search, and routing services
-> before implementation because API availability, transit coverage, quotas, and
-> costs may change.
+> OpenTripPlanner combines OpenStreetMap walking-network data with Malaysia
+> GTFS transit schedules to generate walking and public-transport routes.
+> External map, search, routing, and Supabase operations must be placed behind
+> replaceable services or repositories so providers can be changed without
+> rewriting the application UI.
+>
+> During early development, sample routing data may be used until the
+> OpenTripPlanner server and required Malaysian GTFS feeds are configured.
+> API availability, data coverage, usage policies, quotas, hosting requirements,
+> and costs must be reviewed before production deployment.
 
-## Suggested Project Structure
+## Project Architecture
 
 ```text
 lib/
+├── app/
+│   ├── theme/
+│   │   ├── app_colors.dart
+│   │   ├── app_text_theme.dart
+│   │   └── app_theme.dart
+│   └── app.dart
 ├── core/
 │   ├── constants/
 │   ├── models/
 │   ├── services/
-│   ├── theme/
 │   └── utils/
 ├── features/
 │   ├── authentication/
@@ -79,8 +96,7 @@ the team agrees on the application architecture.
 
 ### Prerequisites
 
-- Flutter SDK
-- Dart SDK
+- Flutter SDK 3.44.2, which includes Dart SDK 3.12.2
 - Android Studio or Visual Studio Code
 - Android emulator or physical Android device
 - Git
@@ -90,7 +106,7 @@ the team agrees on the application architecture.
 ### Installation
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/Kyosin-Yu/CitiesWalk.git
 cd CitiesWalk
 flutter pub get
 ```
@@ -164,13 +180,11 @@ docs/update-readme
 
 | Member | Role | Assigned Module |
 |---|---|---|
-| Chua Thiam Poh | Project Manager / Developer | Eco-Route Navigation |
-| To be completed | Developer | User Authentication and Profile |
-| To be completed | Developer | Fitness and Carbon Analytics |
-| To be completed | Developer | Rewards and Leaderboard |
-| To be completed | Developer | Community Reviews |
-
-Replace the placeholder rows with the confirmed team member names and roles.
+| CHUA THIAM POH | Project Manager / Developer | Eco-Route Navigation |
+| KOH HUAI YU | Requirement Leader / Developer | User Authentication and Profile |
+| ENG ZHEN XIN |  / Coding Developer | Fitness and Carbon Analytics |
+| LAI YU WAI | Design Leader / Developer | Rewards and Leaderboard |
+| TAN YAN ZUN | Testing Leader / Developer | Community Reviews |
 
 ## Scope and Limitations
 
@@ -181,7 +195,9 @@ Replace the placeholder rows with the confirmed team member names and roles.
 - Background location tracking is an advanced feature and depends on Android and
   iOS restrictions.
 - Carbon savings are estimates based on a documented comparison with car travel.
-- Transit route quality and availability depend on the selected external API.
+- Transit route quality and availability depend on OpenStreetMap coverage,
+  Malaysian GTFS feed availability, and the deployed OpenTripPlanner
+  configuration.
 
 ## Documentation
 

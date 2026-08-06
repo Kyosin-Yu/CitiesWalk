@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../features/reviews/presentation/reviews_screen.dart';
+import '../features/authentication/presentation/pages/login_page.dart';
 import 'theme/app_theme.dart';
 
 class CitiesWalkApp extends StatelessWidget {
@@ -11,10 +11,8 @@ class CitiesWalkApp extends StatelessWidget {
     return MaterialApp(
       title: 'CitiesWalk',
       debugShowCheckedModeBanner: false,
-
       theme: AppTheme.lightTheme,
-
-      home: const ReviewsScreen(),
+      home: const LoginPage(),
     );
   }
 }

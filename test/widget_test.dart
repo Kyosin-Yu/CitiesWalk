@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:citieswalk/app/app.dart';
+import 'package:citieswalk/features/reviews/presentation/reviews_screen.dart';
 
 void main() {
   testWidgets('reviews list follows the Community Review design', (WidgetTester tester) async {
-    await tester.pumpWidget(const CitiesWalkApp());
+    await tester.pumpWidget(const MaterialApp(home: ReviewsScreen()));
 
     expect(find.text('Reviews'), findsOneWidget);
     expect(find.text('Petaling Street (Chinatown)'), findsOneWidget);
@@ -12,7 +12,7 @@ void main() {
   });
 
   testWidgets('user can submit a review', (WidgetTester tester) async {
-    await tester.pumpWidget(const CitiesWalkApp());
+    await tester.pumpWidget(const MaterialApp(home: ReviewsScreen()));
 
     await tester.tap(find.text('Write a Review'));
     await tester.pumpAndSettle();
@@ -51,7 +51,7 @@ void main() {
   testWidgets('rating description matches the selected star count', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const CitiesWalkApp());
+    await tester.pumpWidget(const MaterialApp(home: ReviewsScreen()));
 
     await tester.tap(find.text('Write a Review'));
     await tester.pumpAndSettle();
@@ -65,7 +65,7 @@ void main() {
   testWidgets('user can view review detail and manage their review', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const CitiesWalkApp());
+    await tester.pumpWidget(const MaterialApp(home: ReviewsScreen()));
 
     await tester.tap(find.text('Sarah Lim'));
     await tester.pumpAndSettle();
@@ -81,7 +81,7 @@ void main() {
   testWidgets('user can edit and delete their own review', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const CitiesWalkApp());
+    await tester.pumpWidget(const MaterialApp(home: ReviewsScreen()));
 
     await tester.tap(find.text('Write a Review'));
     await tester.tap(find.byTooltip('Give 4 stars'));
