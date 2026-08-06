@@ -38,7 +38,7 @@ class BadgeModel {
   bool get isUnlocked => status == BadgeStatus.unlocked;
   double get progressFraction =>
       goal == 0 ? 0 : (progress / goal).clamp(0, 1).toDouble();
-  int get remaining => (goal - progress).clamp(0, goal) as int;
+  int get remaining => (goal - progress).clamp(0, goal);
 
   factory BadgeModel.fromSupabaseRow(Map<String, dynamic> row) {
     return BadgeModel(
