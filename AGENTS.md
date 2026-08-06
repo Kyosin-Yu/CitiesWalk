@@ -47,7 +47,9 @@ When requirements are not confirmed:
 
 ## 3. Architecture
 
-Use the established feature-first layered architecture:
+Use the established feature-first **three-layer architecture**. The project is
+feature-first at the top level, while each sufficiently large feature uses the
+same Presentation, Business Logic, and Data layers.
 
 ```text
 lib/
@@ -64,13 +66,17 @@ lib/
 │   └── utils/
 ├── features/
 │   ├── authentication/
-│   │   ├── data/
-│   │   ├── models/
-│   │   └── presentation/
 │   ├── eco_route/
-│   │   ├── data/
-│   │   ├── models/
-│   │   └── presentation/
+│   │   ├── presentation/
+│   │   │   ├── controllers/
+│   │   │   ├── pages/
+│   │   │   └── widgets/
+│   │   ├── business/
+│   │   │   ├── models/
+│   │   │   └── services/
+│   │   └── data/
+│   │       ├── repositories/
+│   │       └── datasources/
 │   ├── analytics/
 │   ├── rewards/
 │   └── reviews/
@@ -85,19 +91,34 @@ Directory responsibilities:
 - `features/` contains the functional modules.
 - `main.dart` is limited to application startup and global initialization.
 
-Within a sufficiently large feature:
+Within a sufficiently large feature, use these layers consistently:
 
-- `presentation/` contains screens, widgets, and Provider controllers.
-- `data/` contains repositories, external API clients, and Supabase access.
-- `models/` contains feature-specific models.
+- `presentation/` is the **Presentation Layer**. It contains pages, widgets,
+  and Provider `ChangeNotifier` controllers. It must not call APIs, Supabase,
+  or device plugins directly.
+- `business/` is the **Business Logic Layer**. It contains feature-specific
+  models, calculation or decision services, and business rules. It does not
+  depend on Flutter UI widgets or provider-specific response models.
+- `data/` is the **Data Layer**. It contains repository implementations,
+  data sources, API clients, Supabase access, and provider-specific mapping.
+  It supplies data to the Business Logic Layer through repository contracts.
+
+For small features, do not create an empty folder only to satisfy this tree.
+Create a layer folder when it has a real responsibility or file.
+
+Existing modules do not need to be moved just to match this structure. New
+features and files should follow it, and existing modules should be migrated
+only as part of a separately agreed refactoring task.
 
 Do not create unnecessary abstractions or empty directories for a single small
 widget or function.
 
 Do not move the established theme from `app/theme/` to `core/theme/`.
 
-Shared code belongs in `core/` only when at least two features use it.
-Feature-specific code must remain inside its owning feature.
+Shared code belongs in `core/` only when at least two features use it. Shared
+models and services belong in `core/models/` and `core/services/`; otherwise,
+feature-specific models and services remain inside that feature's `business/`
+layer.
 
 Features must communicate through models, services, and repository contracts.
 A feature must not import another feature's screens or internal state.
