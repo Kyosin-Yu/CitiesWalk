@@ -24,12 +24,14 @@ class PointsHistoryScreen extends StatelessWidget {
                 BuildContext context,
                 AsyncSnapshot<List<PointTransaction>> snapshot,
               ) {
-                if (snapshot.hasError)
+                if (snapshot.hasError) {
                   return const Center(
                     child: Text('We could not load your points history.'),
                   );
-                if (!snapshot.hasData)
+                }
+                if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
+                }
                 final transactions = snapshot.data!;
                 final total = transactions.fold<int>(
                   0,

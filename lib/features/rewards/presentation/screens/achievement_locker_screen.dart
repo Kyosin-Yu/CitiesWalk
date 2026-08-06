@@ -36,12 +36,14 @@ class _AchievementLockerScreenState extends State<AchievementLockerScreen> {
           future: widget.service.fetchBadges(),
           builder:
               (BuildContext context, AsyncSnapshot<List<BadgeModel>> snapshot) {
-                if (snapshot.hasError)
+                if (snapshot.hasError) {
                   return const Center(
                     child: Text('We could not load your achievements.'),
                   );
-                if (!snapshot.hasData)
+                }
+                if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
+                }
                 final badges = snapshot.data!;
                 final unlocked = badges
                     .where((badge) => badge.isUnlocked)
