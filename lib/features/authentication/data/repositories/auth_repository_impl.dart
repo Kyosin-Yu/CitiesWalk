@@ -11,10 +11,7 @@ class AuthRepositoryImpl implements AuthRepository {
   final SupabaseAuthDataSource _authDatasource;
   final ProfileDataSource _profileDatasource;
 
-  const AuthRepositoryImpl(
-      this._authDatasource,
-      this._profileDatasource,
-      );
+  const AuthRepositoryImpl(this._authDatasource, this._profileDatasource);
 
   @override
   Future<AppUser> signUp({
@@ -77,18 +74,13 @@ class AuthRepositoryImpl implements AuthRepository {
         );
       }
 
-      return AppUser(
-        id: user.id,
-        email: user.email ?? email,
-      );
+      return AppUser(id: user.id, email: user.email ?? email);
     } on AppException {
       rethrow;
     } on AuthException catch (e) {
       throw AppException(e.message);
     } catch (_) {
-      throw const AppException(
-        'Something went wrong. Please try again.',
-      );
+      throw const AppException('Something went wrong. Please try again.');
     }
   }
 
@@ -99,24 +91,18 @@ class AuthRepositoryImpl implements AuthRepository {
     } on AuthException catch (e) {
       throw AppException(e.message);
     } catch (_) {
-      throw const AppException(
-        'Something went wrong. Please try again.',
-      );
+      throw const AppException('Something went wrong. Please try again.');
     }
   }
 
   @override
-  Future<void> sendPasswordResetEmail({
-    required String email,
-  }) async {
+  Future<void> sendPasswordResetEmail({required String email}) async {
     try {
       await _authDatasource.sendPasswordResetEmail(email: email);
     } on AuthException catch (e) {
       throw AppException(e.message);
     } catch (_) {
-      throw const AppException(
-        'Something went wrong. Please try again.',
-      );
+      throw const AppException('Something went wrong. Please try again.');
     }
   }
 
@@ -129,17 +115,13 @@ class AuthRepositoryImpl implements AuthRepository {
         throw const AppException('No signed-in user found.');
       }
 
-      await _authDatasource.resendEmailVerification(
-        email: user.email!,
-      );
+      await _authDatasource.resendEmailVerification(email: user.email!);
     } on AppException {
       rethrow;
     } on AuthException catch (e) {
       throw AppException(e.message);
     } catch (_) {
-      throw const AppException(
-        'Something went wrong. Please try again.',
-      );
+      throw const AppException('Something went wrong. Please try again.');
     }
   }
 
@@ -153,16 +135,10 @@ class AuthRepositoryImpl implements AuthRepository {
       final profile = await _profileDatasource.getProfile(user.id);
 
       if (profile != null) {
-        return AuthUserModel.fromMap(
-          profile: profile,
-          email: user.email ?? '',
-        );
+        return AuthUserModel.fromMap(profile: profile, email: user.email ?? '');
       }
 
-      return AppUser(
-        id: user.id,
-        email: user.email ?? '',
-      );
+      return AppUser(id: user.id, email: user.email ?? '');
     } catch (_) {
       return null;
     }
@@ -178,16 +154,10 @@ class AuthRepositoryImpl implements AuthRepository {
       final profile = await _profileDatasource.getProfile(user.id);
 
       if (profile != null) {
-        return AuthUserModel.fromMap(
-          profile: profile,
-          email: user.email ?? '',
-        );
+        return AuthUserModel.fromMap(profile: profile, email: user.email ?? '');
       }
 
-      return AppUser(
-        id: user.id,
-        email: user.email ?? '',
-      );
+      return AppUser(id: user.id, email: user.email ?? '');
     });
   }
 }
