@@ -45,17 +45,18 @@ When requirements are not confirmed:
 - Document unresolved decisions and keep their implementations replaceable.
 - Update documentation and tests when a confirmed requirement changes.
 
+
 ## 3. Architecture
 
-Use the established feature-first layered architecture:
+Use the established feature-first **three-layer architecture**. The project is
+organised by feature at the top level. Each sufficiently large feature is
+separated into Presentation, Business Logic, and Data layers.
 
 ```text
 lib/
 ├── app/
 │   ├── theme/
-│   │   ├── app_colors.dart
-│   │   ├── app_text_theme.dart
-│   │   └── app_theme.dart
+│   ├── navigation/
 │   └── app.dart
 ├── core/
 │   ├── constants/
@@ -64,43 +65,113 @@ lib/
 │   └── utils/
 ├── features/
 │   ├── authentication/
-│   │   ├── data/
-│   │   ├── models/
-│   │   └── presentation/
+│   │   ├── presentation/
+│   │   │   ├── pages/
+│   │   │   └── widgets/
+│   │   ├── business_logic/
+│   │   │   ├── providers/
+│   │   │   ├── entities/
+│   │   │   ├── repositories/
+│   │   │   └── services/
+│   │   └── data/
+│   │       ├── models/
+│   │       ├── repositories/
+│   │       └── data_sources/
 │   ├── eco_route/
-│   │   ├── data/
-│   │   ├── models/
-│   │   └── presentation/
+│   │   ├── presentation/
+│   │   ├── business_logic/
+│   │   └── data/
 │   ├── analytics/
 │   ├── rewards/
 │   └── reviews/
 └── main.dart
 ```
 
-Directory responsibilities:
+### Directory responsibilities
 
-- `app/` contains the root application widget, application navigation, and
-  shared theme.
+- `app/` contains the root application widget, application navigation, Provider
+  registration, and shared theme.
 - `core/` contains code used by at least two features.
 - `features/` contains the functional modules.
 - `main.dart` is limited to application startup and global initialization.
 
-Within a sufficiently large feature:
+### Layer responsibilities
 
-- `presentation/` contains screens, widgets, and Provider controllers.
-- `data/` contains repositories, external API clients, and Supabase access.
-- `models/` contains feature-specific models.
+#### Presentation Layer
 
-Do not create unnecessary abstractions or empty directories for a single small
-widget or function.
+The `presentation/` folder contains pages, screens, and widgets. It displays
+state received from the Business Logic Layer, captures user input, and forwards
+user actions to the appropriate `ChangeNotifier`.
 
-Do not move the established theme from `app/theme/` to `core/theme/`.
+It must not:
 
-Shared code belongs in `core/` only when at least two features use it.
-Feature-specific code must remain inside its owning feature.
+- Call repositories, Supabase, external APIs, or device plugins directly.
+- Contain business rules or complex calculations.
 
-Features must communicate through models, services, and repository contracts.
-A feature must not import another feature's screens or internal state.
+#### Business Logic Layer
+
+The `business_logic/` folder contains:
+
+- Provider `ChangeNotifier` controllers.
+- Feature state.
+- Repository contracts.
+- Feature-specific entities.
+- Validation and calculations.
+- Decision services and business rules.
+
+It receives actions from the Presentation Layer, calls repository contracts,
+and exposes loading, empty, success, and error states to the UI. It must not
+depend on Flutter screens, widgets, Supabase, external APIs, or
+provider-specific data models.
+
+#### Data Layer
+
+The `data/` folder contains:
+
+- Repository implementations.
+- Data sources.
+- API clients.
+- Supabase access.
+- Local or in-memory storage.
+- API- and database-specific models.
+- Data-mapping logic.
+
+It implements repository contracts defined by the Business Logic Layer and
+maps external data into business entities or shared models. It must not contain
+widgets, UI state, or business rules.
+
+### Communication flow
+
+The required communication flow is:
+
+`Presentation Layer → Business Logic Layer → Data Layer`
+
+Results return through the same controlled boundaries:
+
+`Data Layer → Business Logic Layer → Presentation Layer`
+
+Layers must not be skipped. For example, the Presentation Layer must not call
+a repository, Supabase, an external API, or a device plugin directly.
+
+### Folder and model rules
+
+- Create a layer or subfolder only when it has a real responsibility or file.
+- Existing modules do not need to be moved only to match this structure.
+- New features and files must follow this architecture.
+- Do not create unnecessary abstractions for a single small widget or function.
+- Keep the established theme in `app/theme/`.
+- Shared code belongs in `core/` only when at least two features use it.
+- Shared models belong in `core/models/`.
+- Feature-specific entities belong in `business_logic/entities/`.
+- API-response and database-row models belong in `data/models/`.
+- Repository contracts belong in `business_logic/repositories/`.
+- Repository implementations belong in `data/repositories/`.
+- Features must not import another feature's screens, widgets, providers, or
+  internal state.
+
+Use plural directory names such as `entities/`, `models/`, `providers/`, and
+`repositories/`. Use singular Dart filenames such as `journey.dart`,
+`destination.dart`, and `auth_repository.dart`.
 
 ## 4. Module Ownership
 
