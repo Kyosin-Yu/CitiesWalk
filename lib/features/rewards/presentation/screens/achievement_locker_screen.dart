@@ -5,7 +5,6 @@ import '../../models/badge_model.dart';
 import '../../services/rewards_service.dart';
 import '../widgets/badge_detail_modal.dart';
 import '../widgets/badge_item_card.dart';
-import '../widgets/rewards_bottom_navigation.dart';
 
 enum _BadgeFilter { all, unlocked, locked }
 
@@ -31,7 +30,6 @@ class _AchievementLockerScreenState extends State<AchievementLockerScreen> {
         textTheme: Theme.of(context).textTheme.apply(fontFamily: 'Poppins'),
       ),
       child: Scaffold(
-        bottomNavigationBar: const RewardsBottomNavigation(),
         body: FutureBuilder<List<BadgeModel>>(
           future: widget.service.fetchBadges(),
           builder:
@@ -151,7 +149,7 @@ class _LockerHeader extends StatelessWidget {
             children: <Widget>[
               IconButton(
                 tooltip: 'Back',
-                onPressed: () => Navigator.maybePop(context),
+                onPressed: () => Navigator.of(context).pop(),
                 icon: const Icon(
                   Icons.arrow_back_ios_new_rounded,
                   color: Colors.white,
