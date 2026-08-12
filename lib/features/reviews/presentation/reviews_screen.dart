@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-import '../../../../app/theme/app_colors.dart';
-import '../../business_logic/entities/place_review.dart';
-import '../../business_logic/entities/review_destination.dart';
-import '../../business_logic/providers/reviews_provider.dart';
-import '../../data/datasources/review_seed_data.dart';
-import '../../data/repositories/in_memory_review_repository.dart';
+import '../../../app/theme/app_colors.dart';
+import '../business_logic/entities/place_review.dart';
+import '../business_logic/entities/review_destination.dart';
+import '../business_logic/providers/reviews_provider.dart';
+import '../data/datasources/review_seed_data.dart';
+import '../data/repositories/in_memory_review_repository.dart';
 
 enum _ReviewPage { list, detail, write, submitted, mine, edit }
 
