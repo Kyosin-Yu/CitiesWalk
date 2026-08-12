@@ -1,3 +1,5 @@
+import 'eco_location.dart';
+
 enum EcoRouteSegmentType { walk, transit }
 
 class EcoRouteStep {
@@ -21,6 +23,7 @@ class EcoRouteSegment {
     required this.durationMinutes,
     required this.steps,
     this.platform,
+    this.mapPath = const [],
   });
 
   final EcoRouteSegmentType type;
@@ -30,4 +33,10 @@ class EcoRouteSegment {
   final int durationMinutes;
   final String? platform;
   final List<EcoRouteStep> steps;
+
+  /// Points used to draw this segment on the route-preview map.
+  ///
+  /// The sample repository supplies illustrative points until a routing
+  /// provider returns real walking and transit geometry.
+  final List<EcoLocation> mapPath;
 }

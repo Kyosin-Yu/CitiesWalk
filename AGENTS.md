@@ -48,16 +48,14 @@ When requirements are not confirmed:
 ## 3. Architecture
 
 Use the established feature-first **three-layer architecture**. The project is
-feature-first at the top level, while each sufficiently large feature uses the
-same Presentation, Business Logic, and Data layers.
+organised by feature at the top level. Each sufficiently large feature is
+separated into Presentation, Business Logic, and Data layers.
 
 ```text
 lib/
 ├── app/
 │   ├── theme/
-│   │   ├── app_colors.dart
-│   │   ├── app_text_theme.dart
-│   │   └── app_theme.dart
+│   ├── navigation/
 │   └── app.dart
 ├── core/
 │   ├── constants/
@@ -66,62 +64,113 @@ lib/
 │   └── utils/
 ├── features/
 │   ├── authentication/
-│   ├── eco_route/
 │   │   ├── presentation/
-│   │   │   ├── controllers/
 │   │   │   ├── pages/
 │   │   │   └── widgets/
-│   │   ├── business/
-│   │   │   ├── models/
+│   │   ├── business_logic/
+│   │   │   ├── providers/
+│   │   │   ├── entities/
+│   │   │   ├── repositories/
 │   │   │   └── services/
 │   │   └── data/
+│   │       ├── models/
 │   │       ├── repositories/
-│   │       └── datasources/
+│   │       └── data_sources/
+│   ├── eco_route/
+│   │   ├── presentation/
+│   │   ├── business_logic/
+│   │   └── data/
 │   ├── analytics/
 │   ├── rewards/
 │   └── reviews/
 └── main.dart
 ```
 
-Directory responsibilities:
+### Directory responsibilities
 
-- `app/` contains the root application widget, application navigation, and
-  shared theme.
+- `app/` contains the root application widget, application navigation, Provider
+  registration, and shared theme.
 - `core/` contains code used by at least two features.
 - `features/` contains the functional modules.
 - `main.dart` is limited to application startup and global initialization.
 
-Within a sufficiently large feature, use these layers consistently:
+### Layer responsibilities
 
-- `presentation/` is the **Presentation Layer**. It contains pages, widgets,
-  and Provider `ChangeNotifier` controllers. It must not call APIs, Supabase,
-  or device plugins directly.
-- `business/` is the **Business Logic Layer**. It contains feature-specific
-  models, calculation or decision services, and business rules. It does not
-  depend on Flutter UI widgets or provider-specific response models.
-- `data/` is the **Data Layer**. It contains repository implementations,
-  data sources, API clients, Supabase access, and provider-specific mapping.
-  It supplies data to the Business Logic Layer through repository contracts.
+#### Presentation Layer
 
-For small features, do not create an empty folder only to satisfy this tree.
-Create a layer folder when it has a real responsibility or file.
+The `presentation/` folder contains pages, screens, and widgets. It displays
+state received from the Business Logic Layer, captures user input, and forwards
+user actions to the appropriate `ChangeNotifier`.
 
-Existing modules do not need to be moved just to match this structure. New
-features and files should follow it, and existing modules should be migrated
-only as part of a separately agreed refactoring task.
+It must not:
 
-Do not create unnecessary abstractions or empty directories for a single small
-widget or function.
+- Call repositories, Supabase, external APIs, or device plugins directly.
+- Contain business rules or complex calculations.
 
-Do not move the established theme from `app/theme/` to `core/theme/`.
+#### Business Logic Layer
 
-Shared code belongs in `core/` only when at least two features use it. Shared
-models and services belong in `core/models/` and `core/services/`; otherwise,
-feature-specific models and services remain inside that feature's `business/`
-layer.
+The `business_logic/` folder contains:
 
-Features must communicate through models, services, and repository contracts.
-A feature must not import another feature's screens or internal state.
+- Provider `ChangeNotifier` controllers.
+- Feature state.
+- Repository contracts.
+- Feature-specific entities.
+- Validation and calculations.
+- Decision services and business rules.
+
+It receives actions from the Presentation Layer, calls repository contracts,
+and exposes loading, empty, success, and error states to the UI. It must not
+depend on Flutter screens, widgets, Supabase, external APIs, or
+provider-specific data models.
+
+#### Data Layer
+
+The `data/` folder contains:
+
+- Repository implementations.
+- Data sources.
+- API clients.
+- Supabase access.
+- Local or in-memory storage.
+- API- and database-specific models.
+- Data-mapping logic.
+
+It implements repository contracts defined by the Business Logic Layer and
+maps external data into business entities or shared models. It must not contain
+widgets, UI state, or business rules.
+
+### Communication flow
+
+The required communication flow is:
+
+`Presentation Layer → Business Logic Layer → Data Layer`
+
+Results return through the same controlled boundaries:
+
+`Data Layer → Business Logic Layer → Presentation Layer`
+
+Layers must not be skipped. For example, the Presentation Layer must not call
+a repository, Supabase, an external API, or a device plugin directly.
+
+### Folder and model rules
+
+- Create a layer or subfolder only when it has a real responsibility or file.
+- Existing modules do not need to be moved only to match this structure.
+- New features and files must follow this architecture.
+- Do not create unnecessary abstractions for a single small widget or function.
+- Keep the established theme in `app/theme/`.
+- Shared code belongs in `core/` only when at least two features use it.
+- Shared models belong in `core/models/`.
+- Feature-specific entities belong in `business_logic/entities/`.
+- API-response and database-row models belong in `data/models/`.
+- Repository contracts belong in `business_logic/repositories/`.
+- Repository implementations belong in `data/repositories/`.
+- Features must not import another feature's screens, widgets, providers, or
+  internal state.
+
+Use plural directory names such as `entities/`, `models/`, `providers/`, and
+`repositories/`. Use singular Dart filenames such as `journey.dart`,
+`destination.dart`, and `auth_repository.dart`.
 
 ## 4. Module Ownership
 

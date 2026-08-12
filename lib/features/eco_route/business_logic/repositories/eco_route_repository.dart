@@ -1,6 +1,6 @@
-import '../../business/models/eco_destination.dart';
-import '../../business/models/eco_location.dart';
-import '../../business/models/eco_route.dart';
+import '../entities/eco_destination.dart';
+import '../entities/eco_location.dart';
+import '../entities/eco_route.dart';
 
 abstract interface class EcoRouteRepository {
   Future<List<EcoDestination>> searchDestinations(String query);

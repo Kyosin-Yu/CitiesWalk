@@ -1,7 +1,8 @@
 import 'package:citieswalk/features/eco_route/data/repositories/sample_eco_route_repository.dart';
-import 'package:citieswalk/features/eco_route/business/models/eco_location.dart';
-import 'package:citieswalk/features/eco_route/presentation/controllers/eco_route_controller.dart';
-import 'package:citieswalk/features/eco_route/business/services/location_service.dart';
+import 'package:citieswalk/features/eco_route/business_logic/entities/eco_location.dart';
+import 'package:citieswalk/features/eco_route/business_logic/entities/eco_route_segment.dart';
+import 'package:citieswalk/features/eco_route/business_logic/providers/eco_route_controller.dart';
+import 'package:citieswalk/features/eco_route/business_logic/services/location_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _FixedLocationService implements LocationService {
@@ -41,6 +42,24 @@ void main() {
 
       expect(controller.journey, isNotNull);
       expect(controller.journey!.userId, 'user-123');
+    });
+
+    test('creates route geometry for the map preview', () async {
+      await controller.initialise();
+      await controller.selectDestination(controller.destinations.first);
+
+      final route = controller.route;
+      expect(route, isNotNull);
+      expect(
+        route!.segments,
+        everyElement(
+          isA<EcoRouteSegment>().having(
+            (segment) => segment.mapPath.length,
+            'map path point count',
+            greaterThanOrEqualTo(2),
+          ),
+        ),
+      );
     });
   });
 }

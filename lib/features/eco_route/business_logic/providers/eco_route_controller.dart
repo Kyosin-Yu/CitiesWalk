@@ -1,11 +1,11 @@
 import 'package:flutter/foundation.dart';
 
-import '../../data/repositories/eco_route_repository.dart';
-import '../../business/models/eco_destination.dart';
-import '../../business/models/eco_journey.dart';
-import '../../business/models/eco_location.dart';
-import '../../business/models/eco_route.dart';
-import '../../business/services/location_service.dart';
+import '../entities/eco_destination.dart';
+import '../entities/eco_journey.dart';
+import '../entities/eco_location.dart';
+import '../entities/eco_route.dart';
+import '../repositories/eco_route_repository.dart';
+import '../services/location_service.dart';
 
 class EcoRouteController extends ChangeNotifier {
   EcoRouteController({
@@ -59,6 +59,12 @@ class EcoRouteController extends ChangeNotifier {
 
     try {
       _destinations = await repository.fetchNearbyDestinations();
+      _destinations = [..._destinations]
+        ..sort(
+          (first, second) => _distanceSquared(
+            first.location,
+          ).compareTo(_distanceSquared(second.location)),
+        );
     } catch (_) {
       _message = 'Destinations are unavailable right now. Please try again.';
     } finally {
@@ -107,5 +113,12 @@ class EcoRouteController extends ChangeNotifier {
       startedAt: DateTime.now().toUtc(),
     );
     notifyListeners();
+  }
+
+  double _distanceSquared(EcoLocation location) {
+    final latitudeDifference = location.latitude - _origin.latitude;
+    final longitudeDifference = location.longitude - _origin.longitude;
+    return latitudeDifference * latitudeDifference +
+        longitudeDifference * longitudeDifference;
   }
 }

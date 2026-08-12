@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:provider/provider.dart';
 
 import '../core/di/service_locator.dart';
 import '../features/authentication/presentation/controllers/auth_controller.dart';
 import '../features/authentication/presentation/pages/login_page.dart';
-import '../features/eco_route/presentation/pages/eco_route_module.dart';
+import '../features/eco_route/business_logic/providers/eco_route_controller.dart';
+import '../features/eco_route/data/data_sources/device_location_data_source.dart';
+import '../features/eco_route/data/repositories/sample_eco_route_repository.dart';
+import '../features/eco_route/presentation/pages/eco_route_page.dart';
 import '../features/fitness/cubit/fitness_cubit.dart';
 import '../features/fitness/presentation/pages/fitness_page.dart';
 import '../features/rewards/presentation/screens/rewards_hub_screen.dart';
@@ -147,7 +151,14 @@ class _EcoRouteEntryPage extends StatelessWidget {
           );
         }
 
-        return EcoRouteModule(userId: user.id);
+        return ChangeNotifierProvider(
+          create: (_) => EcoRouteController(
+            userId: user.id,
+            repository: const SampleEcoRouteRepository(),
+            locationService: const DeviceLocationDataSource(),
+          ),
+          child: const EcoRoutePage(),
+        );
       },
     );
   }

@@ -1,13 +1,54 @@
-import '../../business/models/eco_destination.dart';
-import '../../business/models/eco_location.dart';
-import '../../business/models/eco_route.dart';
-import '../../business/models/eco_route_segment.dart';
-import 'eco_route_repository.dart';
+import '../../business_logic/entities/eco_destination.dart';
+import '../../business_logic/entities/eco_location.dart';
+import '../../business_logic/entities/eco_route.dart';
+import '../../business_logic/entities/eco_route_segment.dart';
+import '../../business_logic/repositories/eco_route_repository.dart';
 
-/// Replace with Nominatim and OpenTripPlanner-backed implementations once the
-/// team confirms endpoint, GTFS feed, and usage configuration.
+/// Local-only source for the Eco-Route prototype.
+///
+/// It does not call external routing or map services. All destinations,
+/// itinerary details and map paths are safe dummy data for development.
 class SampleEcoRouteRepository implements EcoRouteRepository {
   const SampleEcoRouteRepository();
+
+  static const _klSentralStation = EcoLocation(
+    latitude: 3.1348,
+    longitude: 101.6869,
+    label: 'KL Sentral station',
+  );
+
+  static const _klccStation = EcoLocation(
+    latitude: 3.1588,
+    longitude: 101.7116,
+    label: 'KLCC station',
+  );
+
+  // Representative station points make the rail preview read as a rail path,
+  // rather than a single diagonal line. A GTFS/OTP data source will replace
+  // these sample points with provider-supplied transit geometry.
+  static const _pasarSeniStation = EcoLocation(
+    latitude: 3.1423,
+    longitude: 101.6953,
+    label: 'Pasar Seni station',
+  );
+
+  static const _masjidJamekStation = EcoLocation(
+    latitude: 3.1492,
+    longitude: 101.6967,
+    label: 'Masjid Jamek station',
+  );
+
+  static const _dangWangiStation = EcoLocation(
+    latitude: 3.1562,
+    longitude: 101.7020,
+    label: 'Dang Wangi station',
+  );
+
+  static const _kampungBaruStation = EcoLocation(
+    latitude: 3.1617,
+    longitude: 101.7054,
+    label: 'Kampung Baru station',
+  );
 
   static const _destinations = <EcoDestination>[
     EcoDestination(
@@ -83,20 +124,21 @@ class SampleEcoRouteRepository implements EcoRouteRepository {
       destination: destination,
       estimatedCalories: 62,
       estimatedCarbonSavedKg: 0.9,
-      segments: const [
+      segments: [
         EcoRouteSegment(
           type: EcoRouteSegmentType.walk,
           title: 'Walk to KL Sentral',
           detail: 'Follow the pedestrian path to the station entrance.',
           distanceKm: 0.4,
           durationMinutes: 6,
-          steps: [
+          steps: const [
             EcoRouteStep(
               instruction: 'Walk towards KL Sentral station.',
               distanceKm: 0.4,
               durationMinutes: 6,
             ),
           ],
+          mapPath: [origin, _klSentralStation],
         ),
         EcoRouteSegment(
           type: EcoRouteSegmentType.transit,
@@ -105,7 +147,7 @@ class SampleEcoRouteRepository implements EcoRouteRepository {
           distanceKm: 3.6,
           durationMinutes: 12,
           platform: 'Platform 2',
-          steps: [
+          steps: const [
             EcoRouteStep(
               instruction: 'Board the train at Platform 2.',
               distanceKm: 0,
@@ -117,6 +159,14 @@ class SampleEcoRouteRepository implements EcoRouteRepository {
               durationMinutes: 10,
             ),
           ],
+          mapPath: const [
+            _klSentralStation,
+            _pasarSeniStation,
+            _masjidJamekStation,
+            _dangWangiStation,
+            _kampungBaruStation,
+            _klccStation,
+          ],
         ),
         EcoRouteSegment(
           type: EcoRouteSegmentType.walk,
@@ -124,13 +174,14 @@ class SampleEcoRouteRepository implements EcoRouteRepository {
           detail: 'Use the marked pedestrian route from the station.',
           distanceKm: 0.5,
           durationMinutes: 6,
-          steps: [
+          steps: const [
             EcoRouteStep(
               instruction: 'Walk from the station to your destination.',
               distanceKm: 0.5,
               durationMinutes: 6,
             ),
           ],
+          mapPath: [_klccStation, destination.location],
         ),
       ],
     );

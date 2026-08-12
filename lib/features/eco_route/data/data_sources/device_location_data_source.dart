@@ -1,13 +1,11 @@
 import 'package:geolocator/geolocator.dart';
 
-import '../models/eco_location.dart';
+import '../../business_logic/entities/eco_location.dart';
+import '../../business_logic/services/location_service.dart';
 
-abstract interface class LocationService {
-  Future<EcoLocation> getCurrentLocation();
-}
-
-class DeviceLocationService implements LocationService {
-  const DeviceLocationService();
+/// Device-specific location access for the Eco-Route data layer.
+class DeviceLocationDataSource implements LocationService {
+  const DeviceLocationDataSource();
 
   @override
   Future<EcoLocation> getCurrentLocation() async {
@@ -42,13 +40,4 @@ class DeviceLocationService implements LocationService {
       label: 'Current location',
     );
   }
-}
-
-class LocationServiceException implements Exception {
-  const LocationServiceException(this.message);
-
-  final String message;
-
-  @override
-  String toString() => message;
 }
