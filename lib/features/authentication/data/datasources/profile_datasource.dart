@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
+
 class ProfileDataSource {
   final SupabaseClient _client;
 

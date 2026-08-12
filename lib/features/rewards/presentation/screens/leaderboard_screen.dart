@@ -4,14 +4,32 @@ import '../../../../app/theme/app_colors.dart';
 import '../../models/leaderboard_entry.dart';
 import '../../services/rewards_service.dart';
 import '../widgets/podium_widget.dart';
-import '../widgets/rewards_bottom_navigation.dart';
 import 'achievement_locker_screen.dart';
 import 'points_history_screen.dart';
 
-class LeaderboardScreen extends StatelessWidget {
-  const LeaderboardScreen({super.key, this.service = const RewardsService()});
+class LeaderboardScreen extends StatefulWidget {
+  const LeaderboardScreen({
+    super.key,
+    this.service = const RewardsService(),
+    this.isEmbedded = false,
+  });
 
   final RewardsService service;
+  final bool isEmbedded;
+
+  @override
+  State<LeaderboardScreen> createState() => _LeaderboardScreenState();
+}
+
+class _LeaderboardScreenState extends State<LeaderboardScreen> {
+  late final Future<List<LeaderboardEntry>> _leaderboardFuture;
+  bool _showsAllRankings = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _leaderboardFuture = widget.service.fetchLeaderboard();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,18 +40,20 @@ class LeaderboardScreen extends StatelessWidget {
     return Theme(
       data: rewardsTheme,
       child: FutureBuilder<List<LeaderboardEntry>>(
-        future: service.fetchLeaderboard(),
+        future: _leaderboardFuture,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return const Scaffold(
-              bottomNavigationBar: RewardsBottomNavigation(),
-              body: _ErrorState(message: 'We could not load the leaderboard.'),
+            return _LeaderboardStatusScaffold(
+              showBackButton: !widget.isEmbedded,
+              child: const _ErrorState(
+                message: 'We could not load the leaderboard.',
+              ),
             );
           }
           if (!snapshot.hasData) {
-            return const Scaffold(
-              bottomNavigationBar: RewardsBottomNavigation(),
-              body: Center(
+            return _LeaderboardStatusScaffold(
+              showBackButton: !widget.isEmbedded,
+              child: const Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
@@ -55,30 +75,31 @@ class LeaderboardScreen extends StatelessWidget {
 
           final entries = snapshot.data!;
           if (entries.isEmpty) {
-            return const Scaffold(
-              bottomNavigationBar: RewardsBottomNavigation(),
-              body: _EmptyState(),
+            return _LeaderboardStatusScaffold(
+              showBackButton: !widget.isEmbedded,
+              child: const _EmptyState(),
             );
           }
           final currentUser = entries.firstWhere(
             (entry) => entry.isCurrentUser,
             orElse: () => entries.first,
           );
+          final rankedEntries = entries
+              .where((entry) => entry.rank > 3)
+              .toList(growable: false);
+          final visibleRankedEntries = _showsAllRankings
+              ? rankedEntries
+              : rankedEntries.take(3).toList(growable: false);
 
           return Scaffold(
-            bottomNavigationBar: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                _CurrentUserBar(entry: currentUser),
-                const RewardsBottomNavigation(),
-              ],
-            ),
+            bottomNavigationBar: _CurrentUserBar(entry: currentUser),
             body: CustomScrollView(
               slivers: <Widget>[
                 SliverToBoxAdapter(
                   child: _LeaderboardHero(
                     entries: entries,
                     currentUser: currentUser,
+                    showBackButton: !widget.isEmbedded,
                   ),
                 ),
                 SliverPadding(
@@ -95,21 +116,28 @@ class LeaderboardScreen extends StatelessWidget {
                             ),
                           ),
                           const Spacer(),
-                          TextButton(
-                            onPressed: () {},
-                            child: const Text('View all'),
-                          ),
+                          if (rankedEntries.length > 3)
+                            TextButton(
+                              onPressed: () {
+                                setState(() {
+                                  _showsAllRankings = !_showsAllRankings;
+                                });
+                              },
+                              child: Text(
+                                _showsAllRankings
+                                    ? 'Show less'
+                                    : 'View all (${rankedEntries.length})',
+                              ),
+                            ),
                         ],
                       ),
                       const SizedBox(height: 4),
-                      ...entries
-                          .where((entry) => entry.rank > 3)
-                          .map(
-                            (entry) => Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: _RankRow(entry: entry),
-                            ),
-                          ),
+                      ...visibleRankedEntries.map(
+                        (entry) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _RankRow(entry: entry),
+                        ),
+                      ),
                     ]),
                   ),
                 ),
@@ -123,10 +151,15 @@ class LeaderboardScreen extends StatelessWidget {
 }
 
 class _LeaderboardHero extends StatelessWidget {
-  const _LeaderboardHero({required this.entries, required this.currentUser});
+  const _LeaderboardHero({
+    required this.entries,
+    required this.currentUser,
+    required this.showBackButton,
+  });
 
   final List<LeaderboardEntry> entries;
   final LeaderboardEntry currentUser;
+  final bool showBackButton;
 
   @override
   Widget build(BuildContext context) {
@@ -143,6 +176,15 @@ class _LeaderboardHero extends StatelessWidget {
         children: <Widget>[
           Row(
             children: <Widget>[
+              if (showBackButton)
+                IconButton(
+                  tooltip: 'Back',
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(
+                    Icons.arrow_back_rounded,
+                    color: Colors.white,
+                  ),
+                ),
               const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -434,6 +476,7 @@ class _CurrentUserBar extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
@@ -511,6 +554,33 @@ class _ErrorState extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         child: Text(message, textAlign: TextAlign.center),
       ),
+    );
+  }
+}
+
+class _LeaderboardStatusScaffold extends StatelessWidget {
+  const _LeaderboardStatusScaffold({
+    required this.showBackButton,
+    required this.child,
+  });
+
+  final bool showBackButton;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: showBackButton
+          ? AppBar(
+              leading: IconButton(
+                tooltip: 'Back',
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.arrow_back_rounded),
+              ),
+              title: const Text('Leaderboard'),
+            )
+          : null,
+      body: child,
     );
   }
 }

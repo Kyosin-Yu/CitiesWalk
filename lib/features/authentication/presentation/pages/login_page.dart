@@ -52,9 +52,9 @@ class _LoginPageState extends State<LoginPage> {
     }
 
     if (_authController.currentUser != null) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const AppShell()),
-      );
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const AppShell()));
     }
   }
 
@@ -180,8 +180,7 @@ class _LoginPageState extends State<LoginPage> {
 
                       // Login Button
                       ElevatedButton(
-                        onPressed:
-                            _authController.isLoading ? null : _onLogin,
+                        onPressed: _authController.isLoading ? null : _onLogin,
                         child: _authController.isLoading
                             ? const SizedBox(
                                 height: 20,

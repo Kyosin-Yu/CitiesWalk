@@ -48,19 +48,13 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  Future<void> signIn({
-    required String email,
-    required String password,
-  }) async {
+  Future<void> signIn({required String email, required String password}) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      _currentUser = await _repository.signIn(
-        email: email,
-        password: password,
-      );
+      _currentUser = await _repository.signIn(email: email, password: password);
     } on AppException catch (e) {
       _errorMessage = e.message;
     } finally {
@@ -85,9 +79,7 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  Future<void> sendPasswordResetEmail({
-    required String email,
-  }) async {
+  Future<void> sendPasswordResetEmail({required String email}) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:provider/provider.dart';
 
 import '../core/di/service_locator.dart';
 import '../features/authentication/presentation/controllers/auth_controller.dart';
 import '../features/authentication/presentation/pages/login_page.dart';
-import '../features/fitness/cubit/fitness_cubit.dart';
+import '../features/fitness/business_logic/providers/fitness_controller.dart';
 import '../features/fitness/presentation/pages/fitness_page.dart';
 import '../features/rewards/presentation/screens/rewards_hub_screen.dart';
 
@@ -29,8 +29,8 @@ class _AppShellState extends State<AppShell> {
       icon: Icons.explore_rounded,
       message: 'Eco Route module is under development.',
     ),
-    BlocProvider(
-      create: (_) => FitnessCubit(),
+    ChangeNotifierProvider(
+      create: (_) => sl<FitnessController>()..loadDashboard(),
       child: const FitnessPage(),
     ),
     const RewardsHubScreen(),
@@ -40,10 +40,7 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _pages,
-      ),
+      body: IndexedStack(index: _selectedIndex, children: _pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) {
@@ -97,9 +94,7 @@ class _PlaceholderPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(title),
-      ),
+      appBar: AppBar(title: Text(title)),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -122,9 +117,7 @@ class _ProfilePage extends StatelessWidget {
     final authController = sl<AuthController>();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
-      ),
+      appBar: AppBar(title: const Text('Profile')),
       body: ListenableBuilder(
         listenable: authController,
         builder: (context, _) {
@@ -155,10 +148,8 @@ class _ProfilePage extends StatelessWidget {
                       if (!context.mounted) return;
 
                       Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(
-                          builder: (_) => const LoginPage(),
-                        ),
-                            (_) => false,
+                        MaterialPageRoute(builder: (_) => const LoginPage()),
+                        (_) => false,
                       );
                     },
                     icon: const Icon(Icons.logout),

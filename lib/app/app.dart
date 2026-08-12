@@ -17,4 +17,4 @@ class CitiesWalkApp extends StatelessWidget {
       home: const LoginPage(),
     );
   }
-}
+}
