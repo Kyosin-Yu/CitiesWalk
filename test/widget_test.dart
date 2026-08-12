@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:citieswalk/features/reviews/presentation/reviews_screen.dart';
+import 'package:citieswalk/features/reviews/presentation/pages/reviews_screen.dart';
 
 void main() {
   testWidgets('reviews list follows the Community Review design', (
