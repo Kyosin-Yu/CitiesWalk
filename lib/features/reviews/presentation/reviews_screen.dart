@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_colors.dart';
-import '../data/review_seed_data.dart';
-import '../models/place_review.dart';
-import '../models/review_destination.dart';
+import '../business_logic/entities/place_review.dart';
+import '../business_logic/entities/review_destination.dart';
+import '../business_logic/providers/reviews_provider.dart';
+import '../data/datasources/review_seed_data.dart';
+import '../data/repositories/in_memory_review_repository.dart';
 
 enum _ReviewPage { list, detail, write, submitted, mine, edit }
 
@@ -27,9 +29,8 @@ class ReviewsScreen extends StatefulWidget {
 
 class _ReviewsScreenState extends State<ReviewsScreen> {
   late final ReviewDestination _destination;
-  late final List<PlaceReview> _reviews;
+  late final ReviewsProvider _reviewsProvider;
   PlaceReview? _selectedReview;
-  PlaceReview? _myReview;
   _ReviewPage _page = _ReviewPage.list;
   bool _mostRecent = true;
 
@@ -40,9 +41,16 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
       (item) => item.id == widget.initialDestinationId,
       orElse: () => reviewDestinations.first,
     );
-    _reviews = List.of(
-      initialReviewsByDestination[_destination.id] ?? const [],
+    _reviewsProvider = ReviewsProvider(
+      InMemoryReviewRepository(),
+      _destination,
     );
+  }
+
+  @override
+  void dispose() {
+    _reviewsProvider.dispose();
+    super.dispose();
   }
 
   void _showPage(_ReviewPage page, {PlaceReview? review}) {
@@ -53,83 +61,68 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
   }
 
   void _saveNewReview(int rating, String comment) {
-    setState(() {
-      final review = PlaceReview(
-        id: 'my-review',
-        authorName: 'You',
-        rating: rating,
-        comment: comment,
-        createdAt: DateTime.now(),
-      );
-      _myReview = review;
-      _reviews.add(review);
-      _page = _ReviewPage.submitted;
-    });
+    if (_reviewsProvider.submitReview(rating: rating, comment: comment)) {
+      _showPage(_ReviewPage.submitted);
+    }
   }
 
   void _saveEdit(int rating, String comment) {
-    setState(() {
-      final updatedReview = _myReview!.copyWith(
-        rating: rating,
-        comment: comment,
-        createdAt: DateTime.now(),
-      );
-      final reviewIndex = _reviews.indexWhere(
-        (review) => review.id == updatedReview.id,
-      );
-      if (reviewIndex != -1) {
-        _reviews[reviewIndex] = updatedReview;
-      }
-      _myReview = updatedReview;
-      _page = _ReviewPage.mine;
-    });
+    if (_reviewsProvider.updateMyReview(rating: rating, comment: comment)) {
+      _showPage(_ReviewPage.mine);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final body = switch (_page) {
-      _ReviewPage.list => _ReviewsListPage(
-        destination: _destination,
-        reviews: _reviews,
-        mostRecent: _mostRecent,
-        onSortChanged: (value) => setState(() => _mostRecent = value),
-        onReviewTap: (review) => _showPage(_ReviewPage.detail, review: review),
-        onWrite: () => _showPage(_ReviewPage.write),
-        onMyReviews: () => _showPage(_ReviewPage.mine),
-      ),
-      _ReviewPage.detail => _ReviewDetailPage(
-        destination: _destination,
-        review: _selectedReview!,
-        onBack: () => _showPage(_ReviewPage.list),
-      ),
-      _ReviewPage.write => _ReviewEditorPage(
-        title: 'Write a Review',
-        destination: _destination,
-        onCancel: () => _showPage(_ReviewPage.list),
-        onSave: _saveNewReview,
-      ),
-      _ReviewPage.submitted => _SubmittedPage(
-        destination: _destination,
-        onBackToReviews: () => _showPage(_ReviewPage.list),
-      ),
-      _ReviewPage.mine => _MyReviewsPage(
-        review: _myReview,
-        onBack: () => _showPage(_ReviewPage.list),
-        onEdit: () => _showPage(_ReviewPage.edit),
-        onDelete: _confirmDelete,
-      ),
-      _ReviewPage.edit => _ReviewEditorPage(
-        title: 'Edit Review',
-        destination: _destination,
-        initialReview: _myReview,
-        onCancel: () => _showPage(_ReviewPage.mine),
-        onSave: _saveEdit,
-      ),
-    };
+    return AnimatedBuilder(
+      animation: _reviewsProvider,
+      builder: (context, child) {
+        final body = switch (_page) {
+          _ReviewPage.list => _ReviewsListPage(
+            destination: _destination,
+            reviews: _reviewsProvider.reviews,
+            mostRecent: _mostRecent,
+            onSortChanged: (value) => setState(() => _mostRecent = value),
+            onReviewTap: (review) =>
+                _showPage(_ReviewPage.detail, review: review),
+            onWrite: () => _showPage(_ReviewPage.write),
+            onMyReviews: () => _showPage(_ReviewPage.mine),
+          ),
+          _ReviewPage.detail => _ReviewDetailPage(
+            destination: _destination,
+            review: _selectedReview!,
+            onBack: () => _showPage(_ReviewPage.list),
+          ),
+          _ReviewPage.write => _ReviewEditorPage(
+            title: 'Write a Review',
+            destination: _destination,
+            onCancel: () => _showPage(_ReviewPage.list),
+            onSave: _saveNewReview,
+          ),
+          _ReviewPage.submitted => _SubmittedPage(
+            destination: _destination,
+            onBackToReviews: () => _showPage(_ReviewPage.list),
+          ),
+          _ReviewPage.mine => _MyReviewsPage(
+            review: _reviewsProvider.myReview,
+            onBack: () => _showPage(_ReviewPage.list),
+            onEdit: () => _showPage(_ReviewPage.edit),
+            onDelete: _confirmDelete,
+          ),
+          _ReviewPage.edit => _ReviewEditorPage(
+            title: 'Edit Review',
+            destination: _destination,
+            initialReview: _reviewsProvider.myReview,
+            onCancel: () => _showPage(_ReviewPage.mine),
+            onSave: _saveEdit,
+          ),
+        };
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(child: body),
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          body: SafeArea(child: body),
+        );
+      },
     );
   }
 
@@ -169,10 +162,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
       ),
     );
     if (confirmed == true && mounted) {
-      setState(() {
-        _reviews.removeWhere((review) => review.id == _myReview?.id);
-        _myReview = null;
-      });
+      _reviewsProvider.deleteMyReview();
     }
   }
 }
@@ -624,7 +614,7 @@ class _HeroHeader extends StatelessWidget {
   final VoidCallback? onBack;
   @override
   Widget build(BuildContext context) => Container(
-    height: 128,
+    height: 136,
     padding: const EdgeInsets.fromLTRB(18, 17, 18, 16),
     decoration: const BoxDecoration(
       color: AppColors.primary,

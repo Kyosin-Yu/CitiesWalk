@@ -1,5 +1,5 @@
-import '../models/place_review.dart';
-import '../models/review_destination.dart';
+import '../../business_logic/entities/place_review.dart';
+import '../../business_logic/entities/review_destination.dart';
 
 const reviewDestinations = <ReviewDestination>[
   ReviewDestination(
