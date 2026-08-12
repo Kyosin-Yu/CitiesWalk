@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:provider/provider.dart';
 
 import '../core/di/service_locator.dart';
 import '../features/authentication/presentation/controllers/auth_controller.dart';
 import '../features/authentication/presentation/pages/login_page.dart';
-import '../features/fitness/cubit/fitness_cubit.dart';
+import '../features/fitness/business_logic/providers/fitness_controller.dart';
 import '../features/fitness/presentation/pages/fitness_page.dart';
 import '../features/rewards/presentation/screens/rewards_hub_screen.dart';
 
@@ -29,7 +29,10 @@ class _AppShellState extends State<AppShell> {
       icon: Icons.explore_rounded,
       message: 'Eco Route module is under development.',
     ),
-    BlocProvider(create: (_) => FitnessCubit(), child: const FitnessPage()),
+    ChangeNotifierProvider(
+      create: (_) => sl<FitnessController>()..loadDashboard(),
+      child: const FitnessPage(),
+    ),
     const RewardsHubScreen(),
     const _ProfilePage(),
   ];
