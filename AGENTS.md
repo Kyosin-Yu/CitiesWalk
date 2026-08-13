@@ -45,6 +45,7 @@ When requirements are not confirmed:
 - Document unresolved decisions and keep their implementations replaceable.
 - Update documentation and tests when a confirmed requirement changes.
 
+
 ## 3. Architecture
 
 Use the established feature-first **three-layer architecture**. The project is

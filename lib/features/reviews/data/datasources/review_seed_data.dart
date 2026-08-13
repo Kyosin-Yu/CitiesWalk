@@ -1,5 +1,5 @@
-import '../models/place_review.dart';
-import '../models/review_destination.dart';
+import '../../business_logic/entities/place_review.dart';
+import '../../business_logic/entities/review_destination.dart';
 
 const reviewDestinations = <ReviewDestination>[
   ReviewDestination(
@@ -25,7 +25,8 @@ final initialReviewsByDestination = <String, List<PlaceReview>>{
       id: 'review-1',
       authorName: 'Sarah Lim',
       rating: 5,
-      comment: 'Absolutely electric atmosphere after sundown. The vendors start setting up around 5 PM and by 7 it is a full sensory experience.',
+      comment:
+          'Absolutely electric atmosphere after sundown. The vendors start setting up around 5 PM and by 7 it is a full sensory experience.',
       createdAt: DateTime(2024, 7, 20),
     ),
     PlaceReview(
@@ -48,7 +49,8 @@ final initialReviewsByDestination = <String, List<PlaceReview>>{
       id: 'review-4',
       authorName: 'Ravi',
       rating: 5,
-      comment: 'Great city views and the station is within easy walking distance.',
+      comment:
+          'Great city views and the station is within easy walking distance.',
       createdAt: DateTime(2026, 7, 26),
     ),
     PlaceReview(

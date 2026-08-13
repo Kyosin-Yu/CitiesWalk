@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../app/theme/app_colors.dart';
-import '../../business_logic/entities/eco_destination.dart';
 import '../../business_logic/entities/eco_route.dart';
 import '../../business_logic/providers/eco_route_controller.dart';
 import '../widgets/destination_card.dart';
@@ -12,9 +11,14 @@ import '../widgets/eco_route_map.dart';
 import '../widgets/nearby_places_map.dart';
 import '../widgets/route_step_tile.dart';
 
-class EcoRoutePage extends StatelessWidget {
+class EcoRoutePage extends StatefulWidget {
   const EcoRoutePage({super.key});
 
+  @override
+  State<EcoRoutePage> createState() => _EcoRoutePageState();
+}
+
+class _EcoRoutePageState extends State<EcoRoutePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -23,50 +27,75 @@ class EcoRoutePage extends StatelessWidget {
         bottom: false,
         child: Column(
           children: [
-            const _EcoRouteHeader(),
+            Consumer<EcoRouteController>(
+              builder: (context, controller, _) => _EcoRouteHeader(
+                showBack: controller.route != null,
+                onBack: controller.clearRoute,
+              ),
+            ),
             Expanded(
               child: Consumer<EcoRouteController>(
                 builder: (context, controller, _) {
                   if (!controller.hasInitialised) {
-                    return _LocationSetup(onContinue: controller.initialise);
+                    return _LocationSetup(
+                      onUseCurrentLocation: () => controller.initialise(),
+                      onChooseStartingPoint: () =>
+                          controller.initialise(useDeviceLocation: false),
+                    );
                   }
 
                   if (controller.isLoading) {
                     return const Center(child: CircularProgressIndicator());
                   }
 
-                  return RefreshIndicator(
-                    onRefresh: controller.initialise,
-                    child: SingleChildScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 112),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _OriginCard(label: controller.origin.label),
-                            if (controller.message != null) ...[
-                              const SizedBox(height: 12),
-                              _NoticeCard(message: controller.message!),
-                            ],
+                  return SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 112),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _OriginCard(label: controller.origin.label),
+                          if (controller.message != null) ...[
+                            const SizedBox(height: 12),
+                            _NoticeCard(message: controller.message!),
+                          ],
+                          const SizedBox(height: 24),
+                          if (controller.route != null) ...[
+                            _InlineRouteDetails(
+                              route: controller.route!,
+                              journeyStarted: controller.journey != null,
+                              onStart: () {
+                                controller.startJourney();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Journey started. Your calories and CO₂ savings are being tracked.',
+                                    ),
+                                  ),
+                                );
+                              },
+                              onPlanAnotherRoute: controller.clearRoute,
+                            ),
+                          ] else ...[
+                            Text(
+                              'Explore near you',
+                              style: _sectionTitle(context),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Your current location and places to discover.',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                            const SizedBox(height: 12),
+                            NearbyPlacesMap(
+                              origin: controller.origin,
+                              destinations: controller.destinations,
+                              onDestinationSelected: (destination) async {
+                                await controller.selectDestination(destination);
+                              },
+                            ),
                             const SizedBox(height: 24),
-                            if (controller.route == null) ...[
-                              Text(
-                                'Explore near you',
-                                style: _sectionTitle(context),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Your current location and places to discover.',
-                                style: Theme.of(context).textTheme.bodyMedium,
-                              ),
-                              const SizedBox(height: 12),
-                              NearbyPlacesMap(
-                                origin: controller.origin,
-                                destinations: controller.destinations,
-                              ),
-                              const SizedBox(height: 24),
-                            ],
                             Text(
                               'Choose your next stop',
                               style: _sectionTitle(context),
@@ -102,28 +131,32 @@ class EcoRoutePage extends StatelessWidget {
                               ...controller.destinations.map(
                                 (destination) => DestinationCard(
                                   destination: destination,
-                                  onTap: () {
-                                    final navigator = Navigator.of(context);
-                                    WidgetsBinding.instance
-                                        .addPostFrameCallback((_) {
-                                          if (!context.mounted) return;
-                                          navigator.push(
-                                            MaterialPageRoute(
-                                              builder: (_) =>
-                                                  ChangeNotifierProvider.value(
-                                                    value: controller,
-                                                    child: _EcoRouteDetailsPage(
-                                                      destination: destination,
-                                                    ),
-                                                  ),
-                                            ),
-                                          );
-                                        });
+                                  onTap: () async {
+                                    await controller.selectDestination(
+                                      destination,
+                                    );
+
+                                    if (!context.mounted) return;
+
+                                    final route = controller.route;
+                                    if (route == null ||
+                                        route.destination.id !=
+                                            destination.id) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Unable to create this route. Please try another place.',
+                                          ),
+                                        ),
+                                      );
+                                    }
                                   },
                                 ),
                               ),
                           ],
-                        ),
+                        ],
                       ),
                     ),
                   );
@@ -143,7 +176,10 @@ class EcoRoutePage extends StatelessWidget {
 }
 
 class _EcoRouteHeader extends StatelessWidget {
-  const _EcoRouteHeader();
+  const _EcoRouteHeader({required this.showBack, required this.onBack});
+
+  final bool showBack;
+  final VoidCallback onBack;
 
   @override
   Widget build(BuildContext context) {
@@ -194,24 +230,35 @@ class _EcoRouteHeader extends StatelessWidget {
                   ],
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 7,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text(
-                  'Rail + walk',
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
+              if (showBack)
+                IconButton(
+                  onPressed: onBack,
+                  tooltip: 'Back to places',
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.white.withValues(alpha: 0.14),
+                    foregroundColor: Colors.white,
+                  ),
+                  icon: const Icon(Icons.arrow_back_rounded),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    'Rail + walk',
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
           Positioned(
@@ -242,9 +289,13 @@ class _EcoRouteHeader extends StatelessWidget {
 }
 
 class _LocationSetup extends StatelessWidget {
-  const _LocationSetup({required this.onContinue});
+  const _LocationSetup({
+    required this.onUseCurrentLocation,
+    required this.onChooseStartingPoint,
+  });
 
-  final Future<void> Function() onContinue;
+  final Future<void> Function() onUseCurrentLocation;
+  final Future<void> Function() onChooseStartingPoint;
 
   @override
   Widget build(BuildContext context) {
@@ -298,9 +349,15 @@ class _LocationSetup extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               ElevatedButton.icon(
-                onPressed: onContinue,
+                onPressed: onUseCurrentLocation,
                 icon: const Icon(Icons.location_searching_rounded),
                 label: const Text('Use my current location'),
+              ),
+              const SizedBox(height: 12),
+              TextButton.icon(
+                onPressed: onChooseStartingPoint,
+                icon: const Icon(Icons.map_outlined),
+                label: const Text('Choose a starting point instead'),
               ),
             ],
           ),
@@ -464,27 +521,12 @@ class _EmptyDestinations extends StatelessWidget {
   }
 }
 
-class _EcoRouteDetailsPage extends StatefulWidget {
-  const _EcoRouteDetailsPage({required this.destination});
+// Kept temporarily while the single-page route flow is introduced.
+// ignore: unused_element
+class _EcoRouteDetailsPage extends StatelessWidget {
+  const _EcoRouteDetailsPage({required this.route});
 
-  final EcoDestination destination;
-
-  @override
-  State<_EcoRouteDetailsPage> createState() => _EcoRouteDetailsPageState();
-}
-
-class _EcoRouteDetailsPageState extends State<_EcoRouteDetailsPage> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        context.read<EcoRouteController>().selectDestination(
-          widget.destination,
-        );
-      }
-    });
-  }
+  final EcoRoute route;
 
   @override
   Widget build(BuildContext context) {
@@ -493,14 +535,6 @@ class _EcoRouteDetailsPageState extends State<_EcoRouteDetailsPage> {
       appBar: AppBar(title: const Text('Your eco route')),
       body: Consumer<EcoRouteController>(
         builder: (context, controller, _) {
-          final route = controller.route;
-          final hasRequestedRoute =
-              route?.destination.id == widget.destination.id;
-
-          if (!hasRequestedRoute) {
-            return const _RouteLoadingView();
-          }
-
           return SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
             child: Column(
@@ -511,7 +545,7 @@ class _EcoRouteDetailsPageState extends State<_EcoRouteDetailsPage> {
                   const SizedBox(height: 16),
                 ],
                 _RoutePreview(
-                  route: route!,
+                  route: route,
                   journeyStarted: controller.journey != null,
                   onStart: () {
                     controller.startJourney();
@@ -533,19 +567,46 @@ class _EcoRouteDetailsPageState extends State<_EcoRouteDetailsPage> {
   }
 }
 
-class _RouteLoadingView extends StatelessWidget {
-  const _RouteLoadingView();
+class _InlineRouteDetails extends StatelessWidget {
+  const _InlineRouteDetails({
+    required this.route,
+    required this.journeyStarted,
+    required this.onStart,
+    required this.onPlanAnotherRoute,
+  });
+
+  final EcoRoute route;
+  final bool journeyStarted;
+  final VoidCallback onStart;
+  final VoidCallback onPlanAnotherRoute;
 
   @override
-  Widget build(BuildContext context) => const Center(
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        CircularProgressIndicator(),
-        SizedBox(height: 16),
-        Text('Creating your train-and-walk route…'),
-      ],
-    ),
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        children: [
+          Text('Your eco route', style: _sectionTitle(context)),
+          const Spacer(),
+          TextButton.icon(
+            onPressed: onPlanAnotherRoute,
+            icon: const Icon(Icons.edit_location_alt_outlined, size: 18),
+            label: const Text('Change'),
+          ),
+        ],
+      ),
+      const SizedBox(height: 10),
+      _RoutePreview(
+        route: route,
+        journeyStarted: journeyStarted,
+        onStart: onStart,
+      ),
+    ],
+  );
+
+  TextStyle _sectionTitle(BuildContext context) => GoogleFonts.poppins(
+    textStyle: Theme.of(context).textTheme.titleLarge,
+    fontWeight: FontWeight.w700,
   );
 }
 

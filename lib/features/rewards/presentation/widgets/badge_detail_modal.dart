@@ -17,10 +17,9 @@ class BadgeDetailModal extends StatelessWidget {
   }) {
     return showDialog<void>(
       context: context,
-      builder: (_) => BadgeDetailModal(
-        badge: badge,
-        onStartJourney: onStartJourney,
-      ),
+      barrierDismissible: true,
+      builder: (_) =>
+          BadgeDetailModal(badge: badge, onStartJourney: onStartJourney),
     );
   }
 
@@ -66,9 +65,9 @@ class BadgeDetailModal extends StatelessWidget {
             const SizedBox(height: 3),
             Text(
               badge.title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 8),
             Text(
@@ -223,7 +222,10 @@ class _ProgressDetails extends StatelessWidget {
         children: <Widget>[
           Row(
             children: <Widget>[
-              const Text('Progress', style: TextStyle(fontWeight: FontWeight.w700)),
+              const Text(
+                'Progress',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
               const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -270,7 +272,10 @@ class _ProgressDetails extends StatelessWidget {
               const Spacer(),
               Text(
                 '${badge.goal}',
-                style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textSecondary,
+                ),
               ),
             ],
           ),
@@ -347,7 +352,9 @@ String _formatCompletionTime(DateTime? date) {
     'Nov',
     'Dec',
   ];
-  final hour = date.hour == 0 ? 12 : (date.hour > 12 ? date.hour - 12 : date.hour);
+  final hour = date.hour == 0
+      ? 12
+      : (date.hour > 12 ? date.hour - 12 : date.hour);
   final minute = date.minute.toString().padLeft(2, '0');
   final period = date.hour >= 12 ? 'PM' : 'AM';
   return '${months[date.month - 1]} ${date.day}, ${date.year} at $hour:$minute $period';

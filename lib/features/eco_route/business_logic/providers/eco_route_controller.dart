@@ -42,19 +42,25 @@ class EcoRouteController extends ChangeNotifier {
   EcoRoute? get route => _route;
   EcoJourney? get journey => _journey;
 
-  Future<void> initialise() async {
+  Future<void> initialise({bool useDeviceLocation = true}) async {
     _isLoading = true;
     _hasInitialised = true;
     _message = null;
+    _origin = _fallbackLocation;
     notifyListeners();
 
-    try {
-      _origin = await locationService.getCurrentLocation();
-    } on LocationServiceException catch (error) {
-      _message = '${error.message} Showing routes from KL Sentral instead.';
-    } catch (_) {
+    if (useDeviceLocation) {
+      try {
+        _origin = await locationService.getCurrentLocation();
+      } on LocationServiceException catch (error) {
+        _message = '${error.message} Showing routes from KL Sentral instead.';
+      } catch (_) {
+        _message =
+            'Unable to read your location. Showing routes from KL Sentral instead.';
+      }
+    } else {
       _message =
-          'Unable to read your location. Showing routes from KL Sentral instead.';
+          'Using KL Sentral as your starting point. You can change it later.';
     }
 
     try {
@@ -100,6 +106,13 @@ class EcoRouteController extends ChangeNotifier {
       _isLoadingRoute = false;
       notifyListeners();
     }
+  }
+
+  void clearRoute() {
+    _route = null;
+    _journey = null;
+    _message = null;
+    notifyListeners();
   }
 
   void startJourney() {

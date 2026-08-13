@@ -24,12 +24,13 @@ void main() {
       find.byType(TextField),
       'The food stalls were wonderful and easy to reach by train.',
     );
+    await tester.pump();
     await tester.tap(find.text('Submit Review'));
     await tester.pumpAndSettle();
 
     expect(find.text('Review Submitted'), findsOneWidget);
     expect(
-      find.text('Your review is now visible to fellow walkers.'),
+      find.text('♧  Your review is now visible to fellow walkers.'),
       findsOneWidget,
     );
 
@@ -86,11 +87,13 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: ReviewsScreen()));
 
     await tester.tap(find.text('Write a Review'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Give 4 stars'));
     await tester.enterText(
       find.byType(TextField),
       'A vibrant place with fantastic food and friendly vendors.',
     );
+    await tester.pump();
     await tester.tap(find.text('Submit Review'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Back to Reviews'));
@@ -99,10 +102,12 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Edit'));
+    await tester.pumpAndSettle();
     await tester.enterText(
       find.byType(TextField),
       'Updated review with a brilliant evening food walk.',
     );
+    await tester.pump();
     await tester.tap(find.text('Save Changes'));
     await tester.pumpAndSettle();
     expect(

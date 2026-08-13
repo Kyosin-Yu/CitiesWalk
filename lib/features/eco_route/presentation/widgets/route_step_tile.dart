@@ -17,7 +17,7 @@ class RouteStepTile extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
             width: 42,
@@ -41,12 +41,11 @@ class RouteStepTile extends StatelessWidget {
                   ),
                 ),
                 if (index < 2)
-                  Expanded(
-                    child: Container(
-                      width: 2,
-                      margin: const EdgeInsets.symmetric(vertical: 5),
-                      color: AppColors.accent.withValues(alpha: 0.55),
-                    ),
+                  Container(
+                    width: 2,
+                    height: 52,
+                    margin: const EdgeInsets.symmetric(vertical: 5),
+                    color: AppColors.accent.withValues(alpha: 0.55),
                   ),
               ],
             ),

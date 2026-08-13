@@ -8,16 +8,11 @@ abstract class AuthRepository {
     String? phoneNumber,
   });
 
-  Future<AppUser> signIn({
-    required String email,
-    required String password,
-  });
+  Future<AppUser> signIn({required String email, required String password});
 
   Future<void> signOut();
 
-  Future<void> sendPasswordResetEmail({
-    required String email,
-  });
+  Future<void> sendPasswordResetEmail({required String email});
 
   Future<void> resendEmailVerification();
 

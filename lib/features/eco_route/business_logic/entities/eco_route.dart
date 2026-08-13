@@ -9,6 +9,7 @@ class EcoRoute {
     required this.segments,
     required this.estimatedCalories,
     required this.estimatedCarbonSavedKg,
+    this.isLiveRoute = false,
   });
 
   final EcoLocation origin;
@@ -16,6 +17,7 @@ class EcoRoute {
   final List<EcoRouteSegment> segments;
   final int estimatedCalories;
   final double estimatedCarbonSavedKg;
+  final bool isLiveRoute;
 
   double get totalDistanceKm =>
       segments.fold<double>(0, (total, segment) => total + segment.distanceKm);
