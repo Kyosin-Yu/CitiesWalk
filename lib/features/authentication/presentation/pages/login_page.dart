@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/di/service_locator.dart';
 import '../../../../core/utils/validators.dart';
-import '../../presentation/controllers/auth_controller.dart';
+import '../../business_logic/providers/auth_controller.dart';
 import 'register_page.dart';
 import '../../../../app/app_shell.dart';
 

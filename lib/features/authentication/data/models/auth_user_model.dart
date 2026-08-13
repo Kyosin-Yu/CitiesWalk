@@ -1,4 +1,4 @@
-import '../../domain/entities/app_user.dart';
+import '../../business_logic/entities/app_user.dart';
 
 class AuthUserModel extends AppUser {
   const AuthUserModel({
