@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../../core/errors/app_exception.dart';
-import '../../domain/entities/app_user.dart';
-import '../../domain/repositories/auth_repository.dart';
+import '../entities/app_user.dart';
+import '../repositories/auth_repository.dart';
 
 class AuthController extends ChangeNotifier {
   final AuthRepository _repository;

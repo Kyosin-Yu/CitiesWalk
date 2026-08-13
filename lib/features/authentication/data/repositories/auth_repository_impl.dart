@@ -1,10 +1,10 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
 import '../../../../core/errors/app_exception.dart';
-import '../../domain/entities/app_user.dart';
-import '../../domain/repositories/auth_repository.dart';
-import '../datasources/profile_datasource.dart';
-import '../datasources/supabase_auth_datasource.dart';
+import '../../business_logic/entities/app_user.dart';
+import '../../business_logic/repositories/auth_repository.dart';
+import '../data_sources/profile_data_source.dart';
+import '../data_sources/supabase_auth_data_source.dart';
 import '../models/auth_user_model.dart';
 
 class AuthRepositoryImpl implements AuthRepository {

@@ -2,11 +2,11 @@ import 'package:get_it/get_it.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/supabase_config.dart';
-import '../../features/authentication/domain/repositories/auth_repository.dart';
+import '../../features/authentication/business_logic/repositories/auth_repository.dart';
 import '../../features/authentication/data/repositories/auth_repository_impl.dart';
-import '../../features/authentication/data/datasources/profile_datasource.dart';
-import '../../features/authentication/data/datasources/supabase_auth_datasource.dart';
-import '../../features/authentication/presentation/controllers/auth_controller.dart';
+import '../../features/authentication/data/data_sources/profile_data_source.dart';
+import '../../features/authentication/data/data_sources/supabase_auth_data_source.dart';
+import '../../features/authentication/business_logic/providers/auth_controller.dart';
 import '../../features/fitness/business_logic/providers/fitness_controller.dart';
 import '../../features/fitness/business_logic/repositories/fitness_repository.dart';
 import '../../features/fitness/data/data_sources/fitness_local_data_source.dart';
