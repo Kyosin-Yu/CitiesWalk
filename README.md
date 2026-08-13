@@ -43,25 +43,24 @@ Tunku Abdul Rahman University of Management and Technology (TAR UMT).
 - **Backend:** Supabase
 - **Database:** PostgreSQL through Supabase
 - **Authentication:** Supabase Auth
-- **Map Display:** OpenStreetMap with `flutter_map`
+- **Map Display:** Google Maps Platform with `google_maps_flutter`
 - **Location Services:** Device GPS with `geolocator`
-- **Place Search:** Nominatim
-- **Walking and Public-Transport Routing:** OpenTripPlanner
-- **Transit Schedule Data:** Malaysia GTFS Static
-- **Live Transit Data:** Malaysia GTFS Realtime, where available
+- **Place Search:** Google Places API (New), accessed through a Supabase Edge Function
+- **Walking and Public-Transport Routing:** Google Routes API, accessed through a Supabase Edge Function
 - **State Management:** Provider with `ChangeNotifier`
 - **Version Control:** Git and GitHub
 - **Project Management:** Trello
 
-> OpenTripPlanner combines OpenStreetMap walking-network data with Malaysia
-> GTFS transit schedules to generate walking and public-transport routes.
+> Google Maps Platform provides the interactive map, place discovery, and route
+> geometry. The Google Places and Routes calls are made only by the Supabase
+> Edge Function, so the Google server key is not distributed in the app.
 > External map, search, routing, and Supabase operations must be placed behind
 > replaceable services or repositories so providers can be changed without
 > rewriting the application UI.
 >
-> During early development, sample routing data may be used until the
-> OpenTripPlanner server and required Malaysian GTFS feeds are configured.
-> API availability, data coverage, usage policies, quotas, hosting requirements,
+> The Eco-Route module requests train-and-walk routes only. When a qualifying
+> rail itinerary is unavailable, it may present a walking-only route rather than
+> suggesting a car, taxi, or e-hailing trip. API availability, coverage, quotas,
 > and costs must be reviewed before production deployment.
 
 ## Project Architecture
@@ -195,9 +194,8 @@ docs/update-readme
 - Background location tracking is an advanced feature and depends on Android and
   iOS restrictions.
 - Carbon savings are estimates based on a documented comparison with car travel.
-- Transit route quality and availability depend on OpenStreetMap coverage,
-  Malaysian GTFS feed availability, and the deployed OpenTripPlanner
-  configuration.
+- Route and place availability depend on Google Maps Platform coverage,
+  the user’s network connection, and the enabled Google APIs.
 
 ## Documentation
 

@@ -1,0 +1,4 @@
+# Eco-Route requests require a signed-in CitiesWalk user. Do not disable JWT
+# verification: the Edge Function receives exact location data.
+[functions.eco-route]
+verify_jwt = true

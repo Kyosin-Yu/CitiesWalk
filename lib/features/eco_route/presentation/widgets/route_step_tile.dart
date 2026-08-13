@@ -84,6 +84,15 @@ class RouteStepTile extends StatelessWidget {
                     segment.detail,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
+                  if (segment.steps.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      segment.steps.first.instruction,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 10),
                   Wrap(
                     spacing: 8,

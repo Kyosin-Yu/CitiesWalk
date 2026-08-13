@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../business_logic/entities/eco_journey.dart';
 import '../../business_logic/entities/eco_route.dart';
 import '../../business_logic/providers/eco_route_controller.dart';
 import '../widgets/destination_card.dart';
@@ -38,6 +39,7 @@ class _EcoRoutePageState extends State<EcoRoutePage> {
                 builder: (context, controller, _) {
                   if (!controller.hasInitialised) {
                     return _LocationSetup(
+                      message: controller.message,
                       onUseCurrentLocation: () => controller.initialise(),
                       onChooseStartingPoint: () =>
                           controller.initialise(useDeviceLocation: false),
@@ -55,22 +57,43 @@ class _EcoRoutePageState extends State<EcoRoutePage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _OriginCard(label: controller.origin.label),
+                          _OriginCard(
+                            label: controller.origin.label,
+                            title: controller.originTitle,
+                            isLiveLocation: controller.hasDeviceLocation,
+                            onRefreshGps: controller.refreshDeviceLocation,
+                          ),
                           if (controller.message != null) ...[
                             const SizedBox(height: 12),
                             _NoticeCard(message: controller.message!),
                           ],
                           const SizedBox(height: 24),
+                          if (controller.isLoadingRoute) ...[
+                            const _RouteLoadingBanner(),
+                            const SizedBox(height: 16),
+                          ],
                           if (controller.route != null) ...[
                             _InlineRouteDetails(
                               route: controller.route!,
-                              journeyStarted: controller.journey != null,
-                              onStart: () {
-                                controller.startJourney();
+                              journey: controller.journey,
+                              onStart: () async {
+                                await controller.startJourney();
+                                if (!context.mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text(
                                       'Journey started. Your calories and CO₂ savings are being tracked.',
+                                    ),
+                                  ),
+                                );
+                              },
+                              onEnd: () async {
+                                await controller.endJourney();
+                                if (!context.mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Journey ended. Your eco-trip summary is ready.',
                                     ),
                                   ),
                                 );
@@ -91,9 +114,15 @@ class _EcoRoutePageState extends State<EcoRoutePage> {
                             NearbyPlacesMap(
                               origin: controller.origin,
                               destinations: controller.destinations,
+                              showMyLocation: controller.hasDeviceLocation,
+                              originIsDeviceLocation:
+                                  controller.hasDeviceLocation,
+                              showOriginMarker: controller.hasUsableOrigin,
                               onDestinationSelected: (destination) async {
                                 await controller.selectDestination(destination);
                               },
+                              onStartingPointSelected:
+                                  controller.setStartingPoint,
                             ),
                             const SizedBox(height: 24),
                             Text(
@@ -197,15 +226,26 @@ class _EcoRouteHeader extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.16),
-                  borderRadius: BorderRadius.circular(14),
+              if (showBack)
+                IconButton(
+                  onPressed: onBack,
+                  tooltip: 'Back to places',
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.white.withValues(alpha: 0.14),
+                    foregroundColor: Colors.white,
+                  ),
+                  icon: const Icon(Icons.arrow_back_rounded),
+                )
+              else
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(Icons.explore_rounded, color: Colors.white),
                 ),
-                child: const Icon(Icons.explore_rounded, color: Colors.white),
-              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -230,17 +270,7 @@ class _EcoRouteHeader extends StatelessWidget {
                   ],
                 ),
               ),
-              if (showBack)
-                IconButton(
-                  onPressed: onBack,
-                  tooltip: 'Back to places',
-                  style: IconButton.styleFrom(
-                    backgroundColor: Colors.white.withValues(alpha: 0.14),
-                    foregroundColor: Colors.white,
-                  ),
-                  icon: const Icon(Icons.arrow_back_rounded),
-                )
-              else
+              if (!showBack)
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10,
@@ -290,10 +320,12 @@ class _EcoRouteHeader extends StatelessWidget {
 
 class _LocationSetup extends StatelessWidget {
   const _LocationSetup({
+    required this.message,
     required this.onUseCurrentLocation,
     required this.onChooseStartingPoint,
   });
 
+  final String? message;
   final Future<void> Function() onUseCurrentLocation;
   final Future<void> Function() onChooseStartingPoint;
 
@@ -347,6 +379,16 @@ class _LocationSetup extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
+              if (message != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  message!,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: AppColors.warning),
+                ),
+              ],
               const SizedBox(height: 24),
               ElevatedButton.icon(
                 onPressed: onUseCurrentLocation,
@@ -368,9 +410,17 @@ class _LocationSetup extends StatelessWidget {
 }
 
 class _OriginCard extends StatelessWidget {
-  const _OriginCard({required this.label});
+  const _OriginCard({
+    required this.label,
+    required this.title,
+    required this.isLiveLocation,
+    required this.onRefreshGps,
+  });
 
   final String label;
+  final String title;
+  final bool isLiveLocation;
+  final Future<void> Function() onRefreshGps;
 
   @override
   Widget build(BuildContext context) {
@@ -404,7 +454,7 @@ class _OriginCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'CURRENT LOCATION',
+                  title,
                   style: GoogleFonts.poppins(
                     color: AppColors.textSecondary,
                     fontSize: 10,
@@ -425,16 +475,18 @@ class _OriginCard extends StatelessWidget {
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-            decoration: BoxDecoration(
-              color: AppColors.accent.withValues(alpha: 0.22),
-              borderRadius: BorderRadius.circular(12),
+          IconButton(
+            tooltip: 'Refresh GPS location',
+            onPressed: onRefreshGps,
+            style: IconButton.styleFrom(
+              backgroundColor: AppColors.accent.withValues(alpha: 0.22),
+              foregroundColor: AppColors.primary,
             ),
-            child: const Icon(
-              Icons.verified_rounded,
-              size: 17,
-              color: AppColors.primary,
+            icon: Icon(
+              isLiveLocation
+                  ? Icons.gps_fixed_rounded
+                  : Icons.my_location_rounded,
+              size: 19,
             ),
           ),
         ],
@@ -546,7 +598,7 @@ class _EcoRouteDetailsPage extends StatelessWidget {
                 ],
                 _RoutePreview(
                   route: route,
-                  journeyStarted: controller.journey != null,
+                  journey: controller.journey,
                   onStart: () {
                     controller.startJourney();
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -557,6 +609,17 @@ class _EcoRouteDetailsPage extends StatelessWidget {
                       ),
                     );
                   },
+                  onEnd: () {
+                    controller.endJourney();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Journey ended. Your eco-trip summary is ready.',
+                        ),
+                      ),
+                    );
+                  },
+                  onChangeRoute: controller.clearRoute,
                 ),
               ],
             ),
@@ -570,14 +633,16 @@ class _EcoRouteDetailsPage extends StatelessWidget {
 class _InlineRouteDetails extends StatelessWidget {
   const _InlineRouteDetails({
     required this.route,
-    required this.journeyStarted,
+    required this.journey,
     required this.onStart,
+    required this.onEnd,
     required this.onPlanAnotherRoute,
   });
 
   final EcoRoute route;
-  final bool journeyStarted;
+  final EcoJourney? journey;
   final VoidCallback onStart;
+  final VoidCallback onEnd;
   final VoidCallback onPlanAnotherRoute;
 
   @override
@@ -598,8 +663,10 @@ class _InlineRouteDetails extends StatelessWidget {
       const SizedBox(height: 10),
       _RoutePreview(
         route: route,
-        journeyStarted: journeyStarted,
+        journey: journey,
         onStart: onStart,
+        onEnd: onEnd,
+        onChangeRoute: onPlanAnotherRoute,
       ),
     ],
   );
@@ -637,13 +704,17 @@ class _RouteLoadingBanner extends StatelessWidget {
 class _RoutePreview extends StatelessWidget {
   const _RoutePreview({
     required this.route,
-    required this.journeyStarted,
+    required this.journey,
     required this.onStart,
+    required this.onEnd,
+    required this.onChangeRoute,
   });
 
   final EcoRoute route;
-  final bool journeyStarted;
+  final EcoJourney? journey;
   final VoidCallback onStart;
+  final VoidCallback onEnd;
+  final VoidCallback onChangeRoute;
 
   @override
   Widget build(BuildContext context) {
@@ -651,6 +722,8 @@ class _RoutePreview extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _RouteOverview(route: route),
+        const SizedBox(height: 12),
+        _RouteEndpointsCard(route: route, onChangeRoute: onChangeRoute),
         const SizedBox(height: 12),
         EcoRouteMap(route: route),
         const SizedBox(height: 24),
@@ -705,13 +778,25 @@ class _RoutePreview extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         ElevatedButton.icon(
-          onPressed: journeyStarted ? null : onStart,
+          onPressed: journey?.status == EcoJourneyStatus.inProgress
+              ? onEnd
+              : journey?.status == EcoJourneyStatus.completed
+              ? null
+              : onStart,
           icon: Icon(
-            journeyStarted
+            journey?.status == EcoJourneyStatus.inProgress
+                ? Icons.stop_circle_outlined
+                : journey?.status == EcoJourneyStatus.completed
                 ? Icons.check_circle_outline_rounded
                 : Icons.navigation_rounded,
           ),
-          label: Text(journeyStarted ? 'Journey started' : 'Start journey'),
+          label: Text(
+            journey?.status == EcoJourneyStatus.inProgress
+                ? 'End journey'
+                : journey?.status == EcoJourneyStatus.completed
+                ? 'Journey completed'
+                : 'Start journey',
+          ),
         ),
       ],
     );
@@ -720,6 +805,94 @@ class _RoutePreview extends StatelessWidget {
   TextStyle _sectionTitle(BuildContext context) => GoogleFonts.poppins(
     textStyle: Theme.of(context).textTheme.titleLarge,
     fontWeight: FontWeight.w700,
+  );
+}
+
+class _RouteEndpointsCard extends StatelessWidget {
+  const _RouteEndpointsCard({required this.route, required this.onChangeRoute});
+
+  final EcoRoute route;
+  final VoidCallback onChangeRoute;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+    decoration: BoxDecoration(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(18),
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x0D000000),
+          blurRadius: 12,
+          offset: Offset(0, 4),
+        ),
+      ],
+    ),
+    child: Row(
+      children: [
+        Column(
+          children: [
+            const Icon(
+              Icons.my_location_rounded,
+              color: AppColors.primary,
+              size: 22,
+            ),
+            Container(width: 2, height: 22, color: const Color(0xFFB8DDBB)),
+            const Icon(
+              Icons.location_on_rounded,
+              color: AppColors.error,
+              size: 24,
+            ),
+          ],
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _EndpointLabel(label: 'FROM', value: route.origin.label),
+              const Divider(height: 16),
+              _EndpointLabel(label: 'TO', value: route.destination.name),
+            ],
+          ),
+        ),
+        IconButton(
+          onPressed: onChangeRoute,
+          tooltip: 'Change start or destination',
+          icon: const Icon(Icons.edit_location_alt_outlined),
+        ),
+      ],
+    ),
+  );
+}
+
+class _EndpointLabel extends StatelessWidget {
+  const _EndpointLabel({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        label,
+        style: GoogleFonts.poppins(
+          fontSize: 9,
+          fontWeight: FontWeight.w700,
+          color: AppColors.textSecondary,
+          letterSpacing: .8,
+        ),
+      ),
+      const SizedBox(height: 1),
+      Text(
+        value,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600),
+      ),
+    ],
   );
 }
 
@@ -763,7 +936,9 @@ class _RouteOverview extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  'Train and walking only',
+                  route.hasTransit
+                      ? 'Train and walking only'
+                      : 'Walking route — no rail required',
                   style: GoogleFonts.poppins(
                     color: AppColors.primary,
                     fontSize: 12,

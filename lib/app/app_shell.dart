@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/di/service_locator.dart';
 import '../features/authentication/presentation/controllers/auth_controller.dart';
 import '../features/authentication/presentation/pages/login_page.dart';
 import '../features/eco_route/business_logic/providers/eco_route_controller.dart';
 import '../features/eco_route/data/data_sources/device_location_data_source.dart';
-import '../features/eco_route/data/repositories/sample_eco_route_repository.dart';
+import '../features/eco_route/data/data_sources/google_eco_route_data_source.dart';
+import '../features/eco_route/data/repositories/google_eco_route_repository.dart';
+import '../features/eco_route/data/repositories/supabase_journey_repository.dart';
+import '../features/eco_route/data/data_sources/supabase_journey_data_source.dart';
 import '../features/eco_route/presentation/pages/eco_route_page.dart';
 import '../features/fitness/business_logic/providers/fitness_controller.dart';
 import '../features/fitness/presentation/pages/fitness_page.dart';
@@ -24,7 +28,13 @@ class _AppShellState extends State<AppShell> {
   int _selectedIndex = 0;
 
   late final List<Widget> _pages = [
-    HomeDashboard(onNavigate: _selectDestination),
+    HomeDashboard(
+      userId: sl<AuthController>().currentUser!.id,
+      journeyHistoryRepository: SupabaseJourneyRepository(
+        SupabaseJourneyDataSource(sl<SupabaseClient>()),
+      ),
+      onNavigate: _selectDestination,
+    ),
     const _EcoRouteEntryPage(),
     ChangeNotifierProvider(
       create: (_) => sl<FitnessController>()..loadDashboard(),
@@ -156,7 +166,12 @@ class _EcoRouteEntryPage extends StatelessWidget {
         return ChangeNotifierProvider(
           create: (_) => EcoRouteController(
             userId: user.id,
-            repository: const SampleEcoRouteRepository(),
+            repository: GoogleEcoRouteRepository(
+              GoogleEcoRouteDataSource(sl<SupabaseClient>()),
+            ),
+            journeyRepository: SupabaseJourneyRepository(
+              SupabaseJourneyDataSource(sl<SupabaseClient>()),
+            ),
             locationService: const DeviceLocationDataSource(),
           ),
           child: const EcoRoutePage(),

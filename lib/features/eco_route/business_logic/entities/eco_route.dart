@@ -29,6 +29,9 @@ class EcoRoute {
   int get durationMinutes =>
       segments.fold(0, (total, segment) => total + segment.durationMinutes);
 
+  bool get hasTransit =>
+      segments.any((segment) => segment.type == EcoRouteSegmentType.transit);
+
   String? get recommendedPlatform {
     for (final segment in segments) {
       if (segment.platform != null) return segment.platform;

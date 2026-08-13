@@ -7,9 +7,4 @@ class Env {
 
   static String get supabasePublishableKey =>
       dotenv.env['SUPABASE_PUBLISHABLE_KEY'] ?? '';
-
-  /// Only for local development. Production Routes API calls must be proxied
-  /// through a server so a web-service key is never shipped in the app.
-  static String get googleRoutesApiKey =>
-      dotenv.env['GOOGLE_ROUTES_API_KEY'] ?? '';
 }

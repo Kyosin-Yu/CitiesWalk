@@ -56,3 +56,6 @@ android/.kotlin/
 
 # Local Android SDK and API key configuration
 android/local.properties
+
+# Supabase Edge Function local secrets
+supabase/functions/.env

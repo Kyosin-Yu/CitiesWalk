@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -24,7 +26,7 @@ class EcoRouteMap extends StatelessWidget {
 
     return _GoogleMapFrame(
       label: 'Google Maps route to ${route.destination.name}',
-      bottomLeft: route.isLiveRoute ? 'Live transit route' : 'Transit estimate',
+      bottomLeft: route.hasTransit ? 'Rail route' : 'Walking route',
       bottomRight: '${route.durationMinutes} min',
       child: GoogleMap(
         initialCameraPosition: CameraPosition(
@@ -33,7 +35,14 @@ class EcoRouteMap extends StatelessWidget {
         ),
         mapType: MapType.normal,
         myLocationButtonEnabled: false,
-        zoomControlsEnabled: false,
+        zoomControlsEnabled: true,
+        zoomGesturesEnabled: true,
+        scrollGesturesEnabled: true,
+        rotateGesturesEnabled: true,
+        tiltGesturesEnabled: true,
+        gestureRecognizers: {
+          Factory<OneSequenceGestureRecognizer>(EagerGestureRecognizer.new),
+        },
         mapToolbarEnabled: false,
         markers: {
           Marker(
@@ -68,8 +77,11 @@ class EcoRouteMap extends StatelessWidget {
               .toList(),
           width: segment.type == EcoRouteSegmentType.transit ? 7 : 5,
           color: segment.type == EcoRouteSegmentType.transit
-              ? AppColors.primary
-              : AppColors.secondary,
+              ? const Color(0xFF1565C0)
+              : AppColors.primary,
+          patterns: segment.type == EcoRouteSegmentType.walk
+              ? [PatternItem.dot, PatternItem.gap(10)]
+              : const [],
         ),
       )
       .toSet();
@@ -111,13 +123,17 @@ class _GoogleMapFrame extends StatelessWidget {
             const Positioned(
               left: 12,
               top: 12,
-              child: _MapPill(icon: Icons.map_rounded, label: 'Google Maps'),
+              child: _MapPill(
+                icon: Icons.touch_app_rounded,
+                label: 'Drag or zoom map',
+              ),
             ),
             Positioned(
               left: 12,
               bottom: 12,
               child: _MapPill(icon: Icons.train_rounded, label: bottomLeft),
             ),
+            const Positioned(right: 12, top: 12, child: _RouteLegend()),
             Positioned(
               right: 12,
               bottom: 12,
@@ -126,6 +142,27 @@ class _GoogleMapFrame extends StatelessWidget {
           ],
         ),
       ),
+    ),
+  );
+}
+
+class _RouteLegend extends StatelessWidget {
+  const _RouteLegend();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+    decoration: BoxDecoration(
+      color: Colors.white.withValues(alpha: .94),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: const Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.train_rounded, size: 14, color: Color(0xFF1565C0)),
+        SizedBox(width: 3),
+        Icon(Icons.directions_walk_rounded, size: 14, color: AppColors.primary),
+      ],
     ),
   );
 }

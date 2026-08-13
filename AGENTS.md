@@ -357,12 +357,12 @@ Read `DESIGN.md` before implementing or changing UI.
 
 Use the following confirmed technologies:
 
-- OpenStreetMap with `flutter_map` for map display.
+- Google Maps Platform with `google_maps_flutter` for interactive map display.
 - `geolocator` for device location.
-- Nominatim for place search.
-- OpenTripPlanner for walking and public-transport routing.
-- Malaysian GTFS Static data for transit schedules.
-- GTFS Realtime only where suitable data is available.
+- Google Places API (New) for place search and nearby discovery.
+- Google Routes API for walking and public-transport route geometry.
+- Supabase Edge Functions as the server-side boundary for Google Places and
+  Routes requests. Store the Google server key in Edge Function secrets only.
 
 External API requirements:
 
@@ -377,8 +377,10 @@ External API requirements:
 - Do not claim that a route is safe without verified supporting data.
 - Record the source and version of carbon-emission factors.
 - Treat calories and carbon savings as estimates.
-- Use sample data when the OpenTripPlanner server or GTFS feeds are unavailable,
-  and clearly label it as sample data.
+- Do not expose Google server keys in Flutter, `.env`, source control, or client
+  builds. The Flutter app may contain only the platform-specific map-display key.
+- If live Google route data is unavailable, show an actionable error state; do
+  not represent sample data as a live route.
 
 ## 11. Testing and Quality Checks
 
@@ -588,7 +590,8 @@ implementation:
 - Journey status values.
 - Fitness, carbon-saving, and reward formulas.
 - Main development branch and pull-request approval rules.
-- OpenTripPlanner hosting and deployment configuration.
+- Google Maps Platform project ownership, enabled APIs, quotas, and billing
+  safeguards.
 
 After confirming a decision, document it in the relevant section and remove it
 from this list.

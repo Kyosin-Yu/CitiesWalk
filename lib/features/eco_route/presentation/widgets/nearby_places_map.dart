@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -6,17 +8,52 @@ import '../../business_logic/entities/eco_destination.dart';
 import '../../business_logic/entities/eco_location.dart';
 
 /// Live Google map for selecting a suggested destination.
-class NearbyPlacesMap extends StatelessWidget {
+class NearbyPlacesMap extends StatefulWidget {
   const NearbyPlacesMap({
     super.key,
     required this.origin,
     required this.destinations,
     required this.onDestinationSelected,
+    required this.onStartingPointSelected,
+    required this.showMyLocation,
+    required this.originIsDeviceLocation,
+    required this.showOriginMarker,
   });
 
   final EcoLocation origin;
   final List<EcoDestination> destinations;
   final ValueChanged<EcoDestination> onDestinationSelected;
+  final ValueChanged<EcoLocation> onStartingPointSelected;
+  final bool showMyLocation;
+  final bool originIsDeviceLocation;
+  final bool showOriginMarker;
+
+  @override
+  State<NearbyPlacesMap> createState() => _NearbyPlacesMapState();
+}
+
+class _NearbyPlacesMapState extends State<NearbyPlacesMap> {
+  GoogleMapController? _mapController;
+
+  @override
+  void didUpdateWidget(covariant NearbyPlacesMap oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.origin.latitude == widget.origin.latitude &&
+        oldWidget.origin.longitude == widget.origin.longitude) {
+      return;
+    }
+    _mapController?.animateCamera(
+      CameraUpdate.newLatLng(
+        LatLng(widget.origin.latitude, widget.origin.longitude),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _mapController?.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) => Container(
@@ -37,22 +74,46 @@ class NearbyPlacesMap extends StatelessWidget {
         children: [
           GoogleMap(
             initialCameraPosition: CameraPosition(
-              target: LatLng(origin.latitude, origin.longitude),
+              target: LatLng(widget.origin.latitude, widget.origin.longitude),
               zoom: 13.4,
             ),
-            myLocationButtonEnabled: false,
-            zoomControlsEnabled: false,
+            onMapCreated: (controller) => _mapController = controller,
+            myLocationEnabled: widget.showMyLocation,
+            myLocationButtonEnabled: widget.showMyLocation,
+            zoomControlsEnabled: true,
+            zoomGesturesEnabled: true,
+            scrollGesturesEnabled: true,
+            rotateGesturesEnabled: true,
+            tiltGesturesEnabled: true,
+            gestureRecognizers: {
+              Factory<OneSequenceGestureRecognizer>(EagerGestureRecognizer.new),
+            },
             mapToolbarEnabled: false,
-            markers: {
-              Marker(
-                markerId: const MarkerId('origin'),
-                position: LatLng(origin.latitude, origin.longitude),
-                infoWindow: const InfoWindow(title: 'Current location'),
-                icon: BitmapDescriptor.defaultMarkerWithHue(
-                  BitmapDescriptor.hueGreen,
-                ),
+            onLongPress: (position) => widget.onStartingPointSelected(
+              EcoLocation(
+                latitude: position.latitude,
+                longitude: position.longitude,
+                label: 'Selected starting point',
               ),
-              ...destinations.map(
+            ),
+            markers: {
+              if (widget.showOriginMarker)
+                Marker(
+                  markerId: const MarkerId('origin'),
+                  position: LatLng(
+                    widget.origin.latitude,
+                    widget.origin.longitude,
+                  ),
+                  infoWindow: InfoWindow(
+                    title: widget.originIsDeviceLocation
+                        ? 'Live GPS location'
+                        : 'Selected starting point',
+                  ),
+                  icon: BitmapDescriptor.defaultMarkerWithHue(
+                    BitmapDescriptor.hueGreen,
+                  ),
+                ),
+              ...widget.destinations.map(
                 (destination) => Marker(
                   markerId: MarkerId(destination.id),
                   position: LatLng(
@@ -63,7 +124,7 @@ class NearbyPlacesMap extends StatelessWidget {
                     title: destination.name,
                     snippet: 'Tap to plan a route',
                   ),
-                  onTap: () => onDestinationSelected(destination),
+                  onTap: () => widget.onDestinationSelected(destination),
                 ),
               ),
             },
@@ -73,7 +134,7 @@ class NearbyPlacesMap extends StatelessWidget {
             top: 12,
             child: _MapPill(
               icon: Icons.near_me_rounded,
-              label: 'Google Maps nearby places',
+              label: 'Drag map • long-press start',
             ),
           ),
         ],

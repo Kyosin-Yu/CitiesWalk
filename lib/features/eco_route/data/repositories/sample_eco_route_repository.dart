@@ -24,8 +24,8 @@ class SampleEcoRouteRepository implements EcoRouteRepository {
   );
 
   // Representative station points make the rail preview read as a rail path,
-  // rather than a single diagonal line. A GTFS/OTP data source will replace
-  // these sample points with provider-supplied transit geometry.
+  // rather than a single diagonal line. The live Google Routes data source
+  // replaces these sample points with provider-supplied transit geometry.
   static const _pasarSeniStation = EcoLocation(
     latitude: 3.1423,
     longitude: 101.6953,
@@ -98,10 +98,15 @@ class SampleEcoRouteRepository implements EcoRouteRepository {
   ];
 
   @override
-  Future<List<EcoDestination>> fetchNearbyDestinations() async => _destinations;
+  Future<List<EcoDestination>> fetchNearbyDestinations({
+    required EcoLocation origin,
+  }) async => _destinations;
 
   @override
-  Future<List<EcoDestination>> searchDestinations(String query) async {
+  Future<List<EcoDestination>> searchDestinations({
+    required String query,
+    required EcoLocation origin,
+  }) async {
     final normalizedQuery = query.trim().toLowerCase();
     if (normalizedQuery.isEmpty) return _destinations;
 
