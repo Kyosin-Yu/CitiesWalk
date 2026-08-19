@@ -3,6 +3,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 
+import '../../../../core/models/destination_review_summary.dart';
+import '../../../../core/services/destination_review_summary_service.dart';
 import '../entities/eco_destination.dart';
 import '../entities/eco_journey.dart';
 import '../entities/eco_journey_history_item.dart';
@@ -20,12 +22,14 @@ class EcoRouteController extends ChangeNotifier {
     required this.repository,
     required this.journeyRepository,
     required this.locationService,
+    this.reviewSummaryService,
   });
 
   final String userId;
   final EcoRouteRepository repository;
   final JourneyRepository journeyRepository;
   final LocationService locationService;
+  final DestinationReviewSummaryService? reviewSummaryService;
 
   static const _fallbackLocation = EcoLocation(
     latitude: 3.1340,
@@ -55,6 +59,7 @@ class EcoRouteController extends ChangeNotifier {
   double _liveCarbonSavedKg = 0;
   bool _isRerouting = false;
   DateTime? _lastRerouteAt;
+  Map<String, DestinationReviewSummary> _reviewSummaries = const {};
 
   static const _offRouteThresholdKm = 0.09;
   static const _rerouteCooldown = Duration(seconds: 90);
@@ -76,6 +81,15 @@ class EcoRouteController extends ChangeNotifier {
   double get liveCaloriesBurned => _liveCaloriesBurned;
   double get liveCarbonSavedKg => _liveCarbonSavedKg;
   bool get isRerouting => _isRerouting;
+  DestinationReviewSummary reviewSummaryFor(EcoDestination destination) =>
+      _reviewSummaries[destination.id] ?? DestinationReviewSummary.empty;
+  DestinationReviewSummary get selectedDestinationReviewSummary {
+    final destination = _route?.destination;
+    return destination == null
+        ? DestinationReviewSummary.empty
+        : reviewSummaryFor(destination);
+  }
+
   double get remainingDistanceKm => _route == null
       ? 0
       : math.max(
@@ -161,6 +175,7 @@ class EcoRouteController extends ChangeNotifier {
             first.location,
           ).compareTo(_distanceSquared(second.location)),
         );
+      await _refreshDestinationReviewSummaries();
     } catch (_) {
       _message = 'Destinations are unavailable right now. Please try again.';
     } finally {
@@ -177,6 +192,7 @@ class EcoRouteController extends ChangeNotifier {
         query: query,
         origin: _origin,
       );
+      await _refreshDestinationReviewSummaries();
       notifyListeners();
     } catch (_) {
       _message = 'Search is unavailable right now. Please try again.';
@@ -201,6 +217,7 @@ class EcoRouteController extends ChangeNotifier {
             first.location,
           ).compareTo(_distanceSquared(second.location)),
         );
+      await _refreshDestinationReviewSummaries();
     } catch (_) {
       _message =
           'Nearby ${category.label.toLowerCase()} are unavailable right now.';
@@ -225,6 +242,7 @@ class EcoRouteController extends ChangeNotifier {
         origin: _origin,
         destination: destination,
       );
+      await _refreshDestinationReviewSummaries();
     } catch (error) {
       _message = _routeErrorMessage(error);
     } finally {
@@ -297,6 +315,7 @@ class EcoRouteController extends ChangeNotifier {
             first.location,
           ).compareTo(_distanceSquared(second.location)),
         );
+      await _refreshDestinationReviewSummaries();
     } catch (_) {
       _message = 'Starting point updated, but nearby places are unavailable.';
     }
@@ -316,6 +335,34 @@ class EcoRouteController extends ChangeNotifier {
     _lastRerouteAt = null;
     _message = null;
     notifyListeners();
+  }
+
+  /// Refreshes summary data after the Reviews feature changes a destination.
+  Future<void> refreshDestinationReviewSummaries() async {
+    await _refreshDestinationReviewSummaries();
+    notifyListeners();
+  }
+
+  Future<void> _refreshDestinationReviewSummaries() async {
+    final service = reviewSummaryService;
+    if (service == null) {
+      _reviewSummaries = const {};
+      return;
+    }
+
+    final destinations = <EcoDestination>[
+      ..._destinations,
+      if (_route != null) _route!.destination,
+    ];
+    final summaries = await Future.wait(
+      destinations.map(
+        (destination) async => MapEntry(
+          destination.id,
+          await service.getDestinationReviewSummary(destination.id),
+        ),
+      ),
+    );
+    _reviewSummaries = Map.unmodifiable(Map.fromEntries(summaries));
   }
 
   void _startLocationTracking() {

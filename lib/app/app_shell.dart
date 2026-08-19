@@ -4,8 +4,10 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/di/service_locator.dart';
+import '../core/services/destination_review_summary_service.dart';
 import '../features/authentication/business_logic/providers/auth_controller.dart';
 import '../features/authentication/presentation/pages/profile_page.dart';
+import '../features/eco_route/business_logic/entities/eco_destination.dart';
 import '../features/eco_route/business_logic/providers/eco_route_controller.dart';
 import '../features/eco_route/business_logic/entities/eco_journey_history_item.dart';
 import '../features/eco_route/data/data_sources/device_location_data_source.dart';
@@ -17,6 +19,13 @@ import '../features/eco_route/presentation/pages/eco_route_page.dart';
 import '../features/fitness/business_logic/providers/fitness_controller.dart';
 import '../features/fitness/presentation/pages/fitness_page.dart';
 import '../features/rewards/presentation/screens/rewards_hub_screen.dart';
+import '../features/reviews/business_logic/providers/reviews_provider.dart';
+import '../features/reviews/business_logic/entities/review_destination.dart';
+import '../features/reviews/data/data_sources/review_image_data_source.dart';
+import '../features/reviews/data/repositories/review_image_repository_impl.dart';
+import '../features/reviews/data/repositories/supabase_review_repository.dart';
+import '../features/reviews/data/data_sources/supabase_review_data_source.dart';
+import '../features/reviews/presentation/reviews_screen.dart';
 import 'home_dashboard.dart';
 
 class AppShell extends StatefulWidget {
@@ -32,6 +41,12 @@ class _AppShellState extends State<AppShell> {
   final ValueNotifier<EcoJourneyHistoryItem?> _tripToReplan = ValueNotifier(
     null,
   );
+  final ValueNotifier<int> _reviewSummaryVersion = ValueNotifier(0);
+  late final SupabaseReviewRepository _reviewRepository =
+      SupabaseReviewRepository(SupabaseReviewDataSource(sl<SupabaseClient>()));
+  late final ReviewImageRepositoryImpl _reviewImageRepository =
+      ReviewImageRepositoryImpl(ReviewImageDataSource());
+  final Map<String, ReviewsProvider> _reviewProviders = {};
 
   late final List<Widget> _pages = [
     HomeDashboard(
@@ -46,6 +61,9 @@ class _AppShellState extends State<AppShell> {
     _EcoRouteEntryPage(
       onJourneyCompleted: _refreshJourneyHistory,
       tripToReplan: _tripToReplan,
+      reviewSummaryRefreshSignal: _reviewSummaryVersion,
+      reviewSummaryService: _reviewRepository,
+      onOpenReviews: _openReviews,
     ),
     ChangeNotifierProvider(
       create: (_) => sl<FitnessController>()..loadDashboard(),
@@ -108,19 +126,61 @@ class _AppShellState extends State<AppShell> {
     _selectDestination(1);
   }
 
+  Future<void> _openReviews(EcoDestination destination) async {
+    final reviewDestination = ReviewDestination(
+      id: destination.id,
+      name: destination.name,
+      category: destination.category,
+    );
+    final reviewsProvider = _reviewProviders.putIfAbsent(
+      destination.id,
+      () => ReviewsProvider(
+        _reviewRepository,
+        _reviewImageRepository,
+        reviewDestination,
+        currentUserId: sl<AuthController>().currentUser!.id,
+        currentUserName:
+            sl<AuthController>().currentUser!.fullName ?? 'CitiesWalk User',
+      ),
+    );
+
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ReviewsScreen(
+          destination: reviewDestination,
+          reviewsProvider: reviewsProvider,
+        ),
+      ),
+    );
+    _reviewSummaryVersion.value++;
+  }
+
   @override
   void dispose() {
     _journeyHistoryVersion.dispose();
     _tripToReplan.dispose();
+    _reviewSummaryVersion.dispose();
+    for (final provider in _reviewProviders.values) {
+      provider.dispose();
+    }
     super.dispose();
   }
 }
 
 class _EcoRouteEntryPage extends StatelessWidget {
-  const _EcoRouteEntryPage({this.onJourneyCompleted, this.tripToReplan});
+  const _EcoRouteEntryPage({
+    this.onJourneyCompleted,
+    this.tripToReplan,
+    this.reviewSummaryRefreshSignal,
+    this.reviewSummaryService,
+    this.onOpenReviews,
+  });
 
   final VoidCallback? onJourneyCompleted;
   final ValueListenable<EcoJourneyHistoryItem?>? tripToReplan;
+  final ValueListenable<int>? reviewSummaryRefreshSignal;
+  final DestinationReviewSummaryService? reviewSummaryService;
+  final ValueChanged<EcoDestination>? onOpenReviews;
 
   @override
   Widget build(BuildContext context) {
@@ -147,10 +207,13 @@ class _EcoRouteEntryPage extends StatelessWidget {
               SupabaseJourneyDataSource(sl<SupabaseClient>()),
             ),
             locationService: const DeviceLocationDataSource(),
+            reviewSummaryService: reviewSummaryService,
           ),
           child: EcoRoutePage(
             onJourneyCompleted: onJourneyCompleted,
             tripToReplan: tripToReplan,
+            reviewSummaryRefreshSignal: reviewSummaryRefreshSignal,
+            onOpenReviews: onOpenReviews,
           ),
         );
       },
