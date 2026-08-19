@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../business_logic/entities/fitness_dashboard.dart';
+
 class FitnessGoalsSection extends StatelessWidget {
-  const FitnessGoalsSection({super.key});
+  const FitnessGoalsSection({super.key, required this.dashboard});
+  final FitnessDashboard dashboard;
+
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(18),
@@ -21,40 +25,45 @@ class FitnessGoalsSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Fitness Goals',
+          'Completed Route Summary',
           style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600),
         ),
+        const SizedBox(height: 4),
+        Text(
+          'Personal goals are not configured yet; these are actual route totals.',
+          style: GoogleFonts.poppins(
+            fontSize: 9,
+            color: const Color(0xFF777777),
+          ),
+        ),
         const SizedBox(height: 14),
-        const Row(
+        Row(
           children: [
             Expanded(
-              child: _Goal(
-                '84%',
-                'Daily Goal',
-                '8,452',
-                '10,000 steps',
-                Color(0xFF2E7D32),
-                .84,
+              child: _Summary(
+                icon: Icons.today_rounded,
+                title: 'Today',
+                value:
+                    '${dashboard.walkingDistanceTodayKm.toStringAsFixed(2)} km',
+                color: const Color(0xFF2E7D32),
               ),
             ),
             Expanded(
-              child: _Goal(
-                '72%',
-                'Weekly Goal',
-                '41.8 km',
-                '58 km goal',
-                Color(0xFF1565C0),
-                .72,
+              child: _Summary(
+                icon: Icons.date_range_rounded,
+                title: 'Last 7 days',
+                value:
+                    '${dashboard.weeklyWalkingDistanceKm.toStringAsFixed(2)} km',
+                color: const Color(0xFF1565C0),
               ),
             ),
             Expanded(
-              child: _Goal(
-                '58%',
-                'Monthly Goal',
-                '148 km',
-                '258 km goal',
-                Color(0xFF6A1B9A),
-                .58,
+              child: _Summary(
+                icon: Icons.calendar_month_rounded,
+                title: 'This month',
+                value:
+                    '${dashboard.monthlyWalkingDistanceKm.toStringAsFixed(2)} km',
+                color: const Color(0xFF6A1B9A),
               ),
             ),
           ],
@@ -64,57 +73,37 @@ class FitnessGoalsSection extends StatelessWidget {
   );
 }
 
-class _Goal extends StatelessWidget {
-  const _Goal(
-    this.percent,
-    this.title,
-    this.value,
-    this.caption,
-    this.color,
-    this.progress,
-  );
-  final String percent, title, value, caption;
+class _Summary extends StatelessWidget {
+  const _Summary({
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String title;
+  final String value;
   final Color color;
-  final double progress;
+
   @override
   Widget build(BuildContext context) => Column(
     children: [
-      SizedBox(
-        width: 61,
-        height: 61,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            CircularProgressIndicator(
-              value: progress,
-              strokeWidth: 5,
-              backgroundColor: const Color(0xFFF0F1F1),
-              color: color,
-              strokeCap: StrokeCap.round,
-            ),
-            Text(
-              percent,
-              style: GoogleFonts.poppins(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: color,
-              ),
-            ),
-          ],
-        ),
+      CircleAvatar(
+        backgroundColor: color.withValues(alpha: .12),
+        foregroundColor: color,
+        child: Icon(icon, size: 20),
       ),
-      const SizedBox(height: 7),
+      const SizedBox(height: 8),
       Text(
         title,
+        textAlign: TextAlign.center,
         style: GoogleFonts.poppins(fontSize: 9, fontWeight: FontWeight.w600),
       ),
       Text(
         value,
-        style: GoogleFonts.poppins(fontSize: 8, color: const Color(0xFF888888)),
-      ),
-      Text(
-        caption,
-        style: GoogleFonts.poppins(fontSize: 7, color: const Color(0xFFAAAAAA)),
+        textAlign: TextAlign.center,
+        style: GoogleFonts.poppins(fontSize: 9, color: color),
       ),
     ],
   );

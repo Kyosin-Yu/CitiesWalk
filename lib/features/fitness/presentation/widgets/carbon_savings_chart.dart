@@ -1,8 +1,20 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../business_logic/entities/fitness_dashboard.dart';
+
 class CarbonSavingsChart extends StatelessWidget {
-  const CarbonSavingsChart({super.key});
+  const CarbonSavingsChart({
+    super.key,
+    required this.days,
+    required this.totalKg,
+  });
+
+  final List<FitnessDaySummary> days;
+  final double totalKg;
+
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.fromLTRB(18, 16, 18, 12),
@@ -13,50 +25,25 @@ class CarbonSavingsChart extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Carbon Savings',
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  Text(
-                    'Total: 23.7 kg CO2 this week',
-                    style: GoogleFonts.poppins(
-                      fontSize: 9,
-                      color: const Color(0xFF8C8C8C),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE5F4E7),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Text(
-                '+8.4 kg',
-                style: GoogleFonts.poppins(
-                  fontSize: 9,
-                  color: const Color(0xFF2E7D32),
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
+        Text(
+          'Estimated Carbon Savings',
+          style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600),
+        ),
+        Text(
+          '${totalKg.toStringAsFixed(2)} kg CO₂ from completed routes',
+          style: GoogleFonts.poppins(
+            fontSize: 9,
+            color: const Color(0xFF8C8C8C),
+          ),
         ),
         const SizedBox(height: 10),
-        const SizedBox(
-          height: 78,
-          child: CustomPaint(painter: _CarbonPainter()),
+        SizedBox(
+          height: 92,
+          child: CustomPaint(
+            painter: _CarbonPainter(
+              days.map((day) => day.carbonSavedKg).toList(),
+            ),
+          ),
         ),
       ],
     ),
@@ -64,36 +51,53 @@ class CarbonSavingsChart extends StatelessWidget {
 }
 
 class _CarbonPainter extends CustomPainter {
-  const _CarbonPainter();
+  const _CarbonPainter(this.values);
+  final List<double> values;
+
   @override
   void paint(Canvas canvas, Size size) {
-    const List<double> values = [25.0, 39.0, 32.0, 52.0, 43.0, 62.0, 49.0];
-    const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    for (var i = 0; i < values.length; i++) {
-      final x = 27.0 + i * 36.5;
+    if (values.isEmpty) return;
+    const bottom = 18.0;
+    final chartHeight = size.height - bottom - 4;
+    final maxValue = math.max(1.0, values.reduce(math.max));
+    final slot = size.width / values.length;
+    final barWidth = math.min(22.0, slot * .55);
+
+    for (var index = 0; index < values.length; index++) {
+      final height = values[index] == 0
+          ? 2.0
+          : chartHeight * values[index] / maxValue;
+      final x = index * slot + (slot - barWidth) / 2;
       final rect = RRect.fromRectAndRadius(
-        Rect.fromLTWH(x, 68.0 - values[i], 20.0, values[i]),
+        Rect.fromLTWH(x, chartHeight - height + 4, barWidth, height),
         const Radius.circular(5),
       );
       canvas.drawRRect(
         rect,
         Paint()
-          ..color = i == 6 ? const Color(0xFF2E7D32) : const Color(0xFF81C784),
+          ..color = index == values.length - 1
+              ? const Color(0xFF2E7D32)
+              : const Color(0xFF81C784),
       );
+      final label = index == values.length - 1 ? 'Today' : 'D-${6 - index}';
       final text = TextPainter(
         text: TextSpan(
-          text: labels[i],
-          style: TextStyle(
-            fontSize: 7,
-            color: i == 6 ? const Color(0xFF2E7D32) : const Color(0xFF888888),
-          ),
+          text: label,
+          style: const TextStyle(fontSize: 7, color: Color(0xFF888888)),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
-      text.paint(canvas, Offset(x + 10.0 - text.width / 2, 70.0));
+      text.paint(
+        canvas,
+        Offset(
+          index * slot + (slot - text.width) / 2,
+          size.height - text.height,
+        ),
+      );
     }
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _CarbonPainter oldDelegate) =>
+      oldDelegate.values != values;
 }

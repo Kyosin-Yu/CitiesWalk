@@ -1,5 +1,7 @@
-import '../entities/fitness_dashboard.dart';
+import '../entities/completed_fitness_journey.dart';
 
-abstract class FitnessRepository {
-  Future<FitnessDashboard> getDashboard();
+abstract interface class FitnessRepository {
+  Future<List<CompletedFitnessJourney>> fetchCompletedJourneys({
+    required String userId,
+  });
 }

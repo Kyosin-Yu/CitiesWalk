@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -15,6 +17,7 @@ import '../features/eco_route/data/repositories/supabase_journey_repository.dart
 import '../features/eco_route/data/data_sources/supabase_journey_data_source.dart';
 import '../features/eco_route/presentation/pages/eco_route_page.dart';
 import '../features/fitness/business_logic/providers/fitness_controller.dart';
+import '../features/fitness/business_logic/repositories/fitness_repository.dart';
 import '../features/fitness/presentation/pages/fitness_page.dart';
 import '../features/rewards/presentation/screens/rewards_hub_screen.dart';
 import 'home_dashboard.dart';
@@ -32,6 +35,13 @@ class _AppShellState extends State<AppShell> {
   final ValueNotifier<EcoJourneyHistoryItem?> _tripToReplan = ValueNotifier(
     null,
   );
+  late final FitnessController _fitnessController = FitnessController(
+    userId: sl<AuthController>().currentUser!.id,
+    userName:
+        sl<AuthController>().currentUser!.fullName ??
+        sl<AuthController>().currentUser!.email,
+    repository: sl<FitnessRepository>(),
+  )..loadDashboard();
 
   late final List<Widget> _pages = [
     HomeDashboard(
@@ -47,8 +57,8 @@ class _AppShellState extends State<AppShell> {
       onJourneyCompleted: _refreshJourneyHistory,
       tripToReplan: _tripToReplan,
     ),
-    ChangeNotifierProvider(
-      create: (_) => sl<FitnessController>()..loadDashboard(),
+    ChangeNotifierProvider.value(
+      value: _fitnessController,
       child: const FitnessPage(),
     ),
     const RewardsHubScreen(),
@@ -94,6 +104,9 @@ class _AppShellState extends State<AppShell> {
   }
 
   void _selectDestination(int index) {
+    if (index == 2) {
+      unawaited(_fitnessController.refresh());
+    }
     setState(() {
       _selectedIndex = index;
     });
@@ -101,6 +114,7 @@ class _AppShellState extends State<AppShell> {
 
   void _refreshJourneyHistory() {
     _journeyHistoryVersion.value++;
+    unawaited(_fitnessController.refresh());
   }
 
   void _planSavedTripAgain(EcoJourneyHistoryItem journey) {
@@ -112,6 +126,7 @@ class _AppShellState extends State<AppShell> {
   void dispose() {
     _journeyHistoryVersion.dispose();
     _tripToReplan.dispose();
+    _fitnessController.dispose();
     super.dispose();
   }
 }
