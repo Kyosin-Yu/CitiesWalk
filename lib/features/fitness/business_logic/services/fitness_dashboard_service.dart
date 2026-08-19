@@ -61,6 +61,8 @@ class FitnessDashboardService {
       monthlyWalkingDistanceKm: _distanceKm(monthlyJourneys),
       weeklyCaloriesKcal: _calories(sevenDayJourneys),
       weeklyCarbonSavedKg: _carbon(sevenDayJourneys),
+      monthlyCaloriesKcal: _calories(monthlyJourneys),
+      monthlyCarbonSavedKg: _carbon(monthlyJourneys),
       completedJourneysThisWeek: sevenDayJourneys.length,
       totalCompletedJourneys: journeys.length,
       dailySummaries: dailySummaries,

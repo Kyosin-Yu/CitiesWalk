@@ -26,6 +26,8 @@ class FitnessDashboard {
     required this.monthlyWalkingDistanceKm,
     required this.weeklyCaloriesKcal,
     required this.weeklyCarbonSavedKg,
+    required this.monthlyCaloriesKcal,
+    required this.monthlyCarbonSavedKg,
     required this.completedJourneysThisWeek,
     required this.totalCompletedJourneys,
     required this.dailySummaries,
@@ -45,6 +47,8 @@ class FitnessDashboard {
   final double monthlyWalkingDistanceKm;
   final int weeklyCaloriesKcal;
   final double weeklyCarbonSavedKg;
+  final int monthlyCaloriesKcal;
+  final double monthlyCarbonSavedKg;
   final int completedJourneysThisWeek;
   final int totalCompletedJourneys;
   final List<FitnessDaySummary> dailySummaries;

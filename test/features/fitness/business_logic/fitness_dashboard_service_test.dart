@@ -39,6 +39,8 @@ void main() {
     expect(dashboard.weeklyWalkingDistanceKm, 4);
     expect(dashboard.weeklyCaloriesKcal, 300);
     expect(dashboard.weeklyCarbonSavedKg, closeTo(1.2, .000001));
+    expect(dashboard.monthlyCaloriesKcal, 300);
+    expect(dashboard.monthlyCarbonSavedKg, closeTo(1.2, .000001));
     expect(dashboard.completedJourneysThisWeek, 2);
     expect(dashboard.streakDays, 2);
     expect(dashboard.dailySummaries, hasLength(7));
@@ -55,6 +57,8 @@ void main() {
     expect(dashboard.weeklyWalkingDistanceKm, 0);
     expect(dashboard.weeklyCaloriesKcal, 0);
     expect(dashboard.weeklyCarbonSavedKg, 0);
+    expect(dashboard.monthlyCaloriesKcal, 0);
+    expect(dashboard.monthlyCarbonSavedKg, 0);
     expect(dashboard.streakDays, 0);
     expect(dashboard.hasCompletedJourney, isFalse);
     expect(dashboard.dailySummaries, hasLength(7));
