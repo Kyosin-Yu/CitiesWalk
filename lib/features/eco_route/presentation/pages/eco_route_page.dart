@@ -4,6 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/models/destination_review_summary.dart';
+import '../../business_logic/entities/eco_destination.dart';
 import '../../business_logic/entities/eco_journey.dart';
 import '../../business_logic/entities/eco_journey_history_item.dart';
 import '../../business_logic/entities/eco_location.dart';
@@ -17,10 +19,18 @@ import '../widgets/nearby_places_map.dart';
 import '../widgets/route_step_tile.dart';
 
 class EcoRoutePage extends StatefulWidget {
-  const EcoRoutePage({super.key, this.onJourneyCompleted, this.tripToReplan});
+  const EcoRoutePage({
+    super.key,
+    this.onJourneyCompleted,
+    this.tripToReplan,
+    this.reviewSummaryRefreshSignal,
+    this.onOpenReviews,
+  });
 
   final VoidCallback? onJourneyCompleted;
   final ValueListenable<EcoJourneyHistoryItem?>? tripToReplan;
+  final ValueListenable<int>? reviewSummaryRefreshSignal;
+  final ValueChanged<EcoDestination>? onOpenReviews;
 
   @override
   State<EcoRoutePage> createState() => _EcoRoutePageState();
@@ -31,20 +41,30 @@ class _EcoRoutePageState extends State<EcoRoutePage> {
   void initState() {
     super.initState();
     widget.tripToReplan?.addListener(_replanSavedJourney);
+    widget.reviewSummaryRefreshSignal?.addListener(_refreshReviewSummaries);
     WidgetsBinding.instance.addPostFrameCallback((_) => _replanSavedJourney());
   }
 
   @override
   void didUpdateWidget(covariant EcoRoutePage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.tripToReplan == widget.tripToReplan) return;
-    oldWidget.tripToReplan?.removeListener(_replanSavedJourney);
-    widget.tripToReplan?.addListener(_replanSavedJourney);
+    if (oldWidget.tripToReplan != widget.tripToReplan) {
+      oldWidget.tripToReplan?.removeListener(_replanSavedJourney);
+      widget.tripToReplan?.addListener(_replanSavedJourney);
+    }
+    if (oldWidget.reviewSummaryRefreshSignal !=
+        widget.reviewSummaryRefreshSignal) {
+      oldWidget.reviewSummaryRefreshSignal?.removeListener(
+        _refreshReviewSummaries,
+      );
+      widget.reviewSummaryRefreshSignal?.addListener(_refreshReviewSummaries);
+    }
   }
 
   @override
   void dispose() {
     widget.tripToReplan?.removeListener(_replanSavedJourney);
+    widget.reviewSummaryRefreshSignal?.removeListener(_refreshReviewSummaries);
     super.dispose();
   }
 
@@ -55,6 +75,11 @@ class _EcoRoutePageState extends State<EcoRoutePage> {
       if (!mounted) return;
       context.read<EcoRouteController>().replanJourney(journey);
     });
+  }
+
+  void _refreshReviewSummaries() {
+    if (!mounted) return;
+    context.read<EcoRouteController>().refreshDestinationReviewSummaries();
   }
 
   @override
@@ -150,6 +175,13 @@ class _EcoRoutePageState extends State<EcoRoutePage> {
                               liveCarbonSavedKg: controller.liveCarbonSavedKg,
                               nextInstruction: controller.nextInstruction,
                               onPlanAnotherRoute: controller.clearRoute,
+                              reviewSummary:
+                                  controller.selectedDestinationReviewSummary,
+                              onOpenReviews: widget.onOpenReviews == null
+                                  ? null
+                                  : () => widget.onOpenReviews!(
+                                      controller.route!.destination,
+                                    ),
                             ),
                           ] else ...[
                             Text(
@@ -225,6 +257,9 @@ class _EcoRoutePageState extends State<EcoRoutePage> {
                               ...controller.destinations.map(
                                 (destination) => DestinationCard(
                                   destination: destination,
+                                  reviewSummary: controller.reviewSummaryFor(
+                                    destination,
+                                  ),
                                   onTap: () async {
                                     await controller.selectDestination(
                                       destination,
@@ -730,6 +765,8 @@ class _InlineRouteDetails extends StatelessWidget {
     required this.liveCarbonSavedKg,
     required this.nextInstruction,
     required this.onPlanAnotherRoute,
+    required this.reviewSummary,
+    this.onOpenReviews,
   });
 
   final EcoRoute route;
@@ -745,6 +782,8 @@ class _InlineRouteDetails extends StatelessWidget {
   final double liveCarbonSavedKg;
   final String? nextInstruction;
   final VoidCallback onPlanAnotherRoute;
+  final DestinationReviewSummary reviewSummary;
+  final VoidCallback? onOpenReviews;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -776,6 +815,17 @@ class _InlineRouteDetails extends StatelessWidget {
         liveCarbonSavedKg: liveCarbonSavedKg,
         nextInstruction: nextInstruction,
         onChangeRoute: onPlanAnotherRoute,
+      ),
+      const SizedBox(height: 12),
+      OutlinedButton.icon(
+        onPressed: onOpenReviews,
+        icon: const Icon(Icons.rate_review_outlined),
+        label: Text(
+          reviewSummary.hasReviews
+              ? 'View reviews · ${reviewSummary.averageRating.toStringAsFixed(1)} '
+                    '(${reviewSummary.reviewCount})'
+              : 'Be the first to review',
+        ),
       ),
     ],
   );
