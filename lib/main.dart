@@ -19,7 +19,7 @@ Future<void> main() async {
       );
     }
 
-    await dotenv.load(fileName: 'assets/.env');
+    await _loadEnvironment();
     Env.validate();
 
     await Supabase.initialize(
@@ -32,6 +32,17 @@ Future<void> main() async {
     debugPrint('CitiesWalk startup failed: $error');
     debugPrintStack(stackTrace: stackTrace);
     runApp(_StartupErrorApp(error: error));
+  }
+}
+
+Future<void> _loadEnvironment() async {
+  try {
+    await dotenv.load(fileName: 'assets/.env');
+  } catch (error, stackTrace) {
+    const message =
+        'Missing assets/.env file. Please create one based on assets/.env.example.';
+    debugPrint(message);
+    Error.throwWithStackTrace(StateError(message), stackTrace);
   }
 }
 
