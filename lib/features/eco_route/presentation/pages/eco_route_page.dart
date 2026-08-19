@@ -1,9 +1,13 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../business_logic/entities/eco_journey.dart';
+import '../../business_logic/entities/eco_journey_history_item.dart';
+import '../../business_logic/entities/eco_location.dart';
+import '../../business_logic/entities/eco_place_category.dart';
 import '../../business_logic/entities/eco_route.dart';
 import '../../business_logic/providers/eco_route_controller.dart';
 import '../widgets/destination_card.dart';
@@ -13,13 +17,46 @@ import '../widgets/nearby_places_map.dart';
 import '../widgets/route_step_tile.dart';
 
 class EcoRoutePage extends StatefulWidget {
-  const EcoRoutePage({super.key});
+  const EcoRoutePage({super.key, this.onJourneyCompleted, this.tripToReplan});
+
+  final VoidCallback? onJourneyCompleted;
+  final ValueListenable<EcoJourneyHistoryItem?>? tripToReplan;
 
   @override
   State<EcoRoutePage> createState() => _EcoRoutePageState();
 }
 
 class _EcoRoutePageState extends State<EcoRoutePage> {
+  @override
+  void initState() {
+    super.initState();
+    widget.tripToReplan?.addListener(_replanSavedJourney);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _replanSavedJourney());
+  }
+
+  @override
+  void didUpdateWidget(covariant EcoRoutePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.tripToReplan == widget.tripToReplan) return;
+    oldWidget.tripToReplan?.removeListener(_replanSavedJourney);
+    widget.tripToReplan?.addListener(_replanSavedJourney);
+  }
+
+  @override
+  void dispose() {
+    widget.tripToReplan?.removeListener(_replanSavedJourney);
+    super.dispose();
+  }
+
+  void _replanSavedJourney() {
+    final journey = widget.tripToReplan?.value;
+    if (journey == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<EcoRouteController>().replanJourney(journey);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -89,6 +126,10 @@ class _EcoRoutePageState extends State<EcoRoutePage> {
                               },
                               onEnd: () async {
                                 await controller.endJourney();
+                                if (controller.journey?.status ==
+                                    EcoJourneyStatus.completed) {
+                                  widget.onJourneyCompleted?.call();
+                                }
                                 if (!context.mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
@@ -98,6 +139,16 @@ class _EcoRoutePageState extends State<EcoRoutePage> {
                                   ),
                                 );
                               },
+                              onPause: controller.pauseJourney,
+                              onResume: controller.resumeJourney,
+                              currentLocation:
+                                  controller.currentJourneyLocation,
+                              trackedDistanceKm: controller.trackedDistanceKm,
+                              remainingDistanceKm:
+                                  controller.remainingDistanceKm,
+                              liveCaloriesBurned: controller.liveCaloriesBurned,
+                              liveCarbonSavedKg: controller.liveCarbonSavedKg,
+                              nextInstruction: controller.nextInstruction,
                               onPlanAnotherRoute: controller.clearRoute,
                             ),
                           ] else ...[
@@ -110,6 +161,15 @@ class _EcoRoutePageState extends State<EcoRoutePage> {
                               'Your current location and places to discover.',
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
+                            const SizedBox(height: 12),
+                            _DestinationCategoryBar(
+                              selected: controller.selectedCategory,
+                              onSelected: controller.selectCategory,
+                            ),
+                            if (controller.isLoadingDestinations) ...[
+                              const SizedBox(height: 10),
+                              const LinearProgressIndicator(),
+                            ],
                             const SizedBox(height: 12),
                             NearbyPlacesMap(
                               origin: controller.origin,
@@ -146,10 +206,15 @@ class _EcoRoutePageState extends State<EcoRoutePage> {
                                   style: _sectionTitle(context),
                                 ),
                                 const Spacer(),
-                                const Icon(
-                                  Icons.tune_rounded,
-                                  size: 20,
-                                  color: AppColors.primary,
+                                IconButton(
+                                  onPressed: () =>
+                                      _showCategoryFilter(context, controller),
+                                  tooltip: 'Filter recommended places',
+                                  icon: const Icon(
+                                    Icons.tune_rounded,
+                                    size: 20,
+                                    color: AppColors.primary,
+                                  ),
                                 ),
                               ],
                             ),
@@ -202,6 +267,26 @@ class _EcoRoutePageState extends State<EcoRoutePage> {
     textStyle: Theme.of(context).textTheme.titleLarge,
     fontWeight: FontWeight.w700,
   );
+  Future<void> _showCategoryFilter(
+    BuildContext context,
+    EcoRouteController controller,
+  ) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (sheetContext) => _DestinationFilterSheet(
+        selected: controller.selectedCategory,
+        onSelected: (category) async {
+          Navigator.of(sheetContext).pop();
+          await controller.selectCategory(category);
+        },
+      ),
+    );
+  }
 }
 
 class _EcoRouteHeader extends StatelessWidget {
@@ -636,6 +721,14 @@ class _InlineRouteDetails extends StatelessWidget {
     required this.journey,
     required this.onStart,
     required this.onEnd,
+    required this.onPause,
+    required this.onResume,
+    required this.currentLocation,
+    required this.trackedDistanceKm,
+    required this.remainingDistanceKm,
+    required this.liveCaloriesBurned,
+    required this.liveCarbonSavedKg,
+    required this.nextInstruction,
     required this.onPlanAnotherRoute,
   });
 
@@ -643,6 +736,14 @@ class _InlineRouteDetails extends StatelessWidget {
   final EcoJourney? journey;
   final VoidCallback onStart;
   final VoidCallback onEnd;
+  final VoidCallback onPause;
+  final VoidCallback onResume;
+  final EcoLocation? currentLocation;
+  final double trackedDistanceKm;
+  final double remainingDistanceKm;
+  final double liveCaloriesBurned;
+  final double liveCarbonSavedKg;
+  final String? nextInstruction;
   final VoidCallback onPlanAnotherRoute;
 
   @override
@@ -666,6 +767,14 @@ class _InlineRouteDetails extends StatelessWidget {
         journey: journey,
         onStart: onStart,
         onEnd: onEnd,
+        onPause: onPause,
+        onResume: onResume,
+        currentLocation: currentLocation,
+        trackedDistanceKm: trackedDistanceKm,
+        remainingDistanceKm: remainingDistanceKm,
+        liveCaloriesBurned: liveCaloriesBurned,
+        liveCarbonSavedKg: liveCarbonSavedKg,
+        nextInstruction: nextInstruction,
         onChangeRoute: onPlanAnotherRoute,
       ),
     ],
@@ -675,6 +784,142 @@ class _InlineRouteDetails extends StatelessWidget {
     textStyle: Theme.of(context).textTheme.titleLarge,
     fontWeight: FontWeight.w700,
   );
+}
+
+class _DestinationCategoryBar extends StatelessWidget {
+  const _DestinationCategoryBar({
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final EcoPlaceCategory selected;
+  final ValueChanged<EcoPlaceCategory> onSelected;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: 42,
+    child: ListView.separated(
+      scrollDirection: Axis.horizontal,
+      itemCount: EcoPlaceCategory.values.length,
+      separatorBuilder: (_, _) => const SizedBox(width: 8),
+      itemBuilder: (context, index) {
+        final category = EcoPlaceCategory.values[index];
+        final isSelected = category == selected;
+        return ChoiceChip(
+          label: Text(category.label),
+          selected: isSelected,
+          onSelected: (_) => onSelected(category),
+          avatar: Icon(
+            _iconFor(category),
+            size: 16,
+            color: isSelected ? Colors.white : AppColors.primary,
+          ),
+          labelStyle: GoogleFonts.poppins(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: isSelected ? Colors.white : AppColors.textPrimary,
+          ),
+          selectedColor: AppColors.primary,
+          backgroundColor: AppColors.surface,
+          side: BorderSide(
+            color: isSelected ? AppColors.primary : const Color(0x14000000),
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        );
+      },
+    ),
+  );
+
+  IconData _iconFor(EcoPlaceCategory category) => switch (category) {
+    EcoPlaceCategory.all => Icons.explore_rounded,
+    EcoPlaceCategory.food => Icons.restaurant_rounded,
+    EcoPlaceCategory.attractions => Icons.camera_alt_rounded,
+    EcoPlaceCategory.history => Icons.account_balance_rounded,
+    EcoPlaceCategory.parks => Icons.park_rounded,
+    EcoPlaceCategory.museums => Icons.museum_rounded,
+    EcoPlaceCategory.markets => Icons.storefront_rounded,
+  };
+}
+
+class _DestinationFilterSheet extends StatelessWidget {
+  const _DestinationFilterSheet({
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final EcoPlaceCategory selected;
+  final ValueChanged<EcoPlaceCategory> onSelected;
+
+  @override
+  Widget build(BuildContext context) => SafeArea(
+    top: false,
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(24, 4, 24, 28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Filter nearby places',
+            style: GoogleFonts.poppins(
+              textStyle: Theme.of(context).textTheme.titleLarge,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Choose what you would like to explore.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: EcoPlaceCategory.values.map((category) {
+              final isSelected = category == selected;
+              return ChoiceChip(
+                label: Text(category.label),
+                selected: isSelected,
+                onSelected: (_) => onSelected(category),
+                avatar: Icon(
+                  _categoryIcon(category),
+                  size: 18,
+                  color: isSelected ? Colors.white : AppColors.primary,
+                ),
+                labelStyle: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: isSelected ? Colors.white : AppColors.textPrimary,
+                ),
+                selectedColor: AppColors.primary,
+                backgroundColor: AppColors.background,
+                side: BorderSide(
+                  color: isSelected
+                      ? AppColors.primary
+                      : const Color(0x14000000),
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  IconData _categoryIcon(EcoPlaceCategory category) => switch (category) {
+    EcoPlaceCategory.all => Icons.explore_rounded,
+    EcoPlaceCategory.food => Icons.restaurant_rounded,
+    EcoPlaceCategory.attractions => Icons.camera_alt_rounded,
+    EcoPlaceCategory.history => Icons.account_balance_rounded,
+    EcoPlaceCategory.parks => Icons.park_rounded,
+    EcoPlaceCategory.museums => Icons.museum_rounded,
+    EcoPlaceCategory.markets => Icons.storefront_rounded,
+  };
 }
 
 class _RouteLoadingBanner extends StatelessWidget {
@@ -707,6 +952,14 @@ class _RoutePreview extends StatelessWidget {
     required this.journey,
     required this.onStart,
     required this.onEnd,
+    this.onPause,
+    this.onResume,
+    this.currentLocation,
+    this.trackedDistanceKm = 0,
+    this.remainingDistanceKm = 0,
+    this.liveCaloriesBurned = 0,
+    this.liveCarbonSavedKg = 0,
+    this.nextInstruction,
     required this.onChangeRoute,
   });
 
@@ -714,6 +967,14 @@ class _RoutePreview extends StatelessWidget {
   final EcoJourney? journey;
   final VoidCallback onStart;
   final VoidCallback onEnd;
+  final VoidCallback? onPause;
+  final VoidCallback? onResume;
+  final EcoLocation? currentLocation;
+  final double trackedDistanceKm;
+  final double remainingDistanceKm;
+  final double liveCaloriesBurned;
+  final double liveCarbonSavedKg;
+  final String? nextInstruction;
   final VoidCallback onChangeRoute;
 
   @override
@@ -725,7 +986,19 @@ class _RoutePreview extends StatelessWidget {
         const SizedBox(height: 12),
         _RouteEndpointsCard(route: route, onChangeRoute: onChangeRoute),
         const SizedBox(height: 12),
-        EcoRouteMap(route: route),
+        EcoRouteMap(route: route, currentLocation: currentLocation),
+        if (journey?.status == EcoJourneyStatus.inProgress ||
+            journey?.status == EcoJourneyStatus.paused) ...[
+          const SizedBox(height: 12),
+          _LiveJourneyCard(
+            isPaused: journey?.status == EcoJourneyStatus.paused,
+            trackedDistanceKm: trackedDistanceKm,
+            remainingDistanceKm: remainingDistanceKm,
+            liveCaloriesBurned: liveCaloriesBurned,
+            liveCarbonSavedKg: liveCarbonSavedKg,
+            nextInstruction: nextInstruction,
+          ),
+        ],
         const SizedBox(height: 24),
         Text('Journey estimate', style: _sectionTitle(context)),
         const SizedBox(height: 10),
@@ -777,27 +1050,42 @@ class _RoutePreview extends StatelessWidget {
           (entry) => RouteStepTile(segment: entry.$2, index: entry.$1),
         ),
         const SizedBox(height: 10),
-        ElevatedButton.icon(
-          onPressed: journey?.status == EcoJourneyStatus.inProgress
-              ? onEnd
-              : journey?.status == EcoJourneyStatus.completed
-              ? null
-              : onStart,
-          icon: Icon(
-            journey?.status == EcoJourneyStatus.inProgress
-                ? Icons.stop_circle_outlined
-                : journey?.status == EcoJourneyStatus.completed
-                ? Icons.check_circle_outline_rounded
-                : Icons.navigation_rounded,
+        if (journey == null)
+          ElevatedButton.icon(
+            onPressed: onStart,
+            icon: const Icon(Icons.navigation_rounded),
+            label: const Text('Start journey'),
+          )
+        else ...[
+          ElevatedButton.icon(
+            onPressed: journey?.status == EcoJourneyStatus.completed
+                ? null
+                : onEnd,
+            icon: Icon(
+              journey?.status == EcoJourneyStatus.completed
+                  ? Icons.check_circle_outline_rounded
+                  : Icons.stop_circle_outlined,
+            ),
+            label: Text(
+              journey?.status == EcoJourneyStatus.completed
+                  ? 'Journey completed'
+                  : 'End journey',
+            ),
           ),
-          label: Text(
-            journey?.status == EcoJourneyStatus.inProgress
-                ? 'End journey'
-                : journey?.status == EcoJourneyStatus.completed
-                ? 'Journey completed'
-                : 'Start journey',
+          const SizedBox(height: 10),
+        ],
+        if (journey?.status == EcoJourneyStatus.inProgress)
+          OutlinedButton.icon(
+            onPressed: onPause,
+            icon: const Icon(Icons.pause_circle_outline_rounded),
+            label: const Text('Pause tracking'),
+          )
+        else if (journey?.status == EcoJourneyStatus.paused)
+          ElevatedButton.icon(
+            onPressed: onResume,
+            icon: const Icon(Icons.play_circle_outline_rounded),
+            label: const Text('Resume tracking'),
           ),
-        ),
       ],
     );
   }
@@ -805,6 +1093,69 @@ class _RoutePreview extends StatelessWidget {
   TextStyle _sectionTitle(BuildContext context) => GoogleFonts.poppins(
     textStyle: Theme.of(context).textTheme.titleLarge,
     fontWeight: FontWeight.w700,
+  );
+}
+
+class _LiveJourneyCard extends StatelessWidget {
+  const _LiveJourneyCard({
+    required this.isPaused,
+    required this.trackedDistanceKm,
+    required this.remainingDistanceKm,
+    required this.liveCaloriesBurned,
+    required this.liveCarbonSavedKg,
+    required this.nextInstruction,
+  });
+
+  final bool isPaused;
+  final double trackedDistanceKm;
+  final double remainingDistanceKm;
+  final double liveCaloriesBurned;
+  final double liveCarbonSavedKg;
+  final String? nextInstruction;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: const Color(0xFFE5F4E7),
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              isPaused ? Icons.pause_circle_rounded : Icons.gps_fixed_rounded,
+              color: AppColors.primary,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              isPaused ? 'Tracking paused' : 'Live journey tracking',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Text(
+          '${trackedDistanceKm.toStringAsFixed(2)} km covered · ${remainingDistanceKm.toStringAsFixed(1)} km route remaining',
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '${liveCaloriesBurned.round()} kcal walking · ${liveCarbonSavedKg.toStringAsFixed(2)} kg CO₂ saved',
+          style: TextStyle(color: AppColors.textSecondary),
+        ),
+        if (nextInstruction != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            'Next: $nextInstruction',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: AppColors.textSecondary),
+          ),
+        ],
+      ],
+    ),
   );
 }
 

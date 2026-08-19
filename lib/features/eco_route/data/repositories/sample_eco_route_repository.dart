@@ -1,5 +1,6 @@
 import '../../business_logic/entities/eco_destination.dart';
 import '../../business_logic/entities/eco_location.dart';
+import '../../business_logic/entities/eco_place_category.dart';
 import '../../business_logic/entities/eco_route.dart';
 import '../../business_logic/entities/eco_route_segment.dart';
 import '../../business_logic/repositories/eco_route_repository.dart';
@@ -100,7 +101,26 @@ class SampleEcoRouteRepository implements EcoRouteRepository {
   @override
   Future<List<EcoDestination>> fetchNearbyDestinations({
     required EcoLocation origin,
-  }) async => _destinations;
+    EcoPlaceCategory category = EcoPlaceCategory.all,
+  }) async => category == EcoPlaceCategory.all
+      ? _destinations
+      : _destinations
+            .where(
+              (destination) => destination.category.toLowerCase().contains(
+                category == EcoPlaceCategory.food
+                    ? 'food'
+                    : category == EcoPlaceCategory.parks
+                    ? 'park'
+                    : category == EcoPlaceCategory.markets
+                    ? 'market'
+                    : category == EcoPlaceCategory.history
+                    ? 'heritage'
+                    : category == EcoPlaceCategory.museums
+                    ? 'museum'
+                    : 'landmark',
+              ),
+            )
+            .toList();
 
   @override
   Future<List<EcoDestination>> searchDestinations({

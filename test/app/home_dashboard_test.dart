@@ -15,7 +15,9 @@ void main() {
         home: HomeDashboard(
           userId: 'test-user',
           journeyHistoryRepository: const _EmptyJourneyHistoryRepository(),
+          historyRefreshSignal: ValueNotifier(0),
           onNavigate: (index) => selectedIndex = index,
+          onPlanAgain: (_) => selectedIndex = 1,
         ),
       ),
     );
@@ -23,6 +25,46 @@ void main() {
     await tester.tap(find.text('Plan eco route'));
 
     expect(selectedIndex, 1);
+  });
+
+  testWidgets('replans a selected completed journey from trip history', (
+    tester,
+  ) async {
+    EcoJourneyHistoryItem? selectedTrip;
+    final trip = EcoJourneyHistoryItem(
+      id: 'journey-1',
+      destinationName: 'Batu Caves',
+      destinationCategory: 'Landmark',
+      destinationLatitude: 3.2379,
+      destinationLongitude: 101.684,
+      durationMinutes: 42,
+      walkingDistanceMeters: 900,
+      estimatedCalories: 63,
+      estimatedCarbonSavedKg: 1.2,
+      completedAt: DateTime(2026, 8, 19),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: HomeDashboard(
+          userId: 'test-user',
+          journeyHistoryRepository: _JourneyHistoryRepository([trip]),
+          historyRefreshSignal: ValueNotifier(0),
+          onNavigate: (_) {},
+          onPlanAgain: (value) => selectedTrip = value,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Plan again'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('63 kcal · 1.20 kg CO₂ saved'), findsOneWidget);
+    await tester.tap(find.text('Plan again'));
+    expect(selectedTrip, trip);
   });
 }
 
@@ -33,4 +75,15 @@ class _EmptyJourneyHistoryRepository implements JourneyHistoryRepository {
   Future<List<EcoJourneyHistoryItem>> fetchCompletedJourneys({
     required String userId,
   }) async => const [];
+}
+
+class _JourneyHistoryRepository implements JourneyHistoryRepository {
+  const _JourneyHistoryRepository(this._journeys);
+
+  final List<EcoJourneyHistoryItem> _journeys;
+
+  @override
+  Future<List<EcoJourneyHistoryItem>> fetchCompletedJourneys({
+    required String userId,
+  }) async => _journeys;
 }
