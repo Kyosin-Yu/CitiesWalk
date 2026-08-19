@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -6,6 +7,7 @@ import '../core/di/service_locator.dart';
 import '../features/authentication/business_logic/providers/auth_controller.dart';
 import '../features/authentication/presentation/pages/profile_page.dart';
 import '../features/eco_route/business_logic/providers/eco_route_controller.dart';
+import '../features/eco_route/business_logic/entities/eco_journey_history_item.dart';
 import '../features/eco_route/data/data_sources/device_location_data_source.dart';
 import '../features/eco_route/data/data_sources/google_eco_route_data_source.dart';
 import '../features/eco_route/data/repositories/google_eco_route_repository.dart';
@@ -26,6 +28,10 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int _selectedIndex = 0;
+  final ValueNotifier<int> _journeyHistoryVersion = ValueNotifier(0);
+  final ValueNotifier<EcoJourneyHistoryItem?> _tripToReplan = ValueNotifier(
+    null,
+  );
 
   late final List<Widget> _pages = [
     HomeDashboard(
@@ -33,9 +39,14 @@ class _AppShellState extends State<AppShell> {
       journeyHistoryRepository: SupabaseJourneyRepository(
         SupabaseJourneyDataSource(sl<SupabaseClient>()),
       ),
+      historyRefreshSignal: _journeyHistoryVersion,
       onNavigate: _selectDestination,
+      onPlanAgain: _planSavedTripAgain,
     ),
-    const _EcoRouteEntryPage(),
+    _EcoRouteEntryPage(
+      onJourneyCompleted: _refreshJourneyHistory,
+      tripToReplan: _tripToReplan,
+    ),
     ChangeNotifierProvider(
       create: (_) => sl<FitnessController>()..loadDashboard(),
       child: const FitnessPage(),
@@ -87,10 +98,29 @@ class _AppShellState extends State<AppShell> {
       _selectedIndex = index;
     });
   }
+
+  void _refreshJourneyHistory() {
+    _journeyHistoryVersion.value++;
+  }
+
+  void _planSavedTripAgain(EcoJourneyHistoryItem journey) {
+    _tripToReplan.value = journey;
+    _selectDestination(1);
+  }
+
+  @override
+  void dispose() {
+    _journeyHistoryVersion.dispose();
+    _tripToReplan.dispose();
+    super.dispose();
+  }
 }
 
 class _EcoRouteEntryPage extends StatelessWidget {
-  const _EcoRouteEntryPage();
+  const _EcoRouteEntryPage({this.onJourneyCompleted, this.tripToReplan});
+
+  final VoidCallback? onJourneyCompleted;
+  final ValueListenable<EcoJourneyHistoryItem?>? tripToReplan;
 
   @override
   Widget build(BuildContext context) {
@@ -118,7 +148,10 @@ class _EcoRouteEntryPage extends StatelessWidget {
             ),
             locationService: const DeviceLocationDataSource(),
           ),
-          child: const EcoRoutePage(),
+          child: EcoRoutePage(
+            onJourneyCompleted: onJourneyCompleted,
+            tripToReplan: tripToReplan,
+          ),
         );
       },
     );

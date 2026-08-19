@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../business_logic/entities/eco_destination.dart';
 import '../../business_logic/entities/eco_location.dart';
+import '../../business_logic/entities/eco_place_category.dart';
 import '../../business_logic/entities/eco_route.dart';
 import '../../business_logic/entities/eco_route_segment.dart';
 
@@ -14,10 +15,14 @@ class GoogleEcoRouteDataSource {
 
   final SupabaseClient _client;
 
-  Future<List<EcoDestination>> fetchNearby(EcoLocation origin) async {
+  Future<List<EcoDestination>> fetchNearby({
+    required EcoLocation origin,
+    required EcoPlaceCategory category,
+  }) async {
     final data = await _invoke({
       'action': 'nearby',
       'origin': _locationPayload(origin),
+      'category': category.apiValue,
     });
     return _destinationsFrom(data['places']);
   }

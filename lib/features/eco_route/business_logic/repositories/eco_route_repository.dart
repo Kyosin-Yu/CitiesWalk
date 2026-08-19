@@ -1,5 +1,6 @@
 import '../entities/eco_destination.dart';
 import '../entities/eco_location.dart';
+import '../entities/eco_place_category.dart';
 import '../entities/eco_route.dart';
 
 abstract interface class EcoRouteRepository {
@@ -10,6 +11,7 @@ abstract interface class EcoRouteRepository {
 
   Future<List<EcoDestination>> fetchNearbyDestinations({
     required EcoLocation origin,
+    EcoPlaceCategory category = EcoPlaceCategory.all,
   });
 
   Future<EcoRoute> buildRoute({

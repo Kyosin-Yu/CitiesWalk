@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../features/eco_route/business_logic/repositories/journey_history_repository.dart';
+import '../features/eco_route/business_logic/entities/eco_journey_history_item.dart';
 import 'home_recent_trips.dart';
 
 import 'theme/app_colors.dart';
@@ -12,12 +14,16 @@ class HomeDashboard extends StatelessWidget {
     super.key,
     required this.userId,
     required this.journeyHistoryRepository,
+    required this.historyRefreshSignal,
     required this.onNavigate,
+    required this.onPlanAgain,
   });
 
   final String userId;
   final JourneyHistoryRepository journeyHistoryRepository;
+  final ValueListenable<int> historyRefreshSignal;
   final ValueChanged<int> onNavigate;
+  final ValueChanged<EcoJourneyHistoryItem> onPlanAgain;
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -60,7 +66,8 @@ class HomeDashboard extends StatelessWidget {
                 RecentTrips(
                   userId: userId,
                   repository: journeyHistoryRepository,
-                  onPlanAgain: () => onNavigate(1),
+                  refreshSignal: historyRefreshSignal,
+                  onPlanAgain: onPlanAgain,
                 ),
               ],
             ),

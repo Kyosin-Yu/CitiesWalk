@@ -1,5 +1,7 @@
 import 'package:citieswalk/features/eco_route/data/repositories/sample_eco_route_repository.dart';
 import 'package:citieswalk/features/eco_route/business_logic/entities/eco_location.dart';
+import 'package:citieswalk/features/eco_route/business_logic/entities/eco_place_category.dart';
+import 'package:citieswalk/features/eco_route/business_logic/entities/eco_destination.dart';
 import 'package:citieswalk/features/eco_route/business_logic/entities/eco_journey.dart';
 import 'package:citieswalk/features/eco_route/business_logic/entities/eco_route.dart';
 import 'package:citieswalk/features/eco_route/business_logic/entities/eco_route_segment.dart';
@@ -25,15 +27,24 @@ class _FixedLocationService implements LocationService {
 class _MemoryJourneyRepository implements JourneyRepository {
   String? createdJourneyId;
   DateTime? completedAt;
+  final List<EcoLocation> trackPoints = [];
+  bool isPaused = false;
 
   @override
   Future<void> completeJourney({
     required String journeyId,
     required DateTime endedAt,
+    required EcoRoute finalRoute,
   }) async {
     createdJourneyId = journeyId;
     completedAt = endedAt;
   }
+
+  @override
+  Future<void> updateRouteEstimates({
+    required String journeyId,
+    required EcoRoute route,
+  }) async {}
 
   @override
   Future<String> createStartedJourney({
@@ -41,6 +52,25 @@ class _MemoryJourneyRepository implements JourneyRepository {
     required EcoRoute route,
     required DateTime startedAt,
   }) async => createdJourneyId = 'journey-1';
+
+  @override
+  Future<void> pauseJourney({required String journeyId}) async {
+    isPaused = true;
+  }
+
+  @override
+  Future<void> resumeJourney({required String journeyId}) async {
+    isPaused = false;
+  }
+
+  @override
+  Future<void> recordTrackPoint({
+    required String journeyId,
+    required EcoLocation location,
+    required DateTime recordedAt,
+  }) async {
+    trackPoints.add(location);
+  }
 }
 
 void main() {
@@ -65,6 +95,23 @@ void main() {
       expect(controller.destinations, isNotEmpty);
     });
 
+    test('filters nearby recommendations by place category', () async {
+      await controller.initialise();
+      await controller.selectCategory(EcoPlaceCategory.food);
+
+      expect(controller.selectedCategory, EcoPlaceCategory.food);
+      expect(controller.destinations, isNotEmpty);
+      expect(
+        controller.destinations,
+        everyElement(
+          predicate<EcoDestination>(
+            (destination) =>
+                destination.category.toLowerCase().contains('food'),
+          ),
+        ),
+      );
+    });
+
     test('saves and completes a journey for the authenticated user', () async {
       await controller.initialise();
       await controller.selectDestination(controller.destinations.first);
@@ -78,6 +125,24 @@ void main() {
       expect(controller.journey!.status, EcoJourneyStatus.completed);
       expect(journeyRepository.completedAt, isNotNull);
     });
+
+    test(
+      'pauses and resumes an active journey while retaining its track',
+      () async {
+        await controller.initialise();
+        await controller.selectDestination(controller.destinations.first);
+        await controller.startJourney();
+
+        await controller.pauseJourney();
+        expect(controller.journey!.status, EcoJourneyStatus.paused);
+        expect(journeyRepository.isPaused, isTrue);
+
+        await controller.resumeJourney();
+        expect(controller.journey!.status, EcoJourneyStatus.inProgress);
+        expect(journeyRepository.isPaused, isFalse);
+        expect(journeyRepository.trackPoints, hasLength(1));
+      },
+    );
 
     test('creates route geometry for the map preview', () async {
       await controller.initialise();

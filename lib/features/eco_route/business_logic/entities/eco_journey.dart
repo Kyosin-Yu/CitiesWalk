@@ -1,6 +1,6 @@
 import 'eco_route.dart';
 
-enum EcoJourneyStatus { preview, inProgress, completed }
+enum EcoJourneyStatus { preview, inProgress, paused, completed }
 
 class EcoJourney {
   const EcoJourney({
