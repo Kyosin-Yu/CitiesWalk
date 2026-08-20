@@ -1,21 +1,26 @@
 import '../models/badge_model.dart';
 import '../models/leaderboard_entry_model.dart';
 import '../models/point_transaction_model.dart';
+import 'rewards_data_source.dart';
 
 /// Temporary in-memory data source for the Rewards MVP.
 ///
 /// Replace this source with a Supabase data source after the team confirms the
 /// rewards schema and policy. The repository remains the stable boundary.
-class RewardsMockDataSource {
+class RewardsMockDataSource implements RewardsDataSource {
   const RewardsMockDataSource();
 
+  @override
   Future<List<LeaderboardEntryModel>> fetchLeaderboard() async => _leaderboard;
 
+  @override
   Future<List<BadgeModel>> fetchBadges() async => _badges;
 
+  @override
   Future<List<PointTransactionModel>> fetchPointHistory() async =>
       _transactions;
 
+  @override
   Future<int> fetchCurrentUserPoints() async => 3240;
 
   static const List<LeaderboardEntryModel> _leaderboard =

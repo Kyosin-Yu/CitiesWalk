@@ -517,10 +517,19 @@ IconData _iconForTransaction(String icon) => switch (icon) {
   _ => Icons.eco_rounded,
 };
 
-String _formatPoints(int value) => value.toString().replaceAllMapped(
-  RegExp(r'(?=(\d{3})+(?!\d))'),
-  (_) => ',',
-);
+String _formatPoints(int value) {
+  final sign = value < 0 ? '-' : '';
+  final digits = value.abs().toString();
+  final buffer = StringBuffer(sign);
+  for (var index = 0; index < digits.length; index++) {
+    if (index > 0 && (digits.length - index).remainder(3) == 0) {
+      buffer.write(',');
+    }
+    buffer.write(digits[index]);
+  }
+  return buffer.toString();
+}
+
 String _monthLabel(DateTime month) {
   const names = <String>[
     'Jan',

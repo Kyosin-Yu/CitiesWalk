@@ -36,4 +36,26 @@ class LeaderboardEntryModel {
         initials: row['initials'] as String? ?? '?',
         isCurrentUser: row['is_current_user'] as bool? ?? false,
       );
+
+  factory LeaderboardEntryModel.fromLeaderboardRow(
+    Map<String, dynamic> row, {
+    required String currentUserId,
+  }) {
+    final name = row['display_name'] as String? ?? 'CitiesWalk user';
+    return LeaderboardEntryModel(
+      rank: (row['rank'] as num).toInt(),
+      name: name,
+      points: (row['total_points'] as num).toInt(),
+      achievement: 'Eco Explorer',
+      initials: row['initials'] as String? ?? _initialsFor(name),
+      isCurrentUser: row['user_id'] == currentUserId,
+    );
+  }
+
+  static String _initialsFor(String name) => name
+      .trim()
+      .split(RegExp(r'\s+'))
+      .take(2)
+      .map((part) => part[0].toUpperCase())
+      .join();
 }
