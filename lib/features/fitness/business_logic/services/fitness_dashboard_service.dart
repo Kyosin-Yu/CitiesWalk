@@ -7,6 +7,7 @@ class FitnessDashboardService {
   FitnessDashboard build({
     required String userName,
     required List<CompletedFitnessJourney> journeys,
+    int? ecoPoints,
     DateTime? now,
   }) {
     final localNow = now ?? DateTime.now();
@@ -60,7 +61,7 @@ class FitnessDashboardService {
       walkingDistanceTodayKm: _distanceKm(todayJourneys),
       caloriesTodayKcal: _calories(todayJourneys),
       carbonSavedTodayKg: _carbon(todayJourneys),
-      ecoPoints: null,
+      ecoPoints: ecoPoints,
       weeklyWalkingDistanceKm: _distanceKm(sevenDayJourneys),
       previousWeekWalkingDistanceKm: _distanceKm(previousSevenDayJourneys),
       monthlyWalkingDistanceKm: _distanceKm(monthlyJourneys),

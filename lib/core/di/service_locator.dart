@@ -2,6 +2,7 @@ import 'package:get_it/get_it.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/supabase_config.dart';
+import '../services/eco_points_service.dart';
 import '../../features/authentication/business_logic/repositories/auth_repository.dart';
 import '../../features/authentication/data/repositories/auth_repository_impl.dart';
 import '../../features/authentication/data/data_sources/profile_data_source.dart';
@@ -19,6 +20,9 @@ final sl = GetIt.instance;
 
 Future<void> setupServiceLocator() async {
   sl.registerLazySingleton<SupabaseClient>(() => SupabaseConfig.client);
+  sl.registerLazySingleton<EcoPointsService>(
+    () => EcoPointsService(sl<SupabaseClient>()),
+  );
 
   sl.registerLazySingleton<SupabaseAuthDataSource>(
     () => SupabaseAuthDataSource(sl<SupabaseClient>()),
@@ -47,7 +51,10 @@ Future<void> setupServiceLocator() async {
   );
 
   sl.registerLazySingleton<RewardsDataSource>(
-    () => SupabaseRewardsDataSource(sl<SupabaseClient>()),
+    () => SupabaseRewardsDataSource(
+      sl<SupabaseClient>(),
+      sl<EcoPointsService>(),
+    ),
   );
   sl.registerLazySingleton<RewardsRepository>(
     () => RewardsRepositoryImpl(sl<RewardsDataSource>()),

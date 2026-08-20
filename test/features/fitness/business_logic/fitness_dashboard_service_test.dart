@@ -8,6 +8,7 @@ void main() {
     final dashboard = service.build(
       userName: 'Alex',
       now: DateTime(2026, 8, 19, 12),
+      ecoPoints: 135,
       journeys: [
         CompletedFitnessJourney(
           id: 'today',
@@ -46,6 +47,7 @@ void main() {
     expect(dashboard.monthlyCarbonSavedKg, closeTo(1.2, .000001));
     expect(dashboard.completedJourneysThisWeek, 2);
     expect(dashboard.streakDays, 2);
+    expect(dashboard.ecoPoints, 135);
     expect(dashboard.dailySummaries, hasLength(7));
   });
 

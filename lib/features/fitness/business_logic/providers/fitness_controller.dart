@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../../core/services/eco_points_service.dart';
 import '../entities/fitness_dashboard.dart';
 import '../entities/fitness_goal.dart';
 import '../repositories/fitness_repository.dart';
@@ -13,6 +14,7 @@ class FitnessController extends ChangeNotifier {
     required this.userId,
     required this.userName,
     required this.repository,
+    this.ecoPointsService,
     this.dashboardService = const FitnessDashboardService(),
     this.goalProgressService = const FitnessGoalProgressService(),
   });
@@ -20,6 +22,7 @@ class FitnessController extends ChangeNotifier {
   final String userId;
   final String userName;
   final FitnessRepository repository;
+  final EcoPointsService? ecoPointsService;
   final FitnessDashboardService dashboardService;
   final FitnessGoalProgressService goalProgressService;
 
@@ -61,9 +64,11 @@ class FitnessController extends ChangeNotifier {
 
     try {
       final journeys = await repository.fetchCompletedJourneys(userId: userId);
+      final ecoPoints = await _loadCurrentWeekEcoPoints();
       _dashboard = dashboardService.build(
         userName: userName,
         journeys: journeys,
+        ecoPoints: ecoPoints,
       );
       try {
         _goals = await repository.fetchGoals(userId: userId);
@@ -86,6 +91,18 @@ class FitnessController extends ChangeNotifier {
     if (_refreshPending) {
       _refreshPending = false;
       await _load(showLoading: false);
+    }
+  }
+
+  Future<int?> _loadCurrentWeekEcoPoints() async {
+    final service = ecoPointsService;
+    if (service == null) return null;
+    try {
+      return await service.fetchCurrentWeekPoints(userId: userId);
+    } catch (error, stackTrace) {
+      debugPrint('Unable to load Eco Points: $error');
+      debugPrint(stackTrace.toString());
+      return null;
     }
   }
 

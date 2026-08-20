@@ -51,7 +51,7 @@ class MetricsGrid extends StatelessWidget {
       _MetricCard(
         label: 'Eco Points',
         value: dashboard.ecoPoints?.toString() ?? '—',
-        unit: dashboard.ecoPoints == null ? 'rewards not linked' : 'pts',
+        unit: dashboard.ecoPoints == null ? 'rewards not linked' : 'pts this week',
         icon: Icons.star_rounded,
         color: const Color(0xFFF9A825),
         iconColor: const Color(0xFFFFF3C6),

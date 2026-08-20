@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/di/service_locator.dart';
+import '../core/services/eco_points_service.dart';
 import '../core/models/destination_review_summary.dart';
 import '../core/services/destination_review_summary_service.dart';
 import '../features/authentication/business_logic/providers/auth_controller.dart';
@@ -58,6 +59,7 @@ class _AppShellState extends State<AppShell> {
         sl<AuthController>().currentUser!.fullName ??
         sl<AuthController>().currentUser!.email,
     repository: sl<FitnessRepository>(),
+    ecoPointsService: sl<EcoPointsService>(),
   );
   final ValueNotifier<int> _reviewSummaryVersion = ValueNotifier(0);
   final ValueNotifier<Map<String, DestinationReviewSummary>>
