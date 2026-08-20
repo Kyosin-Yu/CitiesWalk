@@ -1,6 +1,6 @@
 import 'package:get_it/get_it.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import '../../features/authentication/data/data_sources/profile_storage_data_source.dart';
 import '../config/supabase_config.dart';
 import '../services/eco_points_service.dart';
 import '../../features/authentication/business_logic/repositories/auth_repository.dart';
@@ -32,10 +32,15 @@ Future<void> setupServiceLocator() async {
     () => ProfileDataSource(sl<SupabaseClient>()),
   );
 
+  sl.registerLazySingleton<ProfileStorageDataSource>(
+    () => ProfileStorageDataSource(sl<SupabaseClient>()),
+  );
+
   sl.registerLazySingleton<AuthRepository>(
     () => AuthRepositoryImpl(
       sl<SupabaseAuthDataSource>(),
       sl<ProfileDataSource>(),
+      sl<ProfileStorageDataSource>(),
     ),
   );
 

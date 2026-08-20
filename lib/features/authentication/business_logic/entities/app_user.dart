@@ -4,6 +4,8 @@ class AppUser {
   final String? fullName;
   final String? phoneNumber;
   final String? profileImage;
+  final String? bio;
+  final bool publicProfile;
 
   const AppUser({
     required this.id,
@@ -11,5 +13,7 @@ class AppUser {
     this.fullName,
     this.phoneNumber,
     this.profileImage,
+    this.bio,
+    this.publicProfile = true,
   });
 }

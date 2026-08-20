@@ -95,11 +95,73 @@ class AuthController extends ChangeNotifier {
   }
 
   Future<void> checkCurrentUser() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      _currentUser = await _repository.getCurrentUser();
+    } on AppException catch (e) {
+      _currentUser = null;
+      _errorMessage = e.message;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> refreshCurrentUser() async {
     try {
       _currentUser = await _repository.getCurrentUser();
       notifyListeners();
-    } on AppException catch (_) {
-      _currentUser = null;
+    } on AppException catch (e) {
+      _errorMessage = e.message;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> updateProfile({
+    required String fullName,
+    required String bio,
+    required bool publicProfile,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      _currentUser = await _repository.updateProfile(
+        fullName: fullName,
+        bio: bio,
+        publicProfile: publicProfile,
+      );
+
+      return true;
+    } on AppException catch (e) {
+      _errorMessage = e.message;
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> updateProfileImage({required String localImagePath}) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      _currentUser = await _repository.updateProfileImage(
+        localImagePath: localImagePath,
+      );
+
+      return true;
+    } on AppException catch (e) {
+      _errorMessage = e.message;
+      return false;
+    } finally {
+      _isLoading = false;
       notifyListeners();
     }
   }

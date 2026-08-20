@@ -1,3 +1,5 @@
+//to communicate with Supbase Database
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
 
@@ -40,14 +42,32 @@ class ProfileDataSource {
     String? fullName,
     String? phoneNumber,
     String? profileImage,
+    String? bio,
+    bool? publicProfile,
   }) async {
     final updates = <String, dynamic>{};
 
-    if (fullName != null) updates['full_name'] = fullName;
-    if (phoneNumber != null) updates['phone_number'] = phoneNumber;
-    if (profileImage != null) updates['profile_image'] = profileImage;
+    if (fullName != null) {
+      updates['full_name'] = fullName;
+    }
 
-    if (updates.isEmpty) return;
+    if (phoneNumber != null) {
+      updates['phone_number'] = phoneNumber;
+    }
+
+    if (profileImage != null) {
+      updates['profile_image'] = profileImage;
+    }
+
+    if (bio != null) {
+      updates['bio'] = bio;
+    }
+
+    if (publicProfile != null) {
+      updates['public_profile'] = publicProfile;
+    }
+
+    updates['updated_at'] = DateTime.now().toIso8601String();
 
     await _client.from('profiles').update(updates).eq('id', id);
   }
