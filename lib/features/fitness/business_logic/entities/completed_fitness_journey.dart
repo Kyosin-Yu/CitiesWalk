@@ -6,6 +6,7 @@ class CompletedFitnessJourney {
     required this.estimatedCarbonSavedKg,
     required this.completedAt,
     this.stepCount = 0,
+    this.countsAsCompletedRoute = true,
   });
 
   final String id;
@@ -14,4 +15,5 @@ class CompletedFitnessJourney {
   final double estimatedCarbonSavedKg;
   final DateTime completedAt;
   final int stepCount;
+  final bool countsAsCompletedRoute;
 }

@@ -66,4 +66,31 @@ void main() {
     expect(dashboard.hasCompletedJourney, isFalse);
     expect(dashboard.dailySummaries, hasLength(7));
   });
+
+  test('counts early-ended effort without counting a completed route', () {
+    const service = FitnessDashboardService();
+    final dashboard = service.build(
+      userName: 'Alex',
+      now: DateTime(2026, 8, 19, 12),
+      journeys: [
+        CompletedFitnessJourney(
+          id: 'ended-early',
+          walkingDistanceMeters: 850,
+          estimatedCalories: 56,
+          estimatedCarbonSavedKg: .18,
+          completedAt: DateTime(2026, 8, 19, 10),
+          stepCount: 1105,
+          countsAsCompletedRoute: false,
+        ),
+      ],
+    );
+
+    expect(dashboard.hasRecordedActivity, isTrue);
+    expect(dashboard.walkingDistanceTodayKm, .85);
+    expect(dashboard.stepsToday, 1105);
+    expect(dashboard.caloriesTodayKcal, 56);
+    expect(dashboard.completedJourneysThisWeek, 0);
+    expect(dashboard.totalCompletedJourneys, 0);
+    expect(dashboard.streakDays, 0);
+  });
 }

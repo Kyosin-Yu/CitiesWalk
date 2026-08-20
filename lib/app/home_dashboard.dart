@@ -7,6 +7,7 @@ import '../features/eco_route/business_logic/repositories/journey_history_reposi
 import '../features/eco_route/business_logic/entities/eco_destination.dart';
 import '../features/eco_route/business_logic/entities/eco_journey_history_item.dart';
 import '../features/eco_route/business_logic/entities/eco_location.dart';
+import '../features/fitness/business_logic/entities/fitness_dashboard.dart';
 import 'home_recent_trips.dart';
 
 import 'theme/app_colors.dart';
@@ -22,6 +23,7 @@ class HomeDashboard extends StatelessWidget {
     required this.onPlanAgain,
     this.onPlanDestination,
     this.reviewSummaries,
+    this.fitnessDashboard,
   });
 
   final String userId;
@@ -31,6 +33,7 @@ class HomeDashboard extends StatelessWidget {
   final ValueChanged<EcoJourneyHistoryItem> onPlanAgain;
   final ValueChanged<EcoDestination>? onPlanDestination;
   final ValueListenable<Map<String, DestinationReviewSummary>>? reviewSummaries;
+  final ValueListenable<FitnessDashboard?>? fitnessDashboard;
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -48,7 +51,7 @@ class HomeDashboard extends StatelessWidget {
                 const SizedBox(height: 24),
                 const _SectionTitle('Today’s eco impact'),
                 const SizedBox(height: 10),
-                const _ImpactCard(),
+                _ImpactCard(fitnessDashboard: fitnessDashboard),
                 const SizedBox(height: 24),
                 const _SectionTitle('Continue your journey'),
                 const SizedBox(height: 10),
@@ -67,7 +70,7 @@ class HomeDashboard extends StatelessWidget {
                 const _SectionTitle('Your recent trips'),
                 const SizedBox(height: 4),
                 Text(
-                  'Completed journeys are saved here for your next visit.',
+                  'Completed and early-ended journeys are saved for your next visit.',
                   style: GoogleFonts.poppins(
                     fontSize: 11,
                     color: AppColors.textSecondary,
@@ -257,50 +260,108 @@ class _SectionTitle extends StatelessWidget {
 }
 
 class _ImpactCard extends StatelessWidget {
-  const _ImpactCard();
+  const _ImpactCard({this.fitnessDashboard});
+
+  final ValueListenable<FitnessDashboard?>? fitnessDashboard;
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 8),
-    decoration: BoxDecoration(
-      color: AppColors.surface,
-      borderRadius: BorderRadius.circular(20),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x0F000000),
-          blurRadius: 16,
-          offset: Offset(0, 5),
-        ),
-      ],
-    ),
-    child: const Row(
-      children: [
-        Expanded(
-          child: _ImpactMetric(
-            icon: Icons.directions_walk_rounded,
-            value: '0 km',
-            label: 'Walked',
+  Widget build(BuildContext context) {
+    final dashboard = fitnessDashboard;
+    if (dashboard == null) return const _ImpactCardContent();
+
+    return ValueListenableBuilder<FitnessDashboard?>(
+      valueListenable: dashboard,
+      builder: (_, value, _) => _ImpactCardContent(dashboard: value),
+    );
+  }
+}
+
+class _ImpactCardContent extends StatelessWidget {
+  const _ImpactCardContent({this.dashboard});
+
+  final FitnessDashboard? dashboard;
+
+  @override
+  Widget build(BuildContext context) {
+    final walkingDistance = dashboard?.walkingDistanceTodayKm ?? 0;
+    final calories = dashboard?.caloriesTodayKcal ?? 0;
+    final carbonSaved = dashboard?.carbonSavedTodayKg ?? 0;
+    final steps = dashboard?.stepsToday ?? 0;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 8),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0F000000),
+            blurRadius: 16,
+            offset: Offset(0, 5),
           ),
-        ),
-        _MetricDivider(),
-        Expanded(
-          child: _ImpactMetric(
-            icon: Icons.local_fire_department_outlined,
-            value: '0 kcal',
-            label: 'Burned',
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _ImpactMetric(
+                  icon: Icons.directions_walk_rounded,
+                  value: '${walkingDistance.toStringAsFixed(2)} km',
+                  label: 'Walked',
+                ),
+              ),
+              const _MetricDivider(),
+              Expanded(
+                child: _ImpactMetric(
+                  icon: Icons.local_fire_department_outlined,
+                  value: '$calories kcal',
+                  label: 'Burned',
+                ),
+              ),
+              const _MetricDivider(),
+              Expanded(
+                child: _ImpactMetric(
+                  icon: Icons.eco_outlined,
+                  value: '${carbonSaved.toStringAsFixed(2)} kg',
+                  label: 'CO₂ saved',
+                ),
+              ),
+            ],
           ),
-        ),
-        _MetricDivider(),
-        Expanded(
-          child: _ImpactMetric(
-            icon: Icons.eco_outlined,
-            value: '0 kg',
-            label: 'CO₂ saved',
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.accent.withValues(alpha: .16),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.directions_walk_rounded,
+                  size: 16,
+                  color: AppColors.primary,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  '$steps steps recorded today',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }
 
 class _ImpactMetric extends StatelessWidget {
@@ -505,100 +566,96 @@ class _Recommendations extends StatelessWidget {
     List<String> imageUrls,
     Map<String, DestinationReviewSummary> summaries,
   ) => SizedBox(
-      height: 148,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: _items.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 12),
-        itemBuilder: (context, index) {
-          final item = _items[index];
-          final summary = summaries[item.destination.id];
-          return InkWell(
-            onTap: () {
-              final planDestination = onPlanDestination;
-              if (planDestination != null) {
-                planDestination(item.destination);
-              } else {
-                onNavigate(1);
-              }
-            },
-            borderRadius: BorderRadius.circular(20),
-            child: Container(
-              width: 210,
-              clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x0D000000),
-                    blurRadius: 14,
-                    offset: Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Image.network(
-                    imageUrls[index],
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => ColoredBox(
-                      color: AppColors.primary,
-                      child: Center(
-                        child: Icon(
-                          item.icon,
-                          color: Colors.white,
-                          size: 38,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Colors.transparent, Color(0xDE123D18)],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    top: 10,
-                    left: 10,
-                    child: _ReviewsShortcutLabel(summary: summary),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Text(
-                          item.destination.name,
-                          style: GoogleFonts.poppins(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        Text(
-                          item.subtitle,
-                          style: GoogleFonts.poppins(
-                            color: Colors.white70,
-                            fontSize: 10,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+    height: 148,
+    child: ListView.separated(
+      scrollDirection: Axis.horizontal,
+      itemCount: _items.length,
+      separatorBuilder: (_, _) => const SizedBox(width: 12),
+      itemBuilder: (context, index) {
+        final item = _items[index];
+        final summary = summaries[item.destination.id];
+        return InkWell(
+          onTap: () {
+            final planDestination = onPlanDestination;
+            if (planDestination != null) {
+              planDestination(item.destination);
+            } else {
+              onNavigate(1);
+            }
+          },
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            width: 210,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x0D000000),
+                  blurRadius: 14,
+                  offset: Offset(0, 5),
+                ),
+              ],
             ),
-          );
-        },
-      ),
-    );
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Image.network(
+                  imageUrls[index],
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => ColoredBox(
+                    color: AppColors.primary,
+                    child: Center(
+                      child: Icon(item.icon, color: Colors.white, size: 38),
+                    ),
+                  ),
+                ),
+                const DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.transparent, Color(0xDE123D18)],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 10,
+                  left: 10,
+                  child: _ReviewsShortcutLabel(summary: summary),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Text(
+                        item.destination.name,
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Text(
+                        item.subtitle,
+                        style: GoogleFonts.poppins(
+                          color: Colors.white70,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    ),
+  );
 }
 
 class _HomeRecommendation {

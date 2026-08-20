@@ -8,6 +8,7 @@ class FitnessJourneyModel {
     required this.estimatedCarbonSavedKg,
     required this.completedAt,
     this.stepCount = 0,
+    this.countsAsCompletedRoute = true,
   });
 
   final String id;
@@ -16,6 +17,7 @@ class FitnessJourneyModel {
   final double estimatedCarbonSavedKg;
   final DateTime completedAt;
   final int stepCount;
+  final bool countsAsCompletedRoute;
 
   factory FitnessJourneyModel.fromSupabaseRow(Map<String, dynamic> row) {
     return FitnessJourneyModel(
@@ -34,6 +36,7 @@ class FitnessJourneyModel {
           0,
       completedAt: DateTime.parse(row['ended_at'] as String).toLocal(),
       stepCount: (row['actual_step_count'] as num?)?.round() ?? 0,
+      countsAsCompletedRoute: row['status'] == 'completed',
     );
   }
 
@@ -44,5 +47,6 @@ class FitnessJourneyModel {
     estimatedCarbonSavedKg: estimatedCarbonSavedKg,
     completedAt: completedAt,
     stepCount: stepCount,
+    countsAsCompletedRoute: countsAsCompletedRoute,
   );
 }

@@ -42,6 +42,7 @@ class _MemoryJourneyRepository implements JourneyRepository {
   bool wasCancelled = false;
   bool wasEndedEarly = false;
   int? actualStepCount;
+  int startedJourneys = 0;
 
   @override
   Future<void> completeJourney({
@@ -94,7 +95,10 @@ class _MemoryJourneyRepository implements JourneyRepository {
     required String userId,
     required EcoRoute route,
     required DateTime startedAt,
-  }) async => createdJourneyId = 'journey-1';
+  }) async {
+    startedJourneys++;
+    return createdJourneyId = 'journey-$startedJourneys';
+  }
 
   @override
   Future<void> pauseJourney({required String journeyId}) async {
@@ -176,6 +180,16 @@ void main() {
       expect(didComplete, isFalse);
       expect(controller.journey!.status, EcoJourneyStatus.inProgress);
       expect(journeyRepository.completedAt, isNull);
+    });
+
+    test('does not create a second record while a journey is active', () async {
+      await controller.initialise();
+      await controller.selectDestination(controller.destinations.first);
+      await controller.startJourney();
+      await controller.startJourney();
+
+      expect(journeyRepository.startedJourneys, 1);
+      expect(controller.journey!.status, EcoJourneyStatus.inProgress);
     });
 
     test('completes only when the GPS location reaches the destination', () async {

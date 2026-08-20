@@ -81,7 +81,7 @@ class FitnessPage extends StatelessWidget {
                       _SyncWarning(message: controller.errorMessage!),
                       const SizedBox(height: 12),
                     ],
-                    if (!dashboard.hasCompletedJourney) ...[
+                    if (!dashboard.hasRecordedActivity) ...[
                       const _EmptyRouteBanner(),
                       const SizedBox(height: 12),
                     ],

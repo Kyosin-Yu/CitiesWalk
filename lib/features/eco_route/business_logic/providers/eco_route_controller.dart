@@ -556,6 +556,14 @@ class EcoRouteController extends ChangeNotifier {
   Future<void> startJourney() async {
     final selectedRoute = _route;
     if (selectedRoute == null) return;
+    final activeJourney = _journey;
+    if (activeJourney?.status == EcoJourneyStatus.inProgress ||
+        activeJourney?.status == EcoJourneyStatus.paused) {
+      _message =
+          'A journey is already active. Resume it, end it early, or cancel it before starting another one.';
+      notifyListeners();
+      return;
+    }
 
     final startedAt = DateTime.now().toUtc();
     try {
