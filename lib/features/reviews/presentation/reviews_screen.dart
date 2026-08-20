@@ -4,8 +4,7 @@ import '../../../app/theme/app_colors.dart';
 import '../business_logic/entities/place_review.dart';
 import '../business_logic/entities/review_destination.dart';
 import '../business_logic/providers/reviews_provider.dart';
-import '../data/datasources/review_seed_data.dart';
-import '../data/repositories/in_memory_review_repository.dart';
+import '../business_logic/repositories/review_repository.dart';
 
 enum _ReviewPage { list, detail, write, submitted, mine, edit }
 
@@ -19,9 +18,16 @@ String ratingDescription(int rating) => switch (rating) {
 };
 
 class ReviewsScreen extends StatefulWidget {
-  const ReviewsScreen({super.key, this.initialDestinationId});
+  const ReviewsScreen({
+    super.key,
+    required this.destination,
+    required this.reviewsProvider,
+    this.onClose,
+  });
 
-  final String? initialDestinationId;
+  final ReviewDestination destination;
+  final ReviewsProvider reviewsProvider;
+  final VoidCallback? onClose;
 
   @override
   State<ReviewsScreen> createState() => _ReviewsScreenState();
@@ -33,24 +39,13 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
   PlaceReview? _selectedReview;
   _ReviewPage _page = _ReviewPage.list;
   bool _mostRecent = true;
+  int? _ratingFilter;
 
   @override
   void initState() {
     super.initState();
-    _destination = reviewDestinations.firstWhere(
-      (item) => item.id == widget.initialDestinationId,
-      orElse: () => reviewDestinations.first,
-    );
-    _reviewsProvider = ReviewsProvider(
-      InMemoryReviewRepository(),
-      _destination,
-    );
-  }
-
-  @override
-  void dispose() {
-    _reviewsProvider.dispose();
-    super.dispose();
+    _destination = widget.destination;
+    _reviewsProvider = widget.reviewsProvider;
   }
 
   void _showPage(_ReviewPage page, {PlaceReview? review}) {
@@ -60,15 +55,31 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
     });
   }
 
-  void _saveNewReview(int rating, String comment) {
-    if (_reviewsProvider.submitReview(rating: rating, comment: comment)) {
+  Future<void> _saveNewReview(
+    int rating,
+    String comment,
+    bool isAnonymous,
+  ) async {
+    if (await _reviewsProvider.submitReview(
+      rating: rating,
+      comment: comment,
+      isAnonymous: isAnonymous,
+    )) {
       _showPage(_ReviewPage.submitted);
+    } else {
+      _showProviderError();
     }
   }
 
-  void _saveEdit(int rating, String comment) {
-    if (_reviewsProvider.updateMyReview(rating: rating, comment: comment)) {
+  Future<void> _saveEdit(int rating, String comment, bool isAnonymous) async {
+    if (await _reviewsProvider.updateMyReview(
+      rating: rating,
+      comment: comment,
+      isAnonymous: isAnonymous,
+    )) {
       _showPage(_ReviewPage.mine);
+    } else {
+      _showProviderError();
     }
   }
 
@@ -81,23 +92,41 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
           _ReviewPage.list => _ReviewsListPage(
             destination: _destination,
             reviews: _reviewsProvider.reviews,
+            isLoading: _reviewsProvider.isLoading,
+            errorMessage: _reviewsProvider.errorMessage,
+            onRetry: _reviewsProvider.loadReviews,
             mostRecent: _mostRecent,
             onSortChanged: (value) => setState(() => _mostRecent = value),
+            ratingFilter: _ratingFilter,
+            onRatingFilterChanged: (value) =>
+                setState(() => _ratingFilter = value),
             onReviewTap: (review) =>
                 _showPage(_ReviewPage.detail, review: review),
-            onWrite: () => _showPage(_ReviewPage.write),
+            onWrite: () {
+              _reviewsProvider.beginDraft();
+              _showPage(_ReviewPage.write);
+            },
             onMyReviews: () => _showPage(_ReviewPage.mine),
+            onBack:
+                widget.onClose ?? () => Navigator.of(context).maybePop(),
           ),
           _ReviewPage.detail => _ReviewDetailPage(
             destination: _destination,
             review: _selectedReview!,
             onBack: () => _showPage(_ReviewPage.list),
+            onHelpful: () => _toggleHelpful(_selectedReview!),
+            onReport: () => _showReportSheet(_selectedReview!),
           ),
           _ReviewPage.write => _ReviewEditorPage(
             title: 'Write a Review',
             destination: _destination,
             onCancel: () => _showPage(_ReviewPage.list),
             onSave: _saveNewReview,
+            photos: _reviewsProvider.draftPhotos,
+            isPickingPhotos: _reviewsProvider.isSelectingPhotos,
+            isSaving: _reviewsProvider.isSaving,
+            onAddPhotos: _addDraftPhotos,
+            onRemovePhoto: _reviewsProvider.removeDraftPhoto,
           ),
           _ReviewPage.submitted => _SubmittedPage(
             destination: _destination,
@@ -106,7 +135,12 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
           _ReviewPage.mine => _MyReviewsPage(
             review: _reviewsProvider.myReview,
             onBack: () => _showPage(_ReviewPage.list),
-            onEdit: () => _showPage(_ReviewPage.edit),
+            onEdit: () {
+              _reviewsProvider.beginDraft(
+                _reviewsProvider.myReview?.photos ?? const [],
+              );
+              _showPage(_ReviewPage.edit);
+            },
             onDelete: _confirmDelete,
           ),
           _ReviewPage.edit => _ReviewEditorPage(
@@ -115,6 +149,11 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
             initialReview: _reviewsProvider.myReview,
             onCancel: () => _showPage(_ReviewPage.mine),
             onSave: _saveEdit,
+            photos: _reviewsProvider.draftPhotos,
+            isPickingPhotos: _reviewsProvider.isSelectingPhotos,
+            isSaving: _reviewsProvider.isSaving,
+            onAddPhotos: _addDraftPhotos,
+            onRemovePhoto: _reviewsProvider.removeDraftPhoto,
           ),
         };
 
@@ -162,33 +201,147 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
       ),
     );
     if (confirmed == true && mounted) {
-      _reviewsProvider.deleteMyReview();
+      final deleted = await _reviewsProvider.deleteMyReview();
+      if (!mounted || deleted || _reviewsProvider.errorMessage == null) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_reviewsProvider.errorMessage!)));
     }
   }
+
+  Future<void> _addDraftPhotos() async {
+    await _reviewsProvider.addDraftPhotos();
+    if (!mounted || _reviewsProvider.errorMessage == null) {
+      return;
+    }
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(_reviewsProvider.errorMessage!)));
+  }
+
+  void _showProviderError() {
+    final errorMessage = _reviewsProvider.errorMessage;
+    if (!mounted || errorMessage == null) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(errorMessage)));
+  }
+
+  Future<void> _toggleHelpful(PlaceReview review) async {
+    if (review.userId == _reviewsProvider.currentUserId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You cannot mark your own review.')),
+      );
+      return;
+    }
+    final updated = await _reviewsProvider.toggleHelpful(review.id);
+    if (!mounted) return;
+    if (updated == null) {
+      _showProviderError();
+      return;
+    }
+    setState(() => _selectedReview = updated);
+  }
+
+  Future<void> _showReportSheet(PlaceReview review) async {
+    if (review.userId == _reviewsProvider.currentUserId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You cannot report your own review.')),
+      );
+      return;
+    }
+    final reason = await showModalBottomSheet<ReviewReportReason>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Report review',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              const Text('Choose why this review needs moderator attention.'),
+              const SizedBox(height: 12),
+              for (final option in ReviewReportReason.values)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(_reportReasonLabel(option)),
+                  onTap: () => Navigator.pop(context, option),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (reason == null) return;
+    final reported = await _reviewsProvider.reportReview(
+      reviewId: review.id,
+      reason: reason,
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          reported
+              ? 'Thanks. Your report has been sent for review.'
+              : _reviewsProvider.errorMessage ?? 'Unable to send the report.',
+        ),
+      ),
+    );
+  }
 }
+
+String _reportReasonLabel(ReviewReportReason reason) => switch (reason) {
+  ReviewReportReason.spam => 'Spam or advertising',
+  ReviewReportReason.offensive => 'Offensive or abusive content',
+  ReviewReportReason.misleading => 'Misleading information',
+  ReviewReportReason.other => 'Other concern',
+};
 
 class _ReviewsListPage extends StatelessWidget {
   const _ReviewsListPage({
     required this.destination,
     required this.reviews,
+    required this.isLoading,
+    required this.errorMessage,
+    required this.onRetry,
     required this.mostRecent,
     required this.onSortChanged,
+    required this.ratingFilter,
+    required this.onRatingFilterChanged,
     required this.onReviewTap,
     required this.onWrite,
     required this.onMyReviews,
+    required this.onBack,
   });
 
   final ReviewDestination destination;
   final List<PlaceReview> reviews;
+  final bool isLoading;
+  final String? errorMessage;
+  final Future<void> Function() onRetry;
   final bool mostRecent;
   final ValueChanged<bool> onSortChanged;
+  final int? ratingFilter;
+  final ValueChanged<int?> onRatingFilterChanged;
   final ValueChanged<PlaceReview> onReviewTap;
   final VoidCallback onWrite;
   final VoidCallback onMyReviews;
+  final VoidCallback onBack;
 
   @override
   Widget build(BuildContext context) {
-    final sorted = List.of(reviews)
+    final visibleReviews = reviews
+        .where(
+          (review) => ratingFilter == null || review.rating == ratingFilter,
+        )
+        .toList();
+    final sorted = List.of(visibleReviews)
       ..sort(
         (a, b) => mostRecent
             ? b.createdAt.compareTo(a.createdAt)
@@ -197,13 +350,15 @@ class _ReviewsListPage extends StatelessWidget {
     return Stack(
       children: [
         ListView(
-          padding: const EdgeInsets.only(bottom: 90),
+          padding: const EdgeInsets.only(bottom: 24),
           children: [
             _HeroHeader(
               title: 'Reviews',
               subtitle: destination.name,
               actionLabel: 'My Reviews',
               onAction: onMyReviews,
+              showBack: true,
+              onBack: onBack,
             ),
             Padding(
               padding: const EdgeInsets.all(18),
@@ -214,17 +369,22 @@ class _ReviewsListPage extends StatelessWidget {
                   _RatingSummary(reviews: reviews),
                   const SizedBox(height: 20),
                   _SortToggle(mostRecent: mostRecent, onChanged: onSortChanged),
+                  const SizedBox(height: 10),
+                  _RatingFilterBar(
+                    selectedRating: ratingFilter,
+                    onChanged: onRatingFilterChanged,
+                  ),
                   const SizedBox(height: 16),
                   Row(
                     children: [
                       Text(
-                        '${reviews.length} Reviews',
+                        '${visibleReviews.length} ${visibleReviews.length == 1 ? 'Review' : 'Reviews'}',
                         style: Theme.of(context).textTheme.titleSmall,
                       ),
                       const Spacer(),
-                      const Text(
-                        'Newest first',
-                        style: TextStyle(
+                      Text(
+                        mostRecent ? 'Newest first' : 'Highest rated',
+                        style: const TextStyle(
                           fontSize: 10,
                           color: AppColors.primary,
                         ),
@@ -232,24 +392,54 @@ class _ReviewsListPage extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  ...sorted.map(
-                    (review) => _ReviewPreview(
-                      review: review,
-                      onTap: () => onReviewTap(review),
+                  if (isLoading && reviews.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 24),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else if (errorMessage != null && reviews.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Column(
+                        children: [
+                          Text(
+                            errorMessage!,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: onRetry,
+                            child: const Text('Try again'),
+                          ),
+                        ],
+                      ),
+                    )
+                  else if (sorted.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 24),
+                      child: Text(
+                        'No reviews match this rating yet.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
+                    )
+                  else
+                    ...sorted.map(
+                      (review) => _ReviewPreview(
+                        review: review,
+                        onTap: () => onReviewTap(review),
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
           ],
         ),
-        Align(
-          alignment: Alignment.bottomCenter,
-          child: _BottomNav(onProfile: onMyReviews),
-        ),
         Positioned(
           right: 26,
-          bottom: 64,
+          bottom: 24,
           child: FloatingActionButton.extended(
             onPressed: onWrite,
             backgroundColor: AppColors.primary,
@@ -267,10 +457,14 @@ class _ReviewDetailPage extends StatelessWidget {
     required this.destination,
     required this.review,
     required this.onBack,
+    required this.onHelpful,
+    required this.onReport,
   });
   final ReviewDestination destination;
   final PlaceReview review;
   final VoidCallback onBack;
+  final VoidCallback onHelpful;
+  final VoidCallback onReport;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -285,23 +479,41 @@ class _ReviewDetailPage extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.all(18),
           children: [
-            _ReviewContentCard(review: review, expanded: true),
+            _ReviewContentCard(review: review),
             const SizedBox(height: 10),
-            const _PhotosCard(),
+            _PhotosCard(photos: review.photos),
             const SizedBox(height: 10),
-            const Card(
+            Card(
               child: Padding(
                 padding: EdgeInsets.symmetric(vertical: 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    Text(
-                      '♧  Mark Helpful (41)',
-                      style: TextStyle(color: AppColors.textSecondary),
+                    InkWell(
+                      onTap: onHelpful,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Text(
+                          '${review.isMarkedHelpful ? '♥' : '♧'}  ${review.isMarkedHelpful ? 'Helpful' : 'Mark Helpful'} (${review.helpfulCount})',
+                          style: TextStyle(
+                            color: review.isMarkedHelpful
+                                ? AppColors.primary
+                                : AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
                     ),
-                    Text(
-                      '⚑  Report',
-                      style: TextStyle(color: AppColors.textSecondary),
+                    InkWell(
+                      onTap: onReport,
+                      borderRadius: BorderRadius.circular(12),
+                      child: const Padding(
+                        padding: EdgeInsets.all(8),
+                        child: Text(
+                          '⚑  Report',
+                          style: TextStyle(color: AppColors.textSecondary),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -310,7 +522,6 @@ class _ReviewDetailPage extends StatelessWidget {
           ],
         ),
       ),
-      const _BottomNav(),
     ],
   );
 }
@@ -376,7 +587,6 @@ class _SubmittedPage extends StatelessWidget {
           ),
         ),
       ),
-      const _BottomNav(),
     ],
   );
 }
@@ -419,7 +629,6 @@ class _MyReviewsPage extends StatelessWidget {
                 ),
         ),
       ),
-      const _BottomNav(selected: _NavItem.profile),
     ],
   );
 }
@@ -430,13 +639,24 @@ class _ReviewEditorPage extends StatefulWidget {
     required this.destination,
     required this.onCancel,
     required this.onSave,
+    required this.photos,
+    required this.isPickingPhotos,
+    required this.isSaving,
+    required this.onAddPhotos,
+    required this.onRemovePhoto,
     this.initialReview,
   });
   final String title;
   final ReviewDestination destination;
   final PlaceReview? initialReview;
   final VoidCallback onCancel;
-  final void Function(int rating, String comment) onSave;
+  final Future<void> Function(int rating, String comment, bool isAnonymous)
+  onSave;
+  final bool isSaving;
+  final List<ReviewPhoto> photos;
+  final bool isPickingPhotos;
+  final Future<void> Function() onAddPhotos;
+  final ValueChanged<ReviewPhoto> onRemovePhoto;
   @override
   State<_ReviewEditorPage> createState() => _ReviewEditorPageState();
 }
@@ -444,6 +664,7 @@ class _ReviewEditorPage extends StatefulWidget {
 class _ReviewEditorPageState extends State<_ReviewEditorPage> {
   late final TextEditingController _controller;
   late int _rating;
+  late bool _isAnonymous;
   @override
   void initState() {
     super.initState();
@@ -451,6 +672,7 @@ class _ReviewEditorPageState extends State<_ReviewEditorPage> {
       text: widget.initialReview?.comment ?? '',
     );
     _rating = widget.initialReview?.rating ?? 0;
+    _isAnonymous = widget.initialReview?.isAnonymous ?? false;
   }
 
   @override
@@ -562,7 +784,31 @@ class _ReviewEditorPageState extends State<_ReviewEditorPage> {
               ),
             ),
             const SizedBox(height: 10),
-            const _PhotosCard(editable: true),
+            Card(
+              child: SwitchListTile.adaptive(
+                title: const Text(
+                  'Post anonymously',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: const Text(
+                  'Your name will be hidden from other walkers.',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                value: _isAnonymous,
+                onChanged: (value) => setState(() => _isAnonymous = value),
+              ),
+            ),
+            const SizedBox(height: 10),
+            _PhotosCard(
+              editable: true,
+              photos: widget.photos,
+              isPicking: widget.isPickingPhotos,
+              onAdd: widget.onAddPhotos,
+              onRemove: widget.onRemovePhoto,
+            ),
           ],
         ),
       ),
@@ -580,11 +826,20 @@ class _ReviewEditorPageState extends State<_ReviewEditorPage> {
             Expanded(
               flex: 2,
               child: ElevatedButton(
-                onPressed: _rating > 0 && _controller.text.trim().isNotEmpty
-                    ? () => widget.onSave(_rating, _controller.text.trim())
+                onPressed:
+                    _rating > 0 &&
+                        _controller.text.trim().isNotEmpty &&
+                        !widget.isSaving
+                    ? () async => widget.onSave(
+                        _rating,
+                        _controller.text.trim(),
+                        _isAnonymous,
+                      )
                     : null,
                 child: Text(
-                  widget.title == 'Edit Review'
+                  widget.isSaving
+                      ? 'Saving...'
+                      : widget.title == 'Edit Review'
                       ? 'Save Changes'
                       : 'Submit Review',
                 ),
@@ -831,6 +1086,40 @@ class _SortButton extends StatelessWidget {
   );
 }
 
+class _RatingFilterBar extends StatelessWidget {
+  const _RatingFilterBar({
+    required this.selectedRating,
+    required this.onChanged,
+  });
+
+  final int? selectedRating;
+  final ValueChanged<int?> onChanged;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: 34,
+    child: ListView.separated(
+      scrollDirection: Axis.horizontal,
+      itemCount: 6,
+      separatorBuilder: (_, _) => const SizedBox(width: 8),
+      itemBuilder: (context, index) {
+        final rating = index == 0 ? null : 6 - index;
+        final selected = rating == selectedRating;
+        return ChoiceChip(
+          label: Text(rating == null ? 'All' : '$rating ★'),
+          selected: selected,
+          onSelected: (_) => onChanged(rating),
+          selectedColor: AppColors.primary,
+          labelStyle: TextStyle(
+            fontSize: 11,
+            color: selected ? Colors.white : AppColors.textPrimary,
+          ),
+        );
+      },
+    ),
+  );
+}
+
 class _ReviewPreview extends StatelessWidget {
   const _ReviewPreview({required this.review, required this.onTap});
   final PlaceReview review;
@@ -851,13 +1140,13 @@ class _ReviewPreview extends StatelessWidget {
                   radius: 15,
                   backgroundColor: AppColors.primary,
                   child: Text(
-                    review.authorName.substring(0, 1),
+                    review.displayAuthorName.substring(0, 1),
                     style: const TextStyle(color: Colors.white, fontSize: 11),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  review.authorName,
+                  review.displayAuthorName,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
@@ -890,9 +1179,8 @@ class _ReviewPreview extends StatelessWidget {
 }
 
 class _ReviewContentCard extends StatelessWidget {
-  const _ReviewContentCard({required this.review, required this.expanded});
+  const _ReviewContentCard({required this.review});
   final PlaceReview review;
-  final bool expanded;
   @override
   Widget build(BuildContext context) => Card(
     child: Padding(
@@ -905,7 +1193,7 @@ class _ReviewContentCard extends StatelessWidget {
               CircleAvatar(
                 backgroundColor: AppColors.primary,
                 child: Text(
-                  review.authorName.substring(0, 1),
+                  review.displayAuthorName.substring(0, 1),
                   style: const TextStyle(color: Colors.white),
                 ),
               ),
@@ -914,7 +1202,7 @@ class _ReviewContentCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    review.authorName,
+                    review.displayAuthorName,
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   _Stars(rating: review.rating, size: 14),
@@ -932,9 +1220,7 @@ class _ReviewContentCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            expanded
-                ? '${review.comment} It is a full sensory experience — the sizzle of wok-fried Hokkien mee, the scent of incense drifting from the temple, hawkers calling out in Cantonese. Get there hungry. The char kway teow stall on the far end is legendary — 45-minute queue and worth every minute.'
-                : review.comment,
+            review.comment,
             style: const TextStyle(fontSize: 12, height: 1.55),
           ),
         ],
@@ -1010,8 +1296,20 @@ class _MyReviewCard extends StatelessWidget {
 }
 
 class _PhotosCard extends StatelessWidget {
-  const _PhotosCard({this.editable = false});
+  const _PhotosCard({
+    this.editable = false,
+    this.photos = const [],
+    this.isPicking = false,
+    this.onAdd,
+    this.onRemove,
+  });
+
   final bool editable;
+  final List<ReviewPhoto> photos;
+  final bool isPicking;
+  final Future<void> Function()? onAdd;
+  final ValueChanged<ReviewPhoto>? onRemove;
+
   @override
   Widget build(BuildContext context) => Card(
     child: Padding(
@@ -1024,20 +1322,47 @@ class _PhotosCard extends StatelessWidget {
             style: TextStyle(fontSize: 10, color: AppColors.textSecondary),
           ),
           const SizedBox(height: 8),
-          if (editable)
+          if (editable) ...[
             OutlinedButton.icon(
-              onPressed: () {},
-              icon: const Icon(Icons.add_a_photo_outlined),
-              label: const Text('Add'),
-              style: OutlinedButton.styleFrom(minimumSize: const Size(62, 48)),
+              onPressed: isPicking ? null : onAdd,
+              icon: isPicking
+                  ? const SizedBox(
+                      height: 16,
+                      width: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.add_photo_alternate_outlined),
+              label: Text(isPicking ? 'Adding photos...' : 'Add photos'),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'You can select up to 5 JPEG, PNG, or WebP photos (5 MB each).',
+              style: TextStyle(fontSize: 10, color: AppColors.textSecondary),
+            ),
+          ],
+          if (photos.isEmpty && !editable)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 10),
+              child: Text(
+                'No photos were added to this review.',
+                style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+              ),
             )
-          else
-            Row(
-              children: [
-                Expanded(child: _PhotoTile(color: const Color(0xFF795548))),
-                const SizedBox(width: 8),
-                Expanded(child: _PhotoTile(color: const Color(0xFFB26E42))),
-              ],
+          else if (photos.isNotEmpty)
+            Padding(
+              padding: EdgeInsets.only(top: editable ? 10 : 0),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: photos
+                    .map(
+                      (photo) => _PhotoTile(
+                        photo: photo,
+                        onRemove: editable ? () => onRemove?.call(photo) : null,
+                      ),
+                    )
+                    .toList(),
+              ),
             ),
         ],
       ),
@@ -1046,17 +1371,60 @@ class _PhotosCard extends StatelessWidget {
 }
 
 class _PhotoTile extends StatelessWidget {
-  const _PhotoTile({required this.color});
-  final Color color;
+  const _PhotoTile({required this.photo, this.onRemove});
+
+  final ReviewPhoto photo;
+  final VoidCallback? onRemove;
+
   @override
-  Widget build(BuildContext context) => Container(
-    height: 80,
-    decoration: BoxDecoration(
-      color: color,
-      borderRadius: BorderRadius.circular(10),
-    ),
-    child: const Center(child: Icon(Icons.photo, color: Colors.white70)),
+  Widget build(BuildContext context) => Stack(
+    children: [
+      ClipRRect(borderRadius: BorderRadius.circular(10), child: _buildImage()),
+      if (onRemove != null)
+        Positioned(
+          top: 2,
+          right: 2,
+          child: IconButton.filledTonal(
+            tooltip: 'Remove ${photo.name}',
+            onPressed: onRemove,
+            icon: const Icon(Icons.close, size: 15),
+            visualDensity: VisualDensity.compact,
+          ),
+        ),
+    ],
   );
+
+  Widget _buildImage() {
+    const fallback = SizedBox(
+      height: 80,
+      width: 100,
+      child: ColoredBox(
+        color: Color(0xFFE3EFE7),
+        child: Center(child: Icon(Icons.broken_image_outlined)),
+      ),
+    );
+    final bytes = photo.bytes;
+    if (bytes != null) {
+      return Image.memory(
+        bytes,
+        height: 80,
+        width: 100,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => fallback,
+      );
+    }
+    final signedUrl = photo.signedUrl;
+    if (signedUrl != null) {
+      return Image.network(
+        signedUrl,
+        height: 80,
+        width: 100,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => fallback,
+      );
+    }
+    return fallback;
+  }
 }
 
 class _Stars extends StatelessWidget {
@@ -1075,59 +1443,6 @@ class _Stars extends StatelessWidget {
       ),
     ),
   );
-}
-
-enum _NavItem { home, explore, journey, rewards, profile }
-
-class _BottomNav extends StatelessWidget {
-  const _BottomNav({this.selected = _NavItem.explore, this.onProfile});
-  final _NavItem selected;
-  final VoidCallback? onProfile;
-  @override
-  Widget build(BuildContext context) {
-    const items = [
-      (Icons.home_outlined, 'Home', _NavItem.home),
-      (Icons.explore_outlined, 'Explore', _NavItem.explore),
-      (Icons.route_outlined, 'Journey', _NavItem.journey),
-      (Icons.card_giftcard_outlined, 'Rewards', _NavItem.rewards),
-      (Icons.person_outline, 'Profile', _NavItem.profile),
-    ];
-    return Container(
-      height: 62,
-      color: Colors.white,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: items.map((item) {
-          final active = item.$3 == selected;
-          return InkWell(
-            onTap: item.$3 == _NavItem.profile ? onProfile : null,
-            child: SizedBox(
-              width: 48,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    item.$1,
-                    color: active ? AppColors.primary : const Color(0xFF9EB2BB),
-                    size: 18,
-                  ),
-                  Text(
-                    item.$2,
-                    style: TextStyle(
-                      fontSize: 8,
-                      color: active
-                          ? AppColors.primary
-                          : const Color(0xFF9EB2BB),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
 }
 
 String _formatDate(DateTime date) {

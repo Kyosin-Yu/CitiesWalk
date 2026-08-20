@@ -1,5 +1,6 @@
 import '../../business_logic/entities/eco_destination.dart';
 import '../../business_logic/entities/eco_location.dart';
+import '../../business_logic/entities/eco_place_category.dart';
 import '../../business_logic/entities/eco_route.dart';
 import '../../business_logic/repositories/eco_route_repository.dart';
 import '../data_sources/google_eco_route_data_source.dart';
@@ -19,7 +20,8 @@ class GoogleEcoRouteRepository implements EcoRouteRepository {
   @override
   Future<List<EcoDestination>> fetchNearbyDestinations({
     required EcoLocation origin,
-  }) => _dataSource.fetchNearby(origin);
+    EcoPlaceCategory category = EcoPlaceCategory.all,
+  }) => _dataSource.fetchNearby(origin: origin, category: category);
 
   @override
   Future<List<EcoDestination>> searchDestinations({

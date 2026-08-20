@@ -23,6 +23,7 @@ final initialReviewsByDestination = <String, List<PlaceReview>>{
   'petaling-street': [
     PlaceReview(
       id: 'review-1',
+      userId: 'seed-sarah',
       authorName: 'Sarah Lim',
       rating: 5,
       comment:
@@ -31,6 +32,7 @@ final initialReviewsByDestination = <String, List<PlaceReview>>{
     ),
     PlaceReview(
       id: 'review-2',
+      userId: 'seed-jason',
       authorName: 'Jason Tan',
       rating: 4,
       comment: 'Come hungry and take your time exploring the food stalls.',
@@ -38,6 +40,7 @@ final initialReviewsByDestination = <String, List<PlaceReview>>{
     ),
     PlaceReview(
       id: 'review-3',
+      userId: 'seed-nur',
       authorName: 'Nur Aina',
       rating: 4,
       comment: 'A lively place for local snacks, souvenirs, and evening walks.',
@@ -47,6 +50,7 @@ final initialReviewsByDestination = <String, List<PlaceReview>>{
   'petronas-towers': [
     PlaceReview(
       id: 'review-4',
+      userId: 'seed-ravi',
       authorName: 'Ravi',
       rating: 5,
       comment:
@@ -55,6 +59,7 @@ final initialReviewsByDestination = <String, List<PlaceReview>>{
     ),
     PlaceReview(
       id: 'review-5',
+      userId: 'seed-sofia',
       authorName: 'Sofia',
       rating: 4,
       comment: 'Book your visit early and enjoy the park around the towers.',
@@ -64,6 +69,7 @@ final initialReviewsByDestination = <String, List<PlaceReview>>{
   'central-market': [
     PlaceReview(
       id: 'review-6',
+      userId: 'seed-hana',
       authorName: 'Hana',
       rating: 4,
       comment: 'A convenient stop for local crafts, snacks, and souvenirs.',

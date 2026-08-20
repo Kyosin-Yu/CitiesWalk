@@ -29,7 +29,8 @@ Deno.serve(async (request) => {
     const origin = parseCoordinates(body.origin)
 
     if (action === 'nearby') {
-      return response({ places: await searchPlaces('tourist attractions, parks, historical landmarks and local food', origin, apiKey) })
+      const category = typeof body.category === 'string' ? body.category : 'all'
+      return response({ places: await searchPlaces(nearbyQuery(category), origin, apiKey) })
     }
 
     if (action === 'search') {
@@ -105,7 +106,9 @@ async function buildRailAndWalkRoute(origin: Coordinates, destination: Coordinat
   const drivingResponse = drivingResult.status === 'fulfilled' ? drivingResult.value : { routes: [] }
   const transitRoute = findRailOnlyRoute(transitResponse.routes ?? [])
   const selectedRoute = transitRoute ?? walkingResponse.routes?.[0]
-  if (!selectedRoute) throw new Error('No safe walking route is available for this journey.')
+  if (!selectedRoute) {
+    throw new Error('No eligible rail-and-walk or walking route is available for this journey.')
+  }
 
   const steps = selectedRoute.legs?.flatMap((leg: Record<string, unknown>) => leg.steps ?? []) ?? []
   const routeSteps = steps
@@ -200,6 +203,7 @@ async function requestGoogleRoute(
       origin: { location: { latLng: origin } },
       destination: { location: { latLng: destination } },
       travelMode,
+      languageCode: 'en',
       units: 'METRIC',
       ...(isTransit
         ? {
@@ -273,8 +277,23 @@ function parseDurationSeconds(value: string) {
 function friendlyCategory(primaryType: string) {
   if (primaryType.includes('restaurant') || primaryType.includes('food')) return 'Local food'
   if (primaryType.includes('park')) return 'Park'
-  if (primaryType.includes('museum') || primaryType.includes('tourist')) return 'Landmark'
+  if (primaryType.includes('museum')) return 'Museum'
+  if (primaryType.includes('market')) return 'Market'
+  if (primaryType.includes('historical') || primaryType.includes('tourist')) return 'Landmark'
   return 'Place to visit'
+}
+
+function nearbyQuery(category: string) {
+  const queries: Record<string, string> = {
+    all: 'tourist attractions, parks, historical landmarks and local food',
+    food: 'local Malaysian food restaurants and cafes',
+    attractions: 'tourist attractions and sights',
+    history: 'historical landmarks and heritage sites',
+    parks: 'parks and gardens',
+    museums: 'museums and cultural centres',
+    markets: 'local markets and craft markets',
+  }
+  return queries[category] ?? queries.all
 }
 
 function response(data: unknown, status = 200) {

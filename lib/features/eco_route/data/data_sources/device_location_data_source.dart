@@ -9,6 +9,8 @@ import '../../business_logic/services/location_service.dart';
 class DeviceLocationDataSource implements LocationService {
   const DeviceLocationDataSource();
 
+  static const _maximumAcceptedAccuracyMeters = 35.0;
+
   static const _settings = LocationSettings(
     accuracy: LocationAccuracy.bestForNavigation,
     distanceFilter: 5,
@@ -40,40 +42,53 @@ class DeviceLocationDataSource implements LocationService {
       );
     }
 
-    var position = await Geolocator.getCurrentPosition(
+    final accuracyStatus = await Geolocator.getLocationAccuracy();
+    if (accuracyStatus == LocationAccuracyStatus.reduced) {
+      throw const LocationServiceException(
+        'Precise location is turned off. Enable Precise location for CitiesWalk in your device settings, then try again.',
+      );
+    }
+
+    final initialPosition = await Geolocator.getCurrentPosition(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.bestForNavigation,
         distanceFilter: 5,
-        timeLimit: Duration(seconds: 20),
+        timeLimit: Duration(seconds: 25),
       ),
     );
 
-    // A first GPS fix can be based on Wi-Fi or a mobile tower. Wait briefly
-    // for a more accurate satellite fix before displaying it as the origin.
-    if (position.accuracy > 80) {
-      try {
-        position =
-            await Geolocator.getPositionStream(locationSettings: _settings)
-                .firstWhere((fix) => fix.accuracy <= 80)
-                .timeout(const Duration(seconds: 12));
-      } on TimeoutException {
-        // Keep the best fix available. The live stream continues refining it.
-      }
+    if (initialPosition.accuracy <= _maximumAcceptedAccuracyMeters) {
+      return _toEcoLocation(initialPosition);
     }
-    return EcoLocation(
-      latitude: position.latitude,
-      longitude: position.longitude,
-      label: 'GPS location (±${position.accuracy.round()} m)',
-    );
+
+    // A first position can be based on Wi-Fi or a mobile tower. Do not use it
+    // as the route origin if it is too broad; wait for a proper GPS fix.
+    try {
+      final precisePosition =
+          await Geolocator.getPositionStream(locationSettings: _settings)
+              .firstWhere(
+                (fix) => fix.accuracy <= _maximumAcceptedAccuracyMeters,
+              )
+              .timeout(const Duration(seconds: 20));
+      return _toEcoLocation(precisePosition);
+    } on TimeoutException {
+      throw LocationServiceException(
+        'GPS is currently only accurate to ±${initialPosition.accuracy.round()} m. Move outdoors, turn on Google Location Accuracy, then refresh your location.',
+      );
+    }
   }
 
   @override
   Stream<EcoLocation> watchCurrentLocation() =>
-      Geolocator.getPositionStream(locationSettings: _settings).map(
-        (position) => EcoLocation(
-          latitude: position.latitude,
-          longitude: position.longitude,
-          label: 'GPS location (±${position.accuracy.round()} m)',
-        ),
-      );
+      Geolocator.getPositionStream(locationSettings: _settings)
+          .where(
+            (position) => position.accuracy <= _maximumAcceptedAccuracyMeters,
+          )
+          .map(_toEcoLocation);
+
+  EcoLocation _toEcoLocation(Position position) => EcoLocation(
+    latitude: position.latitude,
+    longitude: position.longitude,
+    label: 'GPS location (±${position.accuracy.round()} m)',
+  );
 }

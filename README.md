@@ -156,6 +156,13 @@ at least:
 Carbon savings and calories are estimates. Their formulas, units, assumptions,
 and data sources must be documented before results are shown to users.
 
+An in-progress Eco-Route journey is saved only while tracking. It becomes a
+completed history record only after the latest GPS point reaches the selected
+destination. Cancelling an unfinished journey deletes its record and GPS points.
+Completed journeys store GPS-derived walking and transit distance separately;
+the displayed step count is an estimate derived from walking distance, not a
+hardware pedometer count.
+
 ## Team Workflow
 
 1. Create or select a GitHub issue or Trello task.

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -10,47 +11,54 @@ class RecentTrips extends StatelessWidget {
     super.key,
     required this.userId,
     required this.repository,
+    required this.refreshSignal,
     required this.onPlanAgain,
   });
 
   final String userId;
   final JourneyHistoryRepository repository;
-  final VoidCallback onPlanAgain;
+  final ValueListenable<int> refreshSignal;
+  final ValueChanged<EcoJourneyHistoryItem> onPlanAgain;
 
   @override
-  Widget build(BuildContext context) =>
-      FutureBuilder<List<EcoJourneyHistoryItem>>(
-        future: repository.fetchCompletedJourneys(userId: userId),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const SizedBox(
-              height: 108,
-              child: Center(child: CircularProgressIndicator()),
-            );
-          }
-          if (snapshot.hasError) {
-            return const _HistoryNotice(
-              icon: Icons.cloud_off_rounded,
-              message: 'Your trip history is unavailable right now.',
-            );
-          }
-          final trips = snapshot.data ?? const [];
-          if (trips.isEmpty) {
-            return const _HistoryNotice(
-              icon: Icons.route_outlined,
-              message: 'Finish an eco journey to see it here.',
-            );
-          }
-          return Column(
-            children: [
-              for (final trip in trips) ...[
-                _TripHistoryCard(trip: trip, onPlanAgain: onPlanAgain),
-                const SizedBox(height: 12),
-              ],
-            ],
+  Widget build(BuildContext context) => ValueListenableBuilder<int>(
+    valueListenable: refreshSignal,
+    builder: (context, _, _) => FutureBuilder<List<EcoJourneyHistoryItem>>(
+      future: repository.fetchCompletedJourneys(userId: userId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const SizedBox(
+            height: 108,
+            child: Center(child: CircularProgressIndicator()),
           );
-        },
-      );
+        }
+        if (snapshot.hasError) {
+          return const _HistoryNotice(
+            icon: Icons.cloud_off_rounded,
+            message: 'Your trip history is unavailable right now.',
+          );
+        }
+        final trips = snapshot.data ?? const [];
+        if (trips.isEmpty) {
+          return const _HistoryNotice(
+            icon: Icons.route_outlined,
+            message: 'Finish or end an eco journey to see it here.',
+          );
+        }
+        return Column(
+          children: [
+            for (final trip in trips) ...[
+              _TripHistoryCard(
+                trip: trip,
+                onPlanAgain: () => onPlanAgain(trip),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ],
+        );
+      },
+    ),
+  );
 }
 
 class _TripHistoryCard extends StatelessWidget {
@@ -61,7 +69,7 @@ class _TripHistoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    height: 128,
+    height: 146,
     clipBehavior: Clip.antiAlias,
     decoration: BoxDecoration(
       color: AppColors.surface,
@@ -103,19 +111,47 @@ class _TripHistoryCard extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        trip.destinationCategory ?? 'Eco journey',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(
+                          fontSize: 10,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      trip.isCompleted ? 'Completed' : 'Ended early',
+                      style: GoogleFonts.poppins(
+                        fontSize: 10,
+                        color: trip.isCompleted
+                            ? AppColors.primary
+                            : AppColors.warning,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                const Spacer(),
                 Text(
-                  trip.destinationCategory ?? 'Eco journey',
+                  '${trip.durationMinutes} min · ${(trip.walkingDistanceMeters / 1000).toStringAsFixed(1)} km walked · ${trip.stepCount} steps',
                   style: GoogleFonts.poppins(
                     fontSize: 10,
                     color: AppColors.textSecondary,
                   ),
                 ),
-                const Spacer(),
+                const SizedBox(height: 2),
                 Text(
-                  '${trip.durationMinutes} min · ${(trip.walkingDistanceMeters / 1000).toStringAsFixed(1)} km walked',
+                  '${trip.estimatedCalories} kcal · ${trip.estimatedCarbonSavedKg.toStringAsFixed(2)} kg CO₂ saved',
                   style: GoogleFonts.poppins(
                     fontSize: 10,
-                    color: AppColors.textSecondary,
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 4),

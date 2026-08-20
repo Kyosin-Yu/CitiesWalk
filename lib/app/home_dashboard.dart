@@ -1,7 +1,12 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../core/models/destination_review_summary.dart';
 import '../features/eco_route/business_logic/repositories/journey_history_repository.dart';
+import '../features/eco_route/business_logic/entities/eco_destination.dart';
+import '../features/eco_route/business_logic/entities/eco_journey_history_item.dart';
+import '../features/eco_route/business_logic/entities/eco_location.dart';
 import 'home_recent_trips.dart';
 
 import 'theme/app_colors.dart';
@@ -12,12 +17,20 @@ class HomeDashboard extends StatelessWidget {
     super.key,
     required this.userId,
     required this.journeyHistoryRepository,
+    required this.historyRefreshSignal,
     required this.onNavigate,
+    required this.onPlanAgain,
+    this.onPlanDestination,
+    this.reviewSummaries,
   });
 
   final String userId;
   final JourneyHistoryRepository journeyHistoryRepository;
+  final ValueListenable<int> historyRefreshSignal;
   final ValueChanged<int> onNavigate;
+  final ValueChanged<EcoJourneyHistoryItem> onPlanAgain;
+  final ValueChanged<EcoDestination>? onPlanDestination;
+  final ValueListenable<Map<String, DestinationReviewSummary>>? reviewSummaries;
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -43,7 +56,11 @@ class HomeDashboard extends StatelessWidget {
                 const SizedBox(height: 24),
                 const _SectionTitle('Popular city escapes'),
                 const SizedBox(height: 10),
-                _Recommendations(onNavigate: onNavigate),
+                _Recommendations(
+                  onNavigate: onNavigate,
+                  onPlanDestination: onPlanDestination,
+                  reviewSummaries: reviewSummaries,
+                ),
                 const SizedBox(height: 24),
                 const _ExploreTip(),
                 const SizedBox(height: 24),
@@ -60,7 +77,8 @@ class HomeDashboard extends StatelessWidget {
                 RecentTrips(
                   userId: userId,
                   repository: journeyHistoryRepository,
-                  onPlanAgain: () => onNavigate(1),
+                  refreshSignal: historyRefreshSignal,
+                  onPlanAgain: onPlanAgain,
                 ),
               ],
             ),
@@ -408,14 +426,62 @@ class _QuickAction extends StatelessWidget {
 }
 
 class _Recommendations extends StatelessWidget {
-  const _Recommendations({required this.onNavigate});
+  const _Recommendations({
+    required this.onNavigate,
+    this.onPlanDestination,
+    this.reviewSummaries,
+  });
 
   final ValueChanged<int> onNavigate;
+  final ValueChanged<EcoDestination>? onPlanDestination;
+  final ValueListenable<Map<String, DestinationReviewSummary>>? reviewSummaries;
 
   static const _items = [
-    ('KLCC Park', 'Park · Walk + rail', Icons.park_rounded),
-    ('Central Market', 'Culture · Walk + rail', Icons.museum_rounded),
-    ('Batu Caves', 'Heritage · Rail + walk', Icons.temple_hindu_rounded),
+    _HomeRecommendation(
+      destination: EcoDestination(
+        id: 'klcc-park',
+        name: 'KLCC Park',
+        category: 'Park',
+        description: 'A green city park beside the Petronas Twin Towers.',
+        location: EcoLocation(
+          latitude: 3.1586,
+          longitude: 101.7133,
+          label: 'KLCC Park',
+        ),
+      ),
+      subtitle: 'Park · Walk + rail',
+      icon: Icons.park_rounded,
+    ),
+    _HomeRecommendation(
+      destination: EcoDestination(
+        id: 'central-market',
+        name: 'Central Market',
+        category: 'Cultural landmark',
+        description: 'A heritage market for Malaysian crafts and local food.',
+        location: EcoLocation(
+          latitude: 3.1454,
+          longitude: 101.6953,
+          label: 'Central Market',
+        ),
+      ),
+      subtitle: 'Culture · Walk + rail',
+      icon: Icons.museum_rounded,
+    ),
+    _HomeRecommendation(
+      destination: EcoDestination(
+        id: 'batu-caves',
+        name: 'Batu Caves',
+        category: 'Heritage landmark',
+        description: 'A limestone hill with caves and Hindu temples.',
+        location: EcoLocation(
+          latitude: 3.2379,
+          longitude: 101.684,
+          label: 'Batu Caves',
+        ),
+      ),
+      subtitle: 'Heritage · Rail + walk',
+      icon: Icons.temple_hindu_rounded,
+    ),
   ];
 
   @override
@@ -426,7 +492,19 @@ class _Recommendations extends StatelessWidget {
       'https://images.unsplash.com/photo-1596422846543-75c6fc197f07?auto=format&fit=crop&w=900&q=85',
     ];
 
-    return SizedBox(
+    final summaries = reviewSummaries;
+    if (summaries == null) return _buildList(context, imageUrls, const {});
+    return ValueListenableBuilder<Map<String, DestinationReviewSummary>>(
+      valueListenable: summaries,
+      builder: (context, value, _) => _buildList(context, imageUrls, value),
+    );
+  }
+
+  Widget _buildList(
+    BuildContext context,
+    List<String> imageUrls,
+    Map<String, DestinationReviewSummary> summaries,
+  ) => SizedBox(
       height: 148,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
@@ -434,8 +512,16 @@ class _Recommendations extends StatelessWidget {
         separatorBuilder: (_, _) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
           final item = _items[index];
+          final summary = summaries[item.destination.id];
           return InkWell(
-            onTap: () => onNavigate(1),
+            onTap: () {
+              final planDestination = onPlanDestination;
+              if (planDestination != null) {
+                planDestination(item.destination);
+              } else {
+                onNavigate(1);
+              }
+            },
             borderRadius: BorderRadius.circular(20),
             child: Container(
               width: 210,
@@ -457,11 +543,11 @@ class _Recommendations extends StatelessWidget {
                   Image.network(
                     imageUrls[index],
                     fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => const ColoredBox(
+                    errorBuilder: (_, _, _) => ColoredBox(
                       color: AppColors.primary,
                       child: Center(
                         child: Icon(
-                          Icons.landscape_rounded,
+                          item.icon,
                           color: Colors.white,
                           size: 38,
                         ),
@@ -477,6 +563,11 @@ class _Recommendations extends StatelessWidget {
                       ),
                     ),
                   ),
+                  Positioned(
+                    top: 10,
+                    left: 10,
+                    child: _ReviewsShortcutLabel(summary: summary),
+                  ),
                   Padding(
                     padding: const EdgeInsets.all(14),
                     child: Column(
@@ -484,7 +575,7 @@ class _Recommendations extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         Text(
-                          item.$1,
+                          item.destination.name,
                           style: GoogleFonts.poppins(
                             color: Colors.white,
                             fontSize: 14,
@@ -492,7 +583,7 @@ class _Recommendations extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          item.$2,
+                          item.subtitle,
                           style: GoogleFonts.poppins(
                             color: Colors.white70,
                             fontSize: 10,
@@ -508,7 +599,52 @@ class _Recommendations extends StatelessWidget {
         },
       ),
     );
-  }
+}
+
+class _HomeRecommendation {
+  const _HomeRecommendation({
+    required this.destination,
+    required this.subtitle,
+    required this.icon,
+  });
+
+  final EcoDestination destination;
+  final String subtitle;
+  final IconData icon;
+}
+
+class _ReviewsShortcutLabel extends StatelessWidget {
+  const _ReviewsShortcutLabel({this.summary});
+
+  final DestinationReviewSummary? summary;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
+      color: Colors.white.withValues(alpha: .92),
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: Padding(
+      padding: EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.star_rounded, size: 13, color: Color(0xFFF59A00)),
+          const SizedBox(width: 4),
+          Text(
+            summary?.hasReviews == true
+                ? '${summary!.averageRating.toStringAsFixed(1)} · ${summary!.reviewCount} reviews'
+                : 'New place',
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _ExploreTip extends StatelessWidget {
