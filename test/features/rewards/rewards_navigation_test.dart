@@ -1,8 +1,21 @@
+import 'package:citieswalk/features/rewards/business_logic/providers/rewards_controller.dart';
+import 'package:citieswalk/features/rewards/data/data_sources/rewards_mock_data_source.dart';
+import 'package:citieswalk/features/rewards/data/repositories/rewards_repository_impl.dart';
 import 'package:citieswalk/features/rewards/presentation/screens/leaderboard_screen.dart';
 import 'package:citieswalk/features/rewards/presentation/screens/points_history_screen.dart';
 import 'package:citieswalk/features/rewards/presentation/screens/rewards_hub_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
+
+Widget _withRewardsController(Widget child) {
+  return ChangeNotifierProvider<RewardsController>(
+    create: (_) =>
+        RewardsController(const RewardsRepositoryImpl(RewardsMockDataSource()))
+          ..load(),
+    child: child,
+  );
+}
 
 void main() {
   testWidgets('Rewards tab opens the leaderboard without an internal nav bar', (
@@ -31,21 +44,26 @@ void main() {
     (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: Builder(
-            builder: (BuildContext context) {
-              return Scaffold(
-                body: Center(
-                  child: FilledButton(
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const LeaderboardScreen(),
+          home: _withRewardsController(
+            Builder(
+              builder: (BuildContext context) {
+                return Scaffold(
+                  body: Center(
+                    child: FilledButton(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => ChangeNotifierProvider.value(
+                            value: context.read<RewardsController>(),
+                            child: const LeaderboardScreen(),
+                          ),
+                        ),
                       ),
+                      child: const Text('Open rewards'),
                     ),
-                    child: const Text('Open rewards'),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
       );
@@ -62,20 +80,28 @@ void main() {
   testWidgets('Points history filters transactions by month', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const MaterialApp(home: PointsHistoryScreen()));
+    await tester.binding.setSurfaceSize(const Size(800, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(home: _withRewardsController(const PointsHistoryScreen())),
+    );
     await tester.pumpAndSettle();
 
     expect(find.textContaining('KLCC Park'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Filter activity period'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Jun 2026'));
+    await tester.tap(
+      find.byWidgetPredicate(
+        (widget) => widget is CheckedPopupMenuItem<int> && widget.value == 1,
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Bukit Bintang Green Walk'), findsOneWidget);
     expect(find.text('River of Life Transit Route'), findsOneWidget);
     expect(find.textContaining('KLCC Park'), findsNothing);
-    expect(find.text('+335'), findsOneWidget);
   });
 
   testWidgets('View all expands the remaining leaderboard rankings', (

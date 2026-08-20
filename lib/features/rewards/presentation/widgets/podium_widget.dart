@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
-import '../../models/leaderboard_entry.dart';
+import '../../business_logic/entities/leaderboard_entry.dart';
 
 class PodiumWidget extends StatelessWidget {
   const PodiumWidget({super.key, required this.entries});

@@ -1,30 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../../../app/theme/app_colors.dart';
-import '../../models/point_transaction.dart';
-import '../../services/rewards_service.dart';
+import '../../business_logic/entities/point_transaction.dart';
+import '../../business_logic/providers/rewards_controller.dart';
 
 const _monthlyPointsGoal = 4000;
 
 class PointsHistoryScreen extends StatefulWidget {
-  const PointsHistoryScreen({super.key, this.service = const RewardsService()});
-
-  final RewardsService service;
+  const PointsHistoryScreen({super.key});
 
   @override
   State<PointsHistoryScreen> createState() => _PointsHistoryScreenState();
 }
 
 class _PointsHistoryScreenState extends State<PointsHistoryScreen> {
-  late final Future<List<PointTransaction>> _historyFuture;
   DateTime? _selectedMonth;
   bool _showAllActivity = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _historyFuture = widget.service.fetchPointHistory();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,19 +25,20 @@ class _PointsHistoryScreenState extends State<PointsHistoryScreen> {
         textTheme: Theme.of(context).textTheme.apply(fontFamily: 'Poppins'),
       ),
       child: Scaffold(
-        body: FutureBuilder<List<PointTransaction>>(
-          future: _historyFuture,
-          builder: (context, snapshot) {
-            if (snapshot.hasError) {
+        body: Builder(
+          builder: (context) {
+            final controller = context.watch<RewardsController>();
+            if (controller.status == RewardsStatus.failure) {
               return const Center(
                 child: Text('We could not load your points history.'),
               );
             }
-            if (!snapshot.hasData) {
+            if (controller.status == RewardsStatus.initial ||
+                controller.status == RewardsStatus.loading) {
               return const Center(child: CircularProgressIndicator());
             }
 
-            final transactions = snapshot.data!;
+            final transactions = controller.pointHistory;
             final months = _availableMonths(transactions);
             final activeMonth =
                 _selectedMonth ?? (months.isEmpty ? null : months.first);

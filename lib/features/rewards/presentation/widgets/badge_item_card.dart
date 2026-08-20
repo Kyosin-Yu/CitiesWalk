@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
-import '../../models/badge_model.dart';
+import '../../business_logic/entities/badge.dart';
 
 class BadgeItemCard extends StatelessWidget {
   const BadgeItemCard({super.key, required this.badge, required this.onTap});
 
-  final BadgeModel badge;
+  final RewardBadge badge;
   final VoidCallback onTap;
 
   @override

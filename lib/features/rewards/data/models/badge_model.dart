@@ -1,0 +1,52 @@
+import '../../business_logic/entities/badge.dart';
+
+/// Data-layer representation of a badge record.
+class BadgeModel {
+  const BadgeModel({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.unlocked,
+    required this.icon,
+    required this.progress,
+    required this.goal,
+    this.earnedOn,
+    this.completionLocation,
+  });
+
+  final String id;
+  final String title;
+  final String description;
+  final bool unlocked;
+  final String icon;
+  final int progress;
+  final int goal;
+  final DateTime? earnedOn;
+  final String? completionLocation;
+
+  RewardBadge toEntity() => RewardBadge(
+    id: id,
+    title: title,
+    description: description,
+    status: unlocked ? BadgeStatus.unlocked : BadgeStatus.locked,
+    icon: BadgeIcon.values.byName(icon),
+    progress: progress,
+    goal: goal,
+    earnedOn: earnedOn,
+    completionLocation: completionLocation,
+  );
+
+  factory BadgeModel.fromSupabaseRow(Map<String, dynamic> row) => BadgeModel(
+    id: row['id'] as String,
+    title: row['title'] as String,
+    description: row['description'] as String,
+    unlocked: row['unlocked'] == true,
+    icon: row['icon'] as String,
+    progress: row['progress'] as int,
+    goal: row['goal'] as int,
+    earnedOn: row['earned_on'] == null
+        ? null
+        : DateTime.parse(row['earned_on'] as String),
+    completionLocation: row['completion_location'] as String?,
+  );
+}

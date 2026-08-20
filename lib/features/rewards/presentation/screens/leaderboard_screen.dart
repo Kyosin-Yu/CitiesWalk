@@ -1,20 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../../../app/theme/app_colors.dart';
-import '../../models/leaderboard_entry.dart';
-import '../../services/rewards_service.dart';
+import '../../business_logic/entities/leaderboard_entry.dart';
+import '../../business_logic/providers/rewards_controller.dart';
 import '../widgets/podium_widget.dart';
 import 'achievement_locker_screen.dart';
 import 'points_history_screen.dart';
 
 class LeaderboardScreen extends StatefulWidget {
-  const LeaderboardScreen({
-    super.key,
-    this.service = const RewardsService(),
-    this.isEmbedded = false,
-  });
+  const LeaderboardScreen({super.key, this.isEmbedded = false});
 
-  final RewardsService service;
   final bool isEmbedded;
 
   @override
@@ -22,14 +18,7 @@ class LeaderboardScreen extends StatefulWidget {
 }
 
 class _LeaderboardScreenState extends State<LeaderboardScreen> {
-  late final Future<List<LeaderboardEntry>> _leaderboardFuture;
   bool _showsAllRankings = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _leaderboardFuture = widget.service.fetchLeaderboard();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,10 +28,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
     return Theme(
       data: rewardsTheme,
-      child: FutureBuilder<List<LeaderboardEntry>>(
-        future: _leaderboardFuture,
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
+      child: Builder(
+        builder: (context) {
+          final controller = context.watch<RewardsController>();
+          if (controller.status == RewardsStatus.failure) {
             return _LeaderboardStatusScaffold(
               showBackButton: !widget.isEmbedded,
               child: const _ErrorState(
@@ -50,7 +39,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               ),
             );
           }
-          if (!snapshot.hasData) {
+          if (controller.status == RewardsStatus.initial ||
+              controller.status == RewardsStatus.loading) {
             return _LeaderboardStatusScaffold(
               showBackButton: !widget.isEmbedded,
               child: const Center(
@@ -73,7 +63,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
             );
           }
 
-          final entries = snapshot.data!;
+          final entries = controller.leaderboard;
           if (entries.isEmpty) {
             return _LeaderboardStatusScaffold(
               showBackButton: !widget.isEmbedded,
@@ -214,7 +204,10 @@ class _LeaderboardHero extends StatelessWidget {
                 onPressed: () => Navigator.push(
                   context,
                   MaterialPageRoute<void>(
-                    builder: (_) => const AchievementLockerScreen(),
+                    builder: (_) => ChangeNotifierProvider.value(
+                      value: context.read<RewardsController>(),
+                      child: const AchievementLockerScreen(),
+                    ),
                   ),
                 ),
                 icon: const Icon(
@@ -227,7 +220,10 @@ class _LeaderboardHero extends StatelessWidget {
                 onPressed: () => Navigator.push(
                   context,
                   MaterialPageRoute<void>(
-                    builder: (_) => const PointsHistoryScreen(),
+                    builder: (_) => ChangeNotifierProvider.value(
+                      value: context.read<RewardsController>(),
+                      child: const PointsHistoryScreen(),
+                    ),
                   ),
                 ),
                 icon: const Icon(
