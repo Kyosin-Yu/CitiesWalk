@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../../business_logic/providers/rewards_controller.dart';
+import '../../data/data_sources/rewards_mock_data_source.dart';
+import '../../data/repositories/rewards_repository_impl.dart';
 import 'leaderboard_screen.dart';
 
 /// Backwards-compatible entry point for the Rewards tab and `/rewards` route.
@@ -15,6 +19,11 @@ class RewardsHubScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final embedded = isEmbedded ?? Scaffold.maybeOf(context) != null;
-    return LeaderboardScreen(isEmbedded: embedded);
+    return ChangeNotifierProvider<RewardsController>(
+      create: (_) => RewardsController(
+        const RewardsRepositoryImpl(RewardsMockDataSource()),
+      )..load(),
+      child: LeaderboardScreen(isEmbedded: embedded),
+    );
   }
 }

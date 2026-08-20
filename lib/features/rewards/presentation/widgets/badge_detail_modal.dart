@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
-import '../../models/badge_model.dart';
+import '../../business_logic/entities/badge.dart';
 import 'badge_item_card.dart' show iconForBadge;
 
 class BadgeDetailModal extends StatelessWidget {
   const BadgeDetailModal({super.key, required this.badge, this.onStartJourney});
 
-  final BadgeModel badge;
+  final RewardBadge badge;
   final VoidCallback? onStartJourney;
 
   static Future<void> show(
     BuildContext context,
-    BadgeModel badge, {
+    RewardBadge badge, {
     VoidCallback? onStartJourney,
   }) {
     return showDialog<void>(
@@ -116,7 +116,7 @@ class BadgeDetailModal extends StatelessWidget {
 class _CompletionDetails extends StatelessWidget {
   const _CompletionDetails({required this.badge});
 
-  final BadgeModel badge;
+  final RewardBadge badge;
 
   @override
   Widget build(BuildContext context) {
@@ -207,7 +207,7 @@ class _DetailRow extends StatelessWidget {
 class _ProgressDetails extends StatelessWidget {
   const _ProgressDetails({required this.badge});
 
-  final BadgeModel badge;
+  final RewardBadge badge;
 
   @override
   Widget build(BuildContext context) {
@@ -316,7 +316,7 @@ class _CelebrationMessage extends StatelessWidget {
 class _UnlockHint extends StatelessWidget {
   const _UnlockHint({required this.badge});
 
-  final BadgeModel badge;
+  final RewardBadge badge;
 
   @override
   Widget build(BuildContext context) {
