@@ -106,7 +106,9 @@ async function buildRailAndWalkRoute(origin: Coordinates, destination: Coordinat
   const drivingResponse = drivingResult.status === 'fulfilled' ? drivingResult.value : { routes: [] }
   const transitRoute = findRailOnlyRoute(transitResponse.routes ?? [])
   const selectedRoute = transitRoute ?? walkingResponse.routes?.[0]
-  if (!selectedRoute) throw new Error('No safe walking route is available for this journey.')
+  if (!selectedRoute) {
+    throw new Error('No eligible rail-and-walk or walking route is available for this journey.')
+  }
 
   const steps = selectedRoute.legs?.flatMap((leg: Record<string, unknown>) => leg.steps ?? []) ?? []
   const routeSteps = steps

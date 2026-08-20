@@ -1,16 +1,31 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../business_logic/entities/fitness_dashboard.dart';
+
 class WeeklyWalkingChart extends StatelessWidget {
-  const WeeklyWalkingChart({super.key});
+  const WeeklyWalkingChart({
+    super.key,
+    required this.days,
+    required this.totalKm,
+  });
+
+  final List<FitnessDaySummary> days;
+  final double totalKm;
+
   @override
   Widget build(BuildContext context) => _ChartCard(
-    title: 'Weekly Walking Distance',
-    subtitle: 'Total: 41.8 km this week',
-    badge: '132%',
-    child: const SizedBox(
-      height: 93,
-      child: CustomPaint(painter: _WalkingPainter()),
+    title: 'Walking Distance',
+    subtitle: '${totalKm.toStringAsFixed(2)} km from completed routes',
+    child: SizedBox(
+      height: 110,
+      child: CustomPaint(
+        painter: _WalkingPainter(
+          days.map((day) => day.walkingDistanceKm).toList(),
+        ),
+      ),
     ),
   );
 }
@@ -19,11 +34,13 @@ class _ChartCard extends StatelessWidget {
   const _ChartCard({
     required this.title,
     required this.subtitle,
-    required this.badge,
     required this.child,
   });
-  final String title, subtitle, badge;
+
+  final String title;
+  final String subtitle;
   final Widget child;
+
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.fromLTRB(18, 16, 18, 12),
@@ -41,46 +58,18 @@ class _ChartCard extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  Text(
-                    subtitle,
-                    style: GoogleFonts.poppins(
-                      fontSize: 9,
-                      color: const Color(0xFF8C8C8C),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE5F4E7),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Text(
-                badge,
-                style: GoogleFonts.poppins(
-                  fontSize: 9,
-                  color: const Color(0xFF2E7D32),
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
+        Text(
+          title,
+          style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600),
         ),
+        Text(
+          subtitle,
+          style: GoogleFonts.poppins(
+            fontSize: 9,
+            color: const Color(0xFF8C8C8C),
+          ),
+        ),
+        const SizedBox(height: 8),
         child,
       ],
     ),
@@ -88,36 +77,38 @@ class _ChartCard extends StatelessWidget {
 }
 
 class _WalkingPainter extends CustomPainter {
-  const _WalkingPainter();
+  const _WalkingPainter(this.values);
+  final List<double> values;
+
   @override
-  void paint(Canvas canvas, Size s) {
-    final points = [
-      Offset(8, 56),
-      Offset(50, 39),
-      Offset(92, 51),
-      Offset(134, 29),
-      Offset(176, 39),
-      Offset(218, 19),
-      Offset(260, 37),
-    ];
+  void paint(Canvas canvas, Size size) {
+    if (values.isEmpty) return;
+    const top = 8.0;
+    const bottom = 22.0;
+    final chartHeight = size.height - top - bottom;
+    final maxValue = math.max(1.0, values.reduce(math.max));
+    final stepX = values.length == 1 ? 0.0 : size.width / (values.length - 1);
+    final points = List.generate(values.length, (index) {
+      final y = top + chartHeight * (1 - values[index] / maxValue);
+      return Offset(index * stepX, y);
+    });
+
     final line = Path()..moveTo(points.first.dx, points.first.dy);
-    for (var i = 1; i < points.length; i++) {
-      final a = points[i - 1];
-      final b = points[i];
-      line.cubicTo(a.dx + 18, a.dy, b.dx - 18, b.dy, b.dx, b.dy);
+    for (var index = 1; index < points.length; index++) {
+      line.lineTo(points[index].dx, points[index].dy);
     }
     final fill = Path.from(line)
-      ..lineTo(points.last.dx, 76)
-      ..lineTo(points.first.dx, 76)
+      ..lineTo(points.last.dx, top + chartHeight)
+      ..lineTo(points.first.dx, top + chartHeight)
       ..close();
     canvas.drawPath(
       fill,
       Paint()
         ..shader = const LinearGradient(
-          colors: [Color(0x884CAF50), Color(0x004CAF50)],
+          colors: [Color(0x664CAF50), Color(0x004CAF50)],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-        ).createShader(Offset.zero & s),
+        ).createShader(Offset.zero & size),
     );
     canvas.drawPath(
       line,
@@ -126,65 +117,32 @@ class _WalkingPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2,
     );
-    for (final p in points) {
-      canvas.drawCircle(p, 3.3, Paint()..color = Colors.white);
-      canvas.drawCircle(p, 2.2, Paint()..color = const Color(0xFF388E3C));
+    for (final point in points) {
+      canvas.drawCircle(point, 3.5, Paint()..color = Colors.white);
+      canvas.drawCircle(point, 2.3, Paint()..color = const Color(0xFF388E3C));
     }
-    final labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    for (var i = 0; i < labels.length; i++) {
-      _text(
-        canvas,
-        labels[i],
-        points[i].dx,
-        89,
-        i == 6 ? const Color(0xFF2E7D32) : const Color(0xFF888888),
-      );
-    }
-    _text(
-      canvas,
-      '8.2 km',
-      260,
-      26,
-      Colors.white,
-      background: const Color(0xFF2E7D32),
-    );
+    _drawLabels(canvas, size, stepX);
   }
 
-  void _text(
-    Canvas c,
-    String text,
-    double x,
-    double y,
-    Color color, {
-    Color? background,
-  }) {
-    final p = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: TextStyle(
-          fontSize: 7,
-          fontWeight: FontWeight.w600,
-          color: color,
+  void _drawLabels(Canvas canvas, Size size, double stepX) {
+    const labels = ['D-6', 'D-5', 'D-4', 'D-3', 'D-2', 'Yesterday', 'Today'];
+    for (var index = 0; index < values.length; index++) {
+      final painter = TextPainter(
+        text: TextSpan(
+          text: labels[index],
+          style: const TextStyle(fontSize: 7, color: Color(0xFF888888)),
         ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    if (background != null) {
-      c.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromCenter(
-            center: Offset(x, y),
-            width: p.width + 8,
-            height: p.height + 5,
-          ),
-          const Radius.circular(4),
-        ),
-        Paint()..color = background,
+        textDirection: TextDirection.ltr,
+      )..layout();
+      final x = (index * stepX - painter.width / 2).clamp(
+        0.0,
+        size.width - painter.width,
       );
+      painter.paint(canvas, Offset(x, size.height - painter.height));
     }
-    p.paint(c, Offset(x - p.width / 2, y - p.height / 2));
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _WalkingPainter oldDelegate) =>
+      oldDelegate.values != values;
 }

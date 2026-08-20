@@ -28,6 +28,8 @@
 	<true/>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>CitiesWalk uses your location to find walking and public-transport routes from where you are.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>CitiesWalk uses your photo library so you can add photos to a community review.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

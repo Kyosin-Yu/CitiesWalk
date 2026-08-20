@@ -53,6 +53,8 @@ android/.kotlin/
 
 # Environment
 .env
+assets/.env
+!assets/.env.example
 
 # Local Android SDK and API key configuration
 android/local.properties

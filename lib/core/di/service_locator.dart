@@ -7,10 +7,13 @@ import '../../features/authentication/data/repositories/auth_repository_impl.dar
 import '../../features/authentication/data/data_sources/profile_data_source.dart';
 import '../../features/authentication/data/data_sources/supabase_auth_data_source.dart';
 import '../../features/authentication/business_logic/providers/auth_controller.dart';
-import '../../features/fitness/business_logic/providers/fitness_controller.dart';
 import '../../features/fitness/business_logic/repositories/fitness_repository.dart';
-import '../../features/fitness/data/data_sources/fitness_local_data_source.dart';
+import '../../features/fitness/data/data_sources/supabase_fitness_data_source.dart';
 import '../../features/fitness/data/repositories/fitness_repository_impl.dart';
+import '../../features/rewards/business_logic/repositories/rewards_repository.dart';
+import '../../features/rewards/data/data_sources/rewards_data_source.dart';
+import '../../features/rewards/data/data_sources/supabase_rewards_data_source.dart';
+import '../../features/rewards/data/repositories/rewards_repository_impl.dart';
 
 final sl = GetIt.instance;
 
@@ -25,8 +28,12 @@ Future<void> setupServiceLocator() async {
     () => ProfileDataSource(sl<SupabaseClient>()),
   );
 
+  sl.registerLazySingleton<ProfileStorageDataSource>(
+    () => ProfileStorageDataSource(sl<SupabaseClient>()),
+  );
+
   sl.registerLazySingleton<AuthRepository>(
-        () => AuthRepositoryImpl(
+    () => AuthRepositoryImpl(
       sl<SupabaseAuthDataSource>(),
       sl<ProfileDataSource>(),
       sl<ProfileStorageDataSource>(),
@@ -37,17 +44,17 @@ Future<void> setupServiceLocator() async {
     () => AuthController(sl<AuthRepository>()),
   );
 
-  sl.registerLazySingleton<FitnessLocalDataSource>(FitnessLocalDataSource.new);
-
+  sl.registerLazySingleton<SupabaseFitnessDataSource>(
+    () => SupabaseFitnessDataSource(sl<SupabaseClient>()),
+  );
   sl.registerLazySingleton<FitnessRepository>(
-    () => FitnessRepositoryImpl(sl<FitnessLocalDataSource>()),
+    () => FitnessRepositoryImpl(sl<SupabaseFitnessDataSource>()),
   );
 
-  sl.registerFactory<FitnessController>(
-    () => FitnessController(sl<FitnessRepository>()),
+  sl.registerLazySingleton<RewardsDataSource>(
+    () => SupabaseRewardsDataSource(sl<SupabaseClient>()),
   );
-
-  sl.registerLazySingleton<ProfileStorageDataSource>(
-        () => ProfileStorageDataSource(sl<SupabaseClient>(),),
+  sl.registerLazySingleton<RewardsRepository>(
+    () => RewardsRepositoryImpl(sl<RewardsDataSource>()),
   );
 }

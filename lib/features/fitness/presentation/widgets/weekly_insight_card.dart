@@ -1,85 +1,100 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../business_logic/entities/fitness_dashboard.dart';
+
 class WeeklyInsightCard extends StatelessWidget {
-  const WeeklyInsightCard({super.key});
+  const WeeklyInsightCard({super.key, required this.dashboard});
+  final FitnessDashboard dashboard;
+
   @override
-  Widget build(BuildContext context) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(18),
-    decoration: BoxDecoration(
-      color: const Color(0xFF23762C),
-      borderRadius: BorderRadius.circular(20),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x1A2E7D32),
-          blurRadius: 12,
-          offset: Offset(0, 6),
-        ),
-      ],
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 37,
-              height: 37,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: .13),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Text('💡'),
+  Widget build(BuildContext context) {
+    final previous = dashboard.previousWeekWalkingDistanceKm;
+    final differencePercent = previous <= 0
+        ? null
+        : ((dashboard.weeklyWalkingDistanceKm - previous) / previous * 100);
+    final message = !dashboard.hasRecordedActivity
+        ? 'Complete an Eco Route to generate your first weekly insight.'
+        : differencePercent == null
+        ? 'Your Eco Route activity added ${dashboard.weeklyWalkingDistanceKm.toStringAsFixed(2)} km of walking this week.'
+        : 'You walked ${differencePercent.abs().toStringAsFixed(0)}% ${differencePercent >= 0 ? 'more' : 'less'} than the previous 7 days.';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFF23762C),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'ROUTE INSIGHT',
+            style: GoogleFonts.poppins(
+              fontSize: 9,
+              letterSpacing: 1.1,
+              color: const Color(0xFFA5D6A7),
+              fontWeight: FontWeight.w600,
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'WEEKLY INSIGHT',
-                    style: GoogleFonts.poppins(
-                      fontSize: 9,
-                      letterSpacing: 1.1,
-                      color: const Color(0xFFA5D6A7),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  Text(
-                    'You walked 32% more than last week and saved 8.4 kg of CO₂. Keep it up! 🌍',
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      height: 1.35,
-                    ),
-                  ),
-                ],
-              ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            message,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+              height: 1.35,
             ),
-          ],
-        ),
-        const SizedBox(height: 15),
-        const Row(
-          children: [
-            Expanded(child: _Insight('📈', '+32%', 'vs Last Week')),
-            SizedBox(width: 8),
-            Expanded(child: _Insight('🌿', '8.4 kg', 'CO₂ Saved')),
-            SizedBox(width: 8),
-            Expanded(child: _Insight('🥇', '+14', 'Rank Change')),
-          ],
-        ),
-      ],
-    ),
-  );
+          ),
+          const SizedBox(height: 15),
+          Row(
+            children: [
+              Expanded(
+                child: _Insight(
+                  icon: Icons.route_rounded,
+                  value:
+                      '${dashboard.weeklyWalkingDistanceKm.toStringAsFixed(2)} km',
+                  label: 'Walking',
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _Insight(
+                  icon: Icons.local_fire_department_rounded,
+                  value: '${dashboard.weeklyCaloriesKcal}',
+                  label: 'Est. kcal',
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _Insight(
+                  icon: Icons.eco_rounded,
+                  value:
+                      '${dashboard.weeklyCarbonSavedKg.toStringAsFixed(2)} kg',
+                  label: 'Est. CO₂',
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _Insight extends StatelessWidget {
-  const _Insight(this.icon, this.value, this.label);
-  final String icon, value, label;
+  const _Insight({
+    required this.icon,
+    required this.value,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String value;
+  final String label;
+
   @override
   Widget build(BuildContext context) => Container(
     height: 64,
@@ -90,13 +105,13 @@ class _Insight extends StatelessWidget {
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(icon, style: const TextStyle(fontSize: 13)),
+        Icon(icon, size: 14, color: const Color(0xFFA5D6A7)),
         Text(
           value,
           style: GoogleFonts.poppins(
             color: Colors.white,
             fontWeight: FontWeight.w700,
-            fontSize: 10,
+            fontSize: 9,
           ),
         ),
         Text(

@@ -2,16 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/models/destination_review_summary.dart';
 import '../../business_logic/entities/eco_destination.dart';
 
 class DestinationCard extends StatelessWidget {
   const DestinationCard({
     super.key,
     required this.destination,
+    required this.reviewSummary,
     required this.onTap,
   });
 
   final EcoDestination destination;
+  final DestinationReviewSummary reviewSummary;
   final VoidCallback onTap;
 
   @override
@@ -83,6 +86,28 @@ class DestinationCard extends StatelessWidget {
                           context,
                         ).textTheme.bodyMedium?.copyWith(fontSize: 12),
                       ),
+                      if (reviewSummary.hasReviews) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.star_rounded,
+                              size: 14,
+                              color: Color(0xFFF59A00),
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              '${reviewSummary.averageRating.toStringAsFixed(1)} '
+                              '(${reviewSummary.reviewCount})',
+                              style: GoogleFonts.poppins(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),

@@ -11,6 +11,8 @@ class SupabaseJourneyDataSource {
 
   final SupabaseClient _client;
 
+  /// Includes early-ended journeys for user history. Fitness uses its own
+  /// completed-only query and therefore never counts those partial trips.
   Future<List<EcoJourneyHistoryItem>> fetchCompletedJourneys({
     required String userId,
   }) async {
@@ -19,11 +21,14 @@ class SupabaseJourneyDataSource {
         .select(
           'id, destination_name, destination_category, '
           'destination_latitude, destination_longitude, '
-          'estimated_duration_minutes, estimated_walking_distance_meters, '
-          'estimated_calories, estimated_carbon_saved_kg, ended_at',
+          'estimated_duration_minutes, actual_duration_minutes, '
+          'estimated_walking_distance_meters, '
+          'estimated_calories, estimated_carbon_saved_kg, ended_at, status, '
+          'actual_walking_distance_meters, actual_transit_distance_meters, '
+          'actual_step_count, actual_calories_burned, actual_carbon_saved_kg',
         )
         .eq('user_id', userId)
-        .eq('status', 'completed')
+        .inFilter('status', const ['completed', 'ended_early'])
         .order('ended_at', ascending: false)
         .limit(5);
 
@@ -39,13 +44,23 @@ class SupabaseJourneyDataSource {
                 .toDouble(),
             destinationLongitude: (row['destination_longitude'] as num)
                 .toDouble(),
-            durationMinutes: row['estimated_duration_minutes'] as int,
+            durationMinutes:
+                (row['actual_duration_minutes'] as num?)?.toInt() ??
+                row['estimated_duration_minutes'] as int,
             walkingDistanceMeters:
+                (row['actual_walking_distance_meters'] as num?)?.toInt() ??
                 row['estimated_walking_distance_meters'] as int,
-            estimatedCalories: row['estimated_calories'] as int,
-            estimatedCarbonSavedKg: (row['estimated_carbon_saved_kg'] as num)
-                .toDouble(),
+            transitDistanceMeters:
+                (row['actual_transit_distance_meters'] as num?)?.toInt() ?? 0,
+            stepCount: (row['actual_step_count'] as num?)?.toInt() ?? 0,
+            estimatedCalories:
+                (row['actual_calories_burned'] as num?)?.toInt() ??
+                row['estimated_calories'] as int,
+            estimatedCarbonSavedKg:
+                (row['actual_carbon_saved_kg'] as num?)?.toDouble() ??
+                (row['estimated_carbon_saved_kg'] as num).toDouble(),
             completedAt: DateTime.parse(row['ended_at'] as String).toLocal(),
+            isCompleted: row['status'] == 'completed',
           ),
         )
         .toList();
@@ -102,15 +117,60 @@ class SupabaseJourneyDataSource {
     required String journeyId,
     required DateTime endedAt,
     required EcoRoute finalRoute,
+    required int actualDurationMinutes,
+    required double actualWalkingDistanceKm,
+    required double actualTransitDistanceKm,
+    required int actualStepCount,
+    required int actualCaloriesBurned,
+    required double actualCarbonSavedKg,
   }) => _client
       .from('eco_journeys')
       .update({
         'status': 'completed',
         ..._routeEstimateFields(finalRoute),
+        'actual_duration_minutes': actualDurationMinutes,
+        'actual_walking_distance_meters': (actualWalkingDistanceKm * 1000)
+            .round(),
+        'actual_transit_distance_meters': (actualTransitDistanceKm * 1000)
+            .round(),
+        'actual_step_count': actualStepCount,
+        'actual_calories_burned': actualCaloriesBurned,
+        'actual_carbon_saved_kg': actualCarbonSavedKg,
+        'ended_at': endedAt.toIso8601String(),
+        'updated_at': endedAt.toIso8601String(),
+       })
+      .eq('id', journeyId);
+
+  Future<void> endJourneyEarly({
+    required String journeyId,
+    required DateTime endedAt,
+    required EcoRoute finalRoute,
+    required int actualDurationMinutes,
+    required double actualWalkingDistanceKm,
+    required double actualTransitDistanceKm,
+    required int actualStepCount,
+    required int actualCaloriesBurned,
+    required double actualCarbonSavedKg,
+  }) => _client
+      .from('eco_journeys')
+      .update({
+        'status': 'ended_early',
+        ..._routeEstimateFields(finalRoute),
+        'actual_duration_minutes': actualDurationMinutes,
+        'actual_walking_distance_meters': (actualWalkingDistanceKm * 1000)
+            .round(),
+        'actual_transit_distance_meters': (actualTransitDistanceKm * 1000)
+            .round(),
+        'actual_step_count': actualStepCount,
+        'actual_calories_burned': actualCaloriesBurned,
+        'actual_carbon_saved_kg': actualCarbonSavedKg,
         'ended_at': endedAt.toIso8601String(),
         'updated_at': endedAt.toIso8601String(),
       })
       .eq('id', journeyId);
+
+  Future<void> cancelJourney({required String journeyId}) =>
+      _client.from('eco_journeys').delete().eq('id', journeyId);
 
   Future<void> updateRouteEstimates({
     required String journeyId,

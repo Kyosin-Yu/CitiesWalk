@@ -1,19 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../../../app/theme/app_colors.dart';
-import '../../models/badge_model.dart';
-import '../../services/rewards_service.dart';
+import '../../business_logic/providers/rewards_controller.dart';
 import '../widgets/badge_detail_modal.dart';
 import '../widgets/badge_item_card.dart';
 
 enum _BadgeFilter { all, unlocked, locked }
 
 class AchievementLockerScreen extends StatefulWidget {
-  const AchievementLockerScreen({
-    super.key,
-    this.service = const RewardsService(),
-  });
-  final RewardsService service;
+  const AchievementLockerScreen({super.key});
 
   @override
   State<AchievementLockerScreen> createState() =>
@@ -30,88 +26,83 @@ class _AchievementLockerScreenState extends State<AchievementLockerScreen> {
         textTheme: Theme.of(context).textTheme.apply(fontFamily: 'Poppins'),
       ),
       child: Scaffold(
-        body: FutureBuilder<List<BadgeModel>>(
-          future: widget.service.fetchBadges(),
-          builder:
-              (BuildContext context, AsyncSnapshot<List<BadgeModel>> snapshot) {
-                if (snapshot.hasError) {
-                  return const Center(
-                    child: Text('We could not load your achievements.'),
-                  );
-                }
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                final badges = snapshot.data!;
-                final unlocked = badges
-                    .where((badge) => badge.isUnlocked)
-                    .length;
-                final filtered = switch (_filter) {
-                  _BadgeFilter.all => badges,
-                  _BadgeFilter.unlocked =>
-                    badges.where((badge) => badge.isUnlocked).toList(),
-                  _BadgeFilter.locked =>
-                    badges.where((badge) => !badge.isUnlocked).toList(),
-                };
-                return CustomScrollView(
-                  slivers: <Widget>[
-                    SliverToBoxAdapter(
-                      child: _LockerHeader(
-                        unlocked: unlocked,
-                        total: badges.length,
-                      ),
+        body: Builder(
+          builder: (context) {
+            final controller = context.watch<RewardsController>();
+            if (controller.status == RewardsStatus.failure) {
+              return const Center(
+                child: Text('We could not load your achievements.'),
+              );
+            }
+            if (controller.status == RewardsStatus.initial ||
+                controller.status == RewardsStatus.loading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final badges = controller.badges;
+            final unlocked = badges.where((badge) => badge.isUnlocked).length;
+            final filtered = switch (_filter) {
+              _BadgeFilter.all => badges,
+              _BadgeFilter.unlocked =>
+                badges.where((badge) => badge.isUnlocked).toList(),
+              _BadgeFilter.locked =>
+                badges.where((badge) => !badge.isUnlocked).toList(),
+            };
+            return CustomScrollView(
+              slivers: <Widget>[
+                SliverToBoxAdapter(
+                  child: _LockerHeader(
+                    unlocked: unlocked,
+                    total: badges.length,
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
+                    child: _FilterTabs(
+                      selected: _filter,
+                      allCount: badges.length,
+                      unlockedCount: unlocked,
+                      onSelected: (filter) => setState(() => _filter = filter),
                     ),
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
-                        child: _FilterTabs(
-                          selected: _filter,
-                          allCount: badges.length,
-                          unlockedCount: unlocked,
-                          onSelected: (filter) =>
-                              setState(() => _filter = filter),
-                        ),
-                      ),
-                    ),
-                    if (filtered.isEmpty)
-                      const SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: Center(
-                          child: Text('No badges in this filter yet.'),
-                        ),
-                      )
-                    else
-                      SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 22),
-                        sliver: SliverGrid(
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                crossAxisSpacing: 14,
-                                mainAxisSpacing: 14,
-                                childAspectRatio: 0.84,
-                              ),
-                          delegate: SliverChildBuilderDelegate((
-                            BuildContext context,
-                            int index,
-                          ) {
-                            final badge = filtered[index];
-                            return BadgeItemCard(
-                              badge: badge,
-                              onTap: () {
-                                BadgeDetailModal.show(
-                                  context,
-                                  badge,
-                                  onStartJourney: _showJourneyMessage,
-                                );
-                              },
+                  ),
+                ),
+                if (filtered.isEmpty)
+                  const SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(child: Text('No badges in this filter yet.')),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 22),
+                    sliver: SliverGrid(
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 14,
+                            mainAxisSpacing: 14,
+                            childAspectRatio: 0.84,
+                          ),
+                      delegate: SliverChildBuilderDelegate((
+                        BuildContext context,
+                        int index,
+                      ) {
+                        final badge = filtered[index];
+                        return BadgeItemCard(
+                          badge: badge,
+                          onTap: () {
+                            BadgeDetailModal.show(
+                              context,
+                              badge,
+                              onStartJourney: _showJourneyMessage,
                             );
-                          }, childCount: filtered.length),
-                        ),
-                      ),
-                  ],
-                );
-              },
+                          },
+                        );
+                      }, childCount: filtered.length),
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
       ),
     );

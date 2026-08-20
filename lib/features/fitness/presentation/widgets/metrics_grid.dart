@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../business_logic/entities/fitness_dashboard.dart';
+
 class MetricsGrid extends StatelessWidget {
-  const MetricsGrid({super.key});
+  const MetricsGrid({super.key, required this.dashboard});
+  final FitnessDashboard dashboard;
+
   @override
   Widget build(BuildContext context) => GridView.count(
     crossAxisCount: 2,
@@ -11,60 +15,76 @@ class MetricsGrid extends StatelessWidget {
     childAspectRatio: 1.55,
     mainAxisSpacing: 10,
     crossAxisSpacing: 10,
-    children: const [
+    children: [
       _MetricCard(
-        'Steps Today',
-        '8,452',
-        'steps',
-        '👟',
-        Color(0xFF2E7D32),
-        .72,
-        Color(0xFFE7DCF8),
+        label: 'Steps Today',
+        value: dashboard.stepsToday?.toString() ?? '—',
+        unit: dashboard.stepsToday == null ? 'not tracked' : 'steps',
+        icon: Icons.directions_walk_rounded,
+        color: const Color(0xFF2E7D32),
+        iconColor: const Color(0xFFE7F3E8),
       ),
       _MetricCard(
-        'Calories',
-        '486',
-        'kcal',
-        '🔥',
-        Color(0xFFFF6D00),
-        .58,
-        Color(0xFFFFDDCF),
+        label: 'Walking Today',
+        value: dashboard.walkingDistanceTodayKm.toStringAsFixed(2),
+        unit: 'km',
+        icon: Icons.route_rounded,
+        color: const Color(0xFF2E7D32),
+        iconColor: const Color(0xFFE7F3E8),
       ),
       _MetricCard(
-        'CO₂ Saved',
-        '12.6',
-        'kg',
-        '🌿',
-        Color(0xFF1565C0),
-        .72,
-        Color(0xFFD9EFFF),
+        label: 'Estimated Calories',
+        value: '${dashboard.caloriesTodayKcal}',
+        unit: 'kcal',
+        icon: Icons.local_fire_department_rounded,
+        color: const Color(0xFFFF6D00),
+        iconColor: const Color(0xFFFFDDCF),
       ),
       _MetricCard(
-        'Eco Points',
-        '2,340',
-        'pts',
-        '⭐',
-        Color(0xFFFF6D00),
-        .63,
-        Color(0xFFFFF3C6),
+        label: 'Estimated CO₂ Saved',
+        value: dashboard.carbonSavedTodayKg.toStringAsFixed(2),
+        unit: 'kg',
+        icon: Icons.eco_rounded,
+        color: const Color(0xFF1565C0),
+        iconColor: const Color(0xFFD9EFFF),
+      ),
+      _MetricCard(
+        label: 'Eco Points',
+        value: dashboard.ecoPoints?.toString() ?? '—',
+        unit: dashboard.ecoPoints == null ? 'rewards not linked' : 'pts',
+        icon: Icons.star_rounded,
+        color: const Color(0xFFF9A825),
+        iconColor: const Color(0xFFFFF3C6),
+      ),
+      _MetricCard(
+        label: 'Completed Routes',
+        value: '${dashboard.completedJourneysThisWeek}',
+        unit: 'last 7 days',
+        icon: Icons.flag_rounded,
+        color: const Color(0xFF6A1B9A),
+        iconColor: const Color(0xFFF1E3F8),
       ),
     ],
   );
 }
 
 class _MetricCard extends StatelessWidget {
-  const _MetricCard(
-    this.label,
-    this.value,
-    this.unit,
-    this.emoji,
-    this.color,
-    this.progress,
-    this.iconColor,
-  );
-  final String label, value, unit, emoji;
-  final Color color, iconColor;
-  final double progress;
+  const _MetricCard({
+    required this.label,
+    required this.value,
+    required this.unit,
+    required this.icon,
+    required this.color,
+    required this.iconColor,
+  });
+
+  final String label;
+  final String value;
+  final String unit;
+  final IconData icon;
+  final Color color;
+  final Color iconColor;
+
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(14),
@@ -85,55 +105,44 @@ class _MetricCard extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              label,
-              style: GoogleFonts.poppins(
-                fontSize: 10,
-                color: const Color(0xFF777777),
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.poppins(
+                  fontSize: 9,
+                  color: const Color(0xFF777777),
+                ),
               ),
             ),
             Container(
               width: 29,
               height: 29,
-              alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: iconColor,
                 borderRadius: BorderRadius.circular(9),
               ),
-              child: Text(emoji, style: const TextStyle(fontSize: 15)),
+              child: Icon(icon, size: 16, color: color),
             ),
           ],
         ),
         const Spacer(),
-        RichText(
-          text: TextSpan(
-            children: [
-              TextSpan(
-                text: value,
-                style: GoogleFonts.poppins(
-                  color: color,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              TextSpan(
-                text: ' $unit',
-                style: GoogleFonts.poppins(
-                  color: const Color(0xFF9B9B9B),
-                  fontSize: 8,
-                ),
-              ),
-            ],
+        Text(
+          value,
+          style: GoogleFonts.poppins(
+            color: color,
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
           ),
         ),
-        const SizedBox(height: 7),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: LinearProgressIndicator(
-            value: progress,
-            minHeight: 3,
-            color: color.withValues(alpha: .55),
-            backgroundColor: const Color(0xFFF0F0F0),
+        Text(
+          unit,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.poppins(
+            color: const Color(0xFF9B9B9B),
+            fontSize: 8,
           ),
         ),
       ],
