@@ -10,6 +10,10 @@ import '../../features/authentication/business_logic/providers/auth_controller.d
 import '../../features/fitness/business_logic/repositories/fitness_repository.dart';
 import '../../features/fitness/data/data_sources/supabase_fitness_data_source.dart';
 import '../../features/fitness/data/repositories/fitness_repository_impl.dart';
+import '../../features/rewards/business_logic/repositories/rewards_repository.dart';
+import '../../features/rewards/data/data_sources/rewards_data_source.dart';
+import '../../features/rewards/data/data_sources/supabase_rewards_data_source.dart';
+import '../../features/rewards/data/repositories/rewards_repository_impl.dart';
 
 final sl = GetIt.instance;
 
@@ -40,5 +44,12 @@ Future<void> setupServiceLocator() async {
   );
   sl.registerLazySingleton<FitnessRepository>(
     () => FitnessRepositoryImpl(sl<SupabaseFitnessDataSource>()),
+  );
+
+  sl.registerLazySingleton<RewardsDataSource>(
+    () => SupabaseRewardsDataSource(sl<SupabaseClient>()),
+  );
+  sl.registerLazySingleton<RewardsRepository>(
+    () => RewardsRepositoryImpl(sl<RewardsDataSource>()),
   );
 }

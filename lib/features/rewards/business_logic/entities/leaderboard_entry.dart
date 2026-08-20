@@ -15,4 +15,6 @@ class LeaderboardEntry {
   final String achievement;
   final String initials;
   final bool isCurrentUser;
+
+  bool get isRanked => rank > 0;
 }

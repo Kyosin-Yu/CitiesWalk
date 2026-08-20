@@ -40,7 +40,9 @@ class RewardsController extends ChangeNotifier {
       _badges = result[1] as List<RewardBadge>;
       _pointHistory = result[2] as List<PointTransaction>;
       _status = RewardsStatus.success;
-    } catch (_) {
+    } catch (error, stackTrace) {
+      debugPrint('Unable to load Rewards data: $error');
+      debugPrintStack(stackTrace: stackTrace);
       _status = RewardsStatus.failure;
       _errorMessage = 'Unable to load rewards at the moment.';
     }

@@ -2,13 +2,13 @@ import '../../business_logic/entities/badge.dart';
 import '../../business_logic/entities/leaderboard_entry.dart';
 import '../../business_logic/entities/point_transaction.dart';
 import '../../business_logic/repositories/rewards_repository.dart';
-import '../data_sources/rewards_mock_data_source.dart';
+import '../data_sources/rewards_data_source.dart';
 
 /// Maps Rewards data-source records into business entities.
 class RewardsRepositoryImpl implements RewardsRepository {
   const RewardsRepositoryImpl(this._dataSource);
 
-  final RewardsMockDataSource _dataSource;
+  final RewardsDataSource _dataSource;
 
   @override
   Future<List<LeaderboardEntry>> getLeaderboard() async =>

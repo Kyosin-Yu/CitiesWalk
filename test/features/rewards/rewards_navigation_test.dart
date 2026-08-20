@@ -25,7 +25,13 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(
-      const MaterialApp(home: Scaffold(body: RewardsHubScreen())),
+      MaterialApp(
+        home: Scaffold(
+          body: RewardsHubScreen(
+            repository: const RewardsRepositoryImpl(RewardsMockDataSource()),
+          ),
+        ),
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -111,7 +117,13 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(
-      const MaterialApp(home: Scaffold(body: RewardsHubScreen())),
+      MaterialApp(
+        home: Scaffold(
+          body: RewardsHubScreen(
+            repository: const RewardsRepositoryImpl(RewardsMockDataSource()),
+          ),
+        ),
+      ),
     );
     await tester.pumpAndSettle();
 

@@ -34,8 +34,11 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
           if (controller.status == RewardsStatus.failure) {
             return _LeaderboardStatusScaffold(
               showBackButton: !widget.isEmbedded,
-              child: const _ErrorState(
-                message: 'We could not load the leaderboard.',
+              child: _ErrorState(
+                message:
+                    controller.errorMessage ??
+                    'We could not load the leaderboard.',
+                onRetry: controller.load,
               ),
             );
           }
@@ -264,7 +267,7 @@ class _ScoreCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 const Text(
-                  'Your Score',
+                  'This Week',
                   style: TextStyle(color: Color(0xFFE2F3E3), fontSize: 12),
                 ),
                 Text(
@@ -276,7 +279,7 @@ class _ScoreCard extends StatelessWidget {
                   ),
                 ),
                 const Text(
-                  '+120 pts this week',
+                  'Points earned this week',
                   style: TextStyle(
                     color: Color(0xFF9BE5A0),
                     fontWeight: FontWeight.w600,
@@ -302,7 +305,7 @@ class _ScoreCard extends StatelessWidget {
                   style: TextStyle(color: Color(0xFFE2F3E3), fontSize: 8),
                 ),
                 Text(
-                  '#${entry.rank}',
+                  entry.isRanked ? '#${entry.rank}' : '—',
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w800,
@@ -353,7 +356,7 @@ class _RankRow extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
-              '${entry.rank}',
+              entry.isRanked ? '${entry.rank}' : '—',
               style: TextStyle(
                 color: isCurrent ? Colors.white : AppColors.textSecondary,
                 fontWeight: FontWeight.w700,
@@ -482,8 +485,10 @@ class _CurrentUserBar extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                const Text(
-                  '168 pts to reach #3',
+                Text(
+                  entry.isRanked
+                      ? 'Your weekly leaderboard position'
+                      : 'Complete a journey to join the leaderboard',
                   style: TextStyle(color: Color(0xFFD8F1DA), fontSize: 11),
                 ),
               ],
@@ -539,16 +544,30 @@ class _EmptyState extends StatelessWidget {
 }
 
 class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message});
+  const _ErrorState({required this.message, required this.onRetry});
 
   final String message;
+  final Future<void> Function() onRetry;
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
-        child: Text(message, textAlign: TextAlign.center),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const Icon(Icons.cloud_off_outlined, size: 44),
+            const SizedBox(height: 12),
+            Text(message, textAlign: TextAlign.center),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Try again'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -582,8 +601,14 @@ class _LeaderboardStatusScaffold extends StatelessWidget {
 }
 
 String _formatPoints(int value) {
-  return value.toString().replaceAllMapped(
-    RegExp(r'(?=(\d{3})+(?!\d))'),
-    (_) => ',',
-  );
+  final sign = value < 0 ? '-' : '';
+  final digits = value.abs().toString();
+  final buffer = StringBuffer(sign);
+  for (var index = 0; index < digits.length; index++) {
+    if (index > 0 && (digits.length - index).remainder(3) == 0) {
+      buffer.write(',');
+    }
+    buffer.write(digits[index]);
+  }
+  return buffer.toString();
 }

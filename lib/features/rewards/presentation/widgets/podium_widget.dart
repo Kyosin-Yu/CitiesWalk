@@ -10,10 +10,13 @@ class PodiumWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (entries.length < 3) return const SizedBox.shrink();
-    final first = entries.firstWhere((entry) => entry.rank == 1);
-    final second = entries.firstWhere((entry) => entry.rank == 2);
-    final third = entries.firstWhere((entry) => entry.rank == 3);
+    final podiumEntries = entries
+        .where((entry) => entry.rank >= 1 && entry.rank <= 3)
+        .toList(growable: false);
+    if (podiumEntries.length < 3) return const SizedBox.shrink();
+    final first = podiumEntries.firstWhere((entry) => entry.rank == 1);
+    final second = podiumEntries.firstWhere((entry) => entry.rank == 2);
+    final third = podiumEntries.firstWhere((entry) => entry.rank == 3);
 
     return SizedBox(
       height: 212,
@@ -141,6 +144,14 @@ class _PodiumPlace extends StatelessWidget {
 }
 
 String _formatPoints(int value) {
-  final text = value.toString();
-  return text.replaceAllMapped(RegExp(r'(?=(\d{3})+(?!\d))'), (_) => ',');
+  final sign = value < 0 ? '-' : '';
+  final digits = value.abs().toString();
+  final buffer = StringBuffer(sign);
+  for (var index = 0; index < digits.length; index++) {
+    if (index > 0 && (digits.length - index).remainder(3) == 0) {
+      buffer.write(',');
+    }
+    buffer.write(digits[index]);
+  }
+  return buffer.toString();
 }
