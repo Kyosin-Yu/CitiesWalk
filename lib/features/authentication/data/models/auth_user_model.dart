@@ -7,27 +7,22 @@ class AuthUserModel extends AppUser {
     super.fullName,
     super.phoneNumber,
     super.profileImage,
+    super.bio,
+    super.publicProfile,
   });
 
-  factory AuthUserModel.fromMap({
-    required Map<String, dynamic> profile,
+  factory AuthUserModel.fromMap(
+    Map<String, dynamic> map, {
     required String email,
   }) {
     return AuthUserModel(
-      id: profile['id'] as String,
+      id: map['id'] as String,
       email: email,
-      fullName: profile['full_name'] as String?,
-      phoneNumber: profile['phone_number'] as String?,
-      profileImage: profile['profile_image'] as String?,
+      fullName: map['full_name']?.toString(),
+      phoneNumber: map['phone_number']?.toString(),
+      profileImage: map['profile_image']?.toString(),
+      bio: map['bio']?.toString(),
+      publicProfile: map['public_profile'] as bool? ?? true,
     );
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'full_name': fullName,
-      'phone_number': phoneNumber,
-      'profile_image': profileImage,
-    };
   }
 }

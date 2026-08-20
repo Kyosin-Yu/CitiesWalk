@@ -18,5 +18,13 @@ abstract class AuthRepository {
 
   Future<AppUser?> getCurrentUser();
 
+  Future<AppUser> updateProfile({
+    required String fullName,
+    required String bio,
+    required bool publicProfile,
+  });
+
+  Future<AppUser> updateProfileImage({required String localImagePath});
+
   Stream<AppUser?> authStateChanges();
 }

@@ -1,6 +1,6 @@
 import 'package:get_it/get_it.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import '../../features/authentication/data/data_sources/profile_storage_data_source.dart';
 import '../config/supabase_config.dart';
 import '../../features/authentication/business_logic/repositories/auth_repository.dart';
 import '../../features/authentication/data/repositories/auth_repository_impl.dart';
@@ -26,9 +26,10 @@ Future<void> setupServiceLocator() async {
   );
 
   sl.registerLazySingleton<AuthRepository>(
-    () => AuthRepositoryImpl(
+        () => AuthRepositoryImpl(
       sl<SupabaseAuthDataSource>(),
       sl<ProfileDataSource>(),
+      sl<ProfileStorageDataSource>(),
     ),
   );
 
@@ -37,10 +38,16 @@ Future<void> setupServiceLocator() async {
   );
 
   sl.registerLazySingleton<FitnessLocalDataSource>(FitnessLocalDataSource.new);
+
   sl.registerLazySingleton<FitnessRepository>(
     () => FitnessRepositoryImpl(sl<FitnessLocalDataSource>()),
   );
+
   sl.registerFactory<FitnessController>(
     () => FitnessController(sl<FitnessRepository>()),
+  );
+
+  sl.registerLazySingleton<ProfileStorageDataSource>(
+        () => ProfileStorageDataSource(sl<SupabaseClient>(),),
   );
 }
