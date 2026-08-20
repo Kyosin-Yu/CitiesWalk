@@ -31,6 +31,7 @@ class FitnessDashboard {
     required this.completedJourneysThisWeek,
     required this.totalCompletedJourneys,
     required this.dailySummaries,
+    this.activityJourneyCount = 0,
     this.stepsToday,
     this.ecoPoints,
   });
@@ -52,6 +53,8 @@ class FitnessDashboard {
   final int completedJourneysThisWeek;
   final int totalCompletedJourneys;
   final List<FitnessDaySummary> dailySummaries;
+  final int activityJourneyCount;
 
   bool get hasCompletedJourney => totalCompletedJourneys > 0;
+  bool get hasRecordedActivity => activityJourneyCount > 0;
 }

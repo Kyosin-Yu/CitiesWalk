@@ -21,10 +21,10 @@ class SupabaseFitnessDataSource {
           'id, estimated_walking_distance_meters, estimated_calories, '
           'estimated_carbon_saved_kg, actual_walking_distance_meters, '
           'actual_step_count, actual_calories_burned, '
-          'actual_carbon_saved_kg, ended_at',
+          'actual_carbon_saved_kg, ended_at, status',
         )
         .eq('user_id', userId)
-        .eq('status', 'completed')
+        .inFilter('status', const ['completed', 'ended_early'])
         .not('ended_at', 'is', null)
         .order('ended_at', ascending: false);
 

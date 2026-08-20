@@ -13,10 +13,10 @@ class WeeklyInsightCard extends StatelessWidget {
     final differencePercent = previous <= 0
         ? null
         : ((dashboard.weeklyWalkingDistanceKm - previous) / previous * 100);
-    final message = !dashboard.hasCompletedJourney
+    final message = !dashboard.hasRecordedActivity
         ? 'Complete an Eco Route to generate your first weekly insight.'
         : differencePercent == null
-        ? 'Your completed Eco Routes added ${dashboard.weeklyWalkingDistanceKm.toStringAsFixed(2)} km of walking this week.'
+        ? 'Your Eco Route activity added ${dashboard.weeklyWalkingDistanceKm.toStringAsFixed(2)} km of walking this week.'
         : 'You walked ${differencePercent.abs().toStringAsFixed(0)}% ${differencePercent >= 0 ? 'more' : 'less'} than the previous 7 days.';
 
     return Container(

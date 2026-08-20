@@ -20,6 +20,7 @@ import '../features/eco_route/data/repositories/supabase_journey_repository.dart
 import '../features/eco_route/data/data_sources/supabase_journey_data_source.dart';
 import '../features/eco_route/presentation/pages/eco_route_page.dart';
 import '../features/fitness/business_logic/providers/fitness_controller.dart';
+import '../features/fitness/business_logic/entities/fitness_dashboard.dart';
 import '../features/fitness/business_logic/repositories/fitness_repository.dart';
 import '../features/fitness/presentation/pages/fitness_page.dart';
 import '../features/rewards/presentation/screens/rewards_hub_screen.dart';
@@ -48,13 +49,16 @@ class _AppShellState extends State<AppShell> {
   final ValueNotifier<EcoDestination?> _destinationToPlan = ValueNotifier(
     null,
   );
+  final ValueNotifier<FitnessDashboard?> _homeFitnessDashboard = ValueNotifier(
+    null,
+  );
   late final FitnessController _fitnessController = FitnessController(
     userId: sl<AuthController>().currentUser!.id,
     userName:
         sl<AuthController>().currentUser!.fullName ??
         sl<AuthController>().currentUser!.email,
     repository: sl<FitnessRepository>(),
-  )..loadDashboard();
+  );
   final ValueNotifier<int> _reviewSummaryVersion = ValueNotifier(0);
   final ValueNotifier<Map<String, DestinationReviewSummary>>
   _homeReviewSummaries = ValueNotifier(const {});
@@ -77,6 +81,7 @@ class _AppShellState extends State<AppShell> {
       onPlanAgain: _planSavedTripAgain,
       onPlanDestination: _planHomeDestination,
       reviewSummaries: _homeReviewSummaries,
+      fitnessDashboard: _homeFitnessDashboard,
     ),
     _EcoRouteEntryPage(
       onJourneyCompleted: _refreshJourneyHistory,
@@ -98,7 +103,13 @@ class _AppShellState extends State<AppShell> {
   @override
   void initState() {
     super.initState();
+    _fitnessController.addListener(_syncHomeFitnessDashboard);
+    unawaited(_fitnessController.loadDashboard());
     unawaited(_refreshHomeReviewSummaries());
+  }
+
+  void _syncHomeFitnessDashboard() {
+    _homeFitnessDashboard.value = _fitnessController.dashboard;
   }
 
   @override
@@ -231,7 +242,9 @@ class _AppShellState extends State<AppShell> {
     _journeyHistoryVersion.dispose();
     _tripToReplan.dispose();
     _destinationToPlan.dispose();
+    _fitnessController.removeListener(_syncHomeFitnessDashboard);
     _fitnessController.dispose();
+    _homeFitnessDashboard.dispose();
     _reviewSummaryVersion.dispose();
     _homeReviewSummaries.dispose();
     for (final provider in _reviewProviders.values) {

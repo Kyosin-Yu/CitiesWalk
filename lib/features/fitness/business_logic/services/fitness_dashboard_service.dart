@@ -44,13 +44,18 @@ class FitnessDashboardService {
         walkingDistanceKm: _distanceKm(daily),
         caloriesKcal: _calories(daily),
         carbonSavedKg: _carbon(daily),
-        completedJourneys: daily.length,
+        completedJourneys: daily
+            .where((journey) => journey.countsAsCompletedRoute)
+            .length,
       );
     });
 
     return FitnessDashboard(
       userName: userName,
-      streakDays: _streakDays(journeys, today),
+      streakDays: _streakDays(
+        journeys.where((journey) => journey.countsAsCompletedRoute).toList(),
+        today,
+      ),
       stepsToday: _steps(todayJourneys),
       walkingDistanceTodayKm: _distanceKm(todayJourneys),
       caloriesTodayKcal: _calories(todayJourneys),
@@ -63,9 +68,14 @@ class FitnessDashboardService {
       weeklyCarbonSavedKg: _carbon(sevenDayJourneys),
       monthlyCaloriesKcal: _calories(monthlyJourneys),
       monthlyCarbonSavedKg: _carbon(monthlyJourneys),
-      completedJourneysThisWeek: sevenDayJourneys.length,
-      totalCompletedJourneys: journeys.length,
+      completedJourneysThisWeek: sevenDayJourneys
+          .where((journey) => journey.countsAsCompletedRoute)
+          .length,
+      totalCompletedJourneys: journeys
+          .where((journey) => journey.countsAsCompletedRoute)
+          .length,
       dailySummaries: dailySummaries,
+      activityJourneyCount: journeys.length,
     );
   }
 
