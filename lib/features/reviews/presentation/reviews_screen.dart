@@ -22,10 +22,12 @@ class ReviewsScreen extends StatefulWidget {
     super.key,
     required this.destination,
     required this.reviewsProvider,
+    this.onClose,
   });
 
   final ReviewDestination destination;
   final ReviewsProvider reviewsProvider;
+  final VoidCallback? onClose;
 
   @override
   State<ReviewsScreen> createState() => _ReviewsScreenState();
@@ -105,6 +107,8 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
               _showPage(_ReviewPage.write);
             },
             onMyReviews: () => _showPage(_ReviewPage.mine),
+            onBack:
+                widget.onClose ?? () => Navigator.of(context).maybePop(),
           ),
           _ReviewPage.detail => _ReviewDetailPage(
             destination: _destination,
@@ -313,6 +317,7 @@ class _ReviewsListPage extends StatelessWidget {
     required this.onReviewTap,
     required this.onWrite,
     required this.onMyReviews,
+    required this.onBack,
   });
 
   final ReviewDestination destination;
@@ -327,6 +332,7 @@ class _ReviewsListPage extends StatelessWidget {
   final ValueChanged<PlaceReview> onReviewTap;
   final VoidCallback onWrite;
   final VoidCallback onMyReviews;
+  final VoidCallback onBack;
 
   @override
   Widget build(BuildContext context) {
@@ -344,13 +350,15 @@ class _ReviewsListPage extends StatelessWidget {
     return Stack(
       children: [
         ListView(
-          padding: const EdgeInsets.only(bottom: 90),
+          padding: const EdgeInsets.only(bottom: 24),
           children: [
             _HeroHeader(
               title: 'Reviews',
               subtitle: destination.name,
               actionLabel: 'My Reviews',
               onAction: onMyReviews,
+              showBack: true,
+              onBack: onBack,
             ),
             Padding(
               padding: const EdgeInsets.all(18),
@@ -429,13 +437,9 @@ class _ReviewsListPage extends StatelessWidget {
             ),
           ],
         ),
-        Align(
-          alignment: Alignment.bottomCenter,
-          child: _BottomNav(onProfile: onMyReviews),
-        ),
         Positioned(
           right: 26,
-          bottom: 64,
+          bottom: 24,
           child: FloatingActionButton.extended(
             onPressed: onWrite,
             backgroundColor: AppColors.primary,
@@ -475,7 +479,7 @@ class _ReviewDetailPage extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.all(18),
           children: [
-            _ReviewContentCard(review: review, expanded: true),
+            _ReviewContentCard(review: review),
             const SizedBox(height: 10),
             _PhotosCard(photos: review.photos),
             const SizedBox(height: 10),
@@ -518,7 +522,6 @@ class _ReviewDetailPage extends StatelessWidget {
           ],
         ),
       ),
-      const _BottomNav(),
     ],
   );
 }
@@ -584,7 +587,6 @@ class _SubmittedPage extends StatelessWidget {
           ),
         ),
       ),
-      const _BottomNav(),
     ],
   );
 }
@@ -627,7 +629,6 @@ class _MyReviewsPage extends StatelessWidget {
                 ),
         ),
       ),
-      const _BottomNav(selected: _NavItem.profile),
     ],
   );
 }
@@ -1178,9 +1179,8 @@ class _ReviewPreview extends StatelessWidget {
 }
 
 class _ReviewContentCard extends StatelessWidget {
-  const _ReviewContentCard({required this.review, required this.expanded});
+  const _ReviewContentCard({required this.review});
   final PlaceReview review;
-  final bool expanded;
   @override
   Widget build(BuildContext context) => Card(
     child: Padding(
@@ -1220,9 +1220,7 @@ class _ReviewContentCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            expanded
-                ? '${review.comment} It is a full sensory experience — the sizzle of wok-fried Hokkien mee, the scent of incense drifting from the temple, hawkers calling out in Cantonese. Get there hungry. The char kway teow stall on the far end is legendary — 45-minute queue and worth every minute.'
-                : review.comment,
+            review.comment,
             style: const TextStyle(fontSize: 12, height: 1.55),
           ),
         ],
@@ -1445,59 +1443,6 @@ class _Stars extends StatelessWidget {
       ),
     ),
   );
-}
-
-enum _NavItem { home, explore, journey, rewards, profile }
-
-class _BottomNav extends StatelessWidget {
-  const _BottomNav({this.selected = _NavItem.explore, this.onProfile});
-  final _NavItem selected;
-  final VoidCallback? onProfile;
-  @override
-  Widget build(BuildContext context) {
-    const items = [
-      (Icons.home_outlined, 'Home', _NavItem.home),
-      (Icons.explore_outlined, 'Explore', _NavItem.explore),
-      (Icons.route_outlined, 'Journey', _NavItem.journey),
-      (Icons.card_giftcard_outlined, 'Rewards', _NavItem.rewards),
-      (Icons.person_outline, 'Profile', _NavItem.profile),
-    ];
-    return Container(
-      height: 62,
-      color: Colors.white,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: items.map((item) {
-          final active = item.$3 == selected;
-          return InkWell(
-            onTap: item.$3 == _NavItem.profile ? onProfile : null,
-            child: SizedBox(
-              width: 48,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    item.$1,
-                    color: active ? AppColors.primary : const Color(0xFF9EB2BB),
-                    size: 18,
-                  ),
-                  Text(
-                    item.$2,
-                    style: TextStyle(
-                      fontSize: 8,
-                      color: active
-                          ? AppColors.primary
-                          : const Color(0xFF9EB2BB),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
 }
 
 String _formatDate(DateTime date) {

@@ -32,11 +32,50 @@ class SupabaseJourneyRepository
     required String journeyId,
     required DateTime endedAt,
     required EcoRoute finalRoute,
+    required int actualDurationMinutes,
+    required double actualWalkingDistanceKm,
+    required double actualTransitDistanceKm,
+    required int actualStepCount,
+    required int actualCaloriesBurned,
+    required double actualCarbonSavedKg,
   }) => _dataSource.completeJourney(
     journeyId: journeyId,
     endedAt: endedAt,
     finalRoute: finalRoute,
+    actualDurationMinutes: actualDurationMinutes,
+    actualWalkingDistanceKm: actualWalkingDistanceKm,
+    actualTransitDistanceKm: actualTransitDistanceKm,
+    actualStepCount: actualStepCount,
+    actualCaloriesBurned: actualCaloriesBurned,
+    actualCarbonSavedKg: actualCarbonSavedKg,
   );
+
+  @override
+  Future<void> endJourneyEarly({
+    required String journeyId,
+    required DateTime endedAt,
+    required EcoRoute finalRoute,
+    required int actualDurationMinutes,
+    required double actualWalkingDistanceKm,
+    required double actualTransitDistanceKm,
+    required int actualStepCount,
+    required int actualCaloriesBurned,
+    required double actualCarbonSavedKg,
+  }) => _dataSource.endJourneyEarly(
+    journeyId: journeyId,
+    endedAt: endedAt,
+    finalRoute: finalRoute,
+    actualDurationMinutes: actualDurationMinutes,
+    actualWalkingDistanceKm: actualWalkingDistanceKm,
+    actualTransitDistanceKm: actualTransitDistanceKm,
+    actualStepCount: actualStepCount,
+    actualCaloriesBurned: actualCaloriesBurned,
+    actualCarbonSavedKg: actualCarbonSavedKg,
+  );
+
+  @override
+  Future<void> cancelJourney({required String journeyId}) =>
+      _dataSource.cancelJourney(journeyId: journeyId);
 
   @override
   Future<void> updateRouteEstimates({

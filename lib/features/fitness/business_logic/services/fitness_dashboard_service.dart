@@ -51,7 +51,7 @@ class FitnessDashboardService {
     return FitnessDashboard(
       userName: userName,
       streakDays: _streakDays(journeys, today),
-      stepsToday: null,
+      stepsToday: _steps(todayJourneys),
       walkingDistanceTodayKm: _distanceKm(todayJourneys),
       caloriesTodayKcal: _calories(todayJourneys),
       carbonSavedTodayKg: _carbon(todayJourneys),
@@ -81,6 +81,9 @@ class FitnessDashboardService {
 
   double _carbon(Iterable<CompletedFitnessJourney> journeys) =>
       journeys.fold(0, (sum, journey) => sum + journey.estimatedCarbonSavedKg);
+
+  int _steps(Iterable<CompletedFitnessJourney> journeys) =>
+      journeys.fold(0, (sum, journey) => sum + journey.stepCount);
 
   int _streakDays(List<CompletedFitnessJourney> journeys, DateTime today) {
     final activeDates = journeys

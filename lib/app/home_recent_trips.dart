@@ -42,7 +42,7 @@ class RecentTrips extends StatelessWidget {
         if (trips.isEmpty) {
           return const _HistoryNotice(
             icon: Icons.route_outlined,
-            message: 'Finish an eco journey to see it here.',
+            message: 'Finish or end an eco journey to see it here.',
           );
         }
         return Column(
@@ -111,16 +111,35 @@ class _TripHistoryCard extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                Text(
-                  trip.destinationCategory ?? 'Eco journey',
-                  style: GoogleFonts.poppins(
-                    fontSize: 10,
-                    color: AppColors.textSecondary,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        trip.destinationCategory ?? 'Eco journey',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(
+                          fontSize: 10,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      trip.isCompleted ? 'Completed' : 'Ended early',
+                      style: GoogleFonts.poppins(
+                        fontSize: 10,
+                        color: trip.isCompleted
+                            ? AppColors.primary
+                            : AppColors.warning,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
                 const Spacer(),
                 Text(
-                  '${trip.durationMinutes} min · ${(trip.walkingDistanceMeters / 1000).toStringAsFixed(1)} km walked',
+                  '${trip.durationMinutes} min · ${(trip.walkingDistanceMeters / 1000).toStringAsFixed(1)} km walked · ${trip.stepCount} steps',
                   style: GoogleFonts.poppins(
                     fontSize: 10,
                     color: AppColors.textSecondary,

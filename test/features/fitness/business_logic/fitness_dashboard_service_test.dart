@@ -15,6 +15,7 @@ void main() {
           estimatedCalories: 100,
           estimatedCarbonSavedKg: .4,
           completedAt: DateTime(2026, 8, 19, 10),
+          stepCount: 1950,
         ),
         CompletedFitnessJourney(
           id: 'yesterday',
@@ -22,6 +23,7 @@ void main() {
           estimatedCalories: 200,
           estimatedCarbonSavedKg: .8,
           completedAt: DateTime(2026, 8, 18, 10),
+          stepCount: 3250,
         ),
         CompletedFitnessJourney(
           id: 'old',
@@ -34,6 +36,7 @@ void main() {
     );
 
     expect(dashboard.walkingDistanceTodayKm, 1.5);
+    expect(dashboard.stepsToday, 1950);
     expect(dashboard.caloriesTodayKcal, 100);
     expect(dashboard.carbonSavedTodayKg, .4);
     expect(dashboard.weeklyWalkingDistanceKm, 4);

@@ -7,6 +7,7 @@ class FitnessJourneyModel {
     required this.estimatedCalories,
     required this.estimatedCarbonSavedKg,
     required this.completedAt,
+    this.stepCount = 0,
   });
 
   final String id;
@@ -14,16 +15,25 @@ class FitnessJourneyModel {
   final int estimatedCalories;
   final double estimatedCarbonSavedKg;
   final DateTime completedAt;
+  final int stepCount;
 
   factory FitnessJourneyModel.fromSupabaseRow(Map<String, dynamic> row) {
     return FitnessJourneyModel(
       id: row['id'] as String,
       walkingDistanceMeters:
-          (row['estimated_walking_distance_meters'] as num?)?.round() ?? 0,
-      estimatedCalories: (row['estimated_calories'] as num?)?.round() ?? 0,
+          (row['actual_walking_distance_meters'] as num?)?.round() ??
+          (row['estimated_walking_distance_meters'] as num?)?.round() ??
+          0,
+      estimatedCalories:
+          (row['actual_calories_burned'] as num?)?.round() ??
+          (row['estimated_calories'] as num?)?.round() ??
+          0,
       estimatedCarbonSavedKg:
-          (row['estimated_carbon_saved_kg'] as num?)?.toDouble() ?? 0,
+          (row['actual_carbon_saved_kg'] as num?)?.toDouble() ??
+          (row['estimated_carbon_saved_kg'] as num?)?.toDouble() ??
+          0,
       completedAt: DateTime.parse(row['ended_at'] as String).toLocal(),
+      stepCount: (row['actual_step_count'] as num?)?.round() ?? 0,
     );
   }
 
@@ -33,5 +43,6 @@ class FitnessJourneyModel {
     estimatedCalories: estimatedCalories,
     estimatedCarbonSavedKg: estimatedCarbonSavedKg,
     completedAt: completedAt,
+    stepCount: stepCount,
   );
 }

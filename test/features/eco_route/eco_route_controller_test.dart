@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:citieswalk/features/eco_route/data/repositories/sample_eco_route_repository.dart';
 import 'package:citieswalk/features/eco_route/business_logic/entities/eco_location.dart';
 import 'package:citieswalk/features/eco_route/business_logic/entities/eco_place_category.dart';
@@ -11,17 +13,25 @@ import 'package:citieswalk/features/eco_route/business_logic/services/location_s
 import 'package:flutter_test/flutter_test.dart';
 
 class _FixedLocationService implements LocationService {
-  const _FixedLocationService();
+  _FixedLocationService();
 
-  @override
-  Future<EcoLocation> getCurrentLocation() async => const EcoLocation(
+  final StreamController<EcoLocation> _locations =
+      StreamController<EcoLocation>.broadcast();
+  EcoLocation currentLocation = const EcoLocation(
     latitude: 3.139,
     longitude: 101.6869,
     label: 'Test location',
   );
 
   @override
-  Stream<EcoLocation> watchCurrentLocation() => const Stream.empty();
+  Future<EcoLocation> getCurrentLocation() async => currentLocation;
+
+  @override
+  Stream<EcoLocation> watchCurrentLocation() => _locations.stream;
+
+  void emit(EcoLocation location) => _locations.add(location);
+
+  Future<void> dispose() => _locations.close();
 }
 
 class _MemoryJourneyRepository implements JourneyRepository {
@@ -29,15 +39,48 @@ class _MemoryJourneyRepository implements JourneyRepository {
   DateTime? completedAt;
   final List<EcoLocation> trackPoints = [];
   bool isPaused = false;
+  bool wasCancelled = false;
+  bool wasEndedEarly = false;
+  int? actualStepCount;
 
   @override
   Future<void> completeJourney({
     required String journeyId,
     required DateTime endedAt,
     required EcoRoute finalRoute,
+    required int actualDurationMinutes,
+    required double actualWalkingDistanceKm,
+    required double actualTransitDistanceKm,
+    required int actualStepCount,
+    required int actualCaloriesBurned,
+    required double actualCarbonSavedKg,
   }) async {
     createdJourneyId = journeyId;
     completedAt = endedAt;
+    this.actualStepCount = actualStepCount;
+  }
+
+  @override
+  Future<void> endJourneyEarly({
+    required String journeyId,
+    required DateTime endedAt,
+    required EcoRoute finalRoute,
+    required int actualDurationMinutes,
+    required double actualWalkingDistanceKm,
+    required double actualTransitDistanceKm,
+    required int actualStepCount,
+    required int actualCaloriesBurned,
+    required double actualCarbonSavedKg,
+  }) async {
+    createdJourneyId = journeyId;
+    completedAt = endedAt;
+    this.actualStepCount = actualStepCount;
+    wasEndedEarly = true;
+  }
+
+  @override
+  Future<void> cancelJourney({required String journeyId}) async {
+    wasCancelled = true;
   }
 
   @override
@@ -77,15 +120,22 @@ void main() {
   group('EcoRouteController', () {
     late EcoRouteController controller;
     late _MemoryJourneyRepository journeyRepository;
+    late _FixedLocationService locationService;
 
     setUp(() {
       journeyRepository = _MemoryJourneyRepository();
+      locationService = _FixedLocationService();
       controller = EcoRouteController(
         userId: 'user-123',
         repository: const SampleEcoRouteRepository(),
         journeyRepository: journeyRepository,
-        locationService: const _FixedLocationService(),
+        locationService: locationService,
       );
+    });
+
+    tearDown(() async {
+      controller.dispose();
+      await locationService.dispose();
     });
 
     test('loads the device origin and suggested destinations', () async {
@@ -112,7 +162,7 @@ void main() {
       );
     });
 
-    test('saves and completes a journey for the authenticated user', () async {
+    test('does not complete a journey before GPS reaches the destination', () async {
       await controller.initialise();
       await controller.selectDestination(controller.destinations.first);
       await controller.startJourney();
@@ -121,9 +171,49 @@ void main() {
       expect(controller.journey!.userId, 'user-123');
       expect(controller.journey!.id, 'journey-1');
 
-      await controller.endJourney();
+      final didComplete = await controller.finishJourneyIfArrived();
+
+      expect(didComplete, isFalse);
+      expect(controller.journey!.status, EcoJourneyStatus.inProgress);
+      expect(journeyRepository.completedAt, isNull);
+    });
+
+    test('completes only when the GPS location reaches the destination', () async {
+      await controller.initialise();
+      await controller.selectDestination(controller.destinations.first);
+      await controller.startJourney();
+
+      locationService.emit(controller.route!.destination.location);
+      await Future<void>.delayed(const Duration(milliseconds: 1));
+
       expect(controller.journey!.status, EcoJourneyStatus.completed);
       expect(journeyRepository.completedAt, isNotNull);
+      expect(journeyRepository.actualStepCount, isNotNull);
+    });
+
+    test('cancelling removes an unfinished journey from persistence', () async {
+      await controller.initialise();
+      await controller.selectDestination(controller.destinations.first);
+      await controller.startJourney();
+
+      final didCancel = await controller.cancelJourney();
+
+      expect(didCancel, isTrue);
+      expect(journeyRepository.wasCancelled, isTrue);
+      expect(controller.journey, isNull);
+    });
+
+    test('ends early while retaining the recorded partial progress', () async {
+      await controller.initialise();
+      await controller.selectDestination(controller.destinations.first);
+      await controller.startJourney();
+
+      final didEndEarly = await controller.endJourneyEarly();
+
+      expect(didEndEarly, isTrue);
+      expect(journeyRepository.wasEndedEarly, isTrue);
+      expect(controller.journey!.status, EcoJourneyStatus.endedEarly);
+      expect(journeyRepository.wasCancelled, isFalse);
     });
 
     test(
@@ -143,6 +233,35 @@ void main() {
         expect(journeyRepository.trackPoints, hasLength(1));
       },
     );
+
+    test('completes on resume when the fresh GPS fix is at the destination',
+        () async {
+      await controller.initialise();
+      await controller.selectDestination(controller.destinations.first);
+      await controller.startJourney();
+      await controller.pauseJourney();
+      locationService.currentLocation = controller.route!.destination.location;
+
+      await controller.resumeJourney();
+      await Future<void>.delayed(const Duration(milliseconds: 1));
+
+      expect(controller.journey!.status, EcoJourneyStatus.completed);
+      expect(journeyRepository.completedAt, isNotNull);
+      expect(controller.trackedWalkingDistanceKm, 0);
+    });
+
+    test('does not clear an active journey when the user leaves route preview',
+        () async {
+      await controller.initialise();
+      await controller.selectDestination(controller.destinations.first);
+      await controller.startJourney();
+
+      controller.clearRoute();
+
+      expect(controller.route, isNotNull);
+      expect(controller.journey?.status, EcoJourneyStatus.inProgress);
+      expect(controller.message, contains('still active'));
+    });
 
     test('creates route geometry for the map preview', () async {
       await controller.initialise();

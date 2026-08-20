@@ -178,8 +178,7 @@ void main() {
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    // The persistent bottom navigation overlays the lower part of the list.
-    // Move the review card clear of that overlay before tapping it.
+    // Move the review card into view before tapping it.
     await tester.drag(find.byType(Scrollable).first, const Offset(0, -180));
     await tester.pumpAndSettle();
     await tester.tap(sarahReview);

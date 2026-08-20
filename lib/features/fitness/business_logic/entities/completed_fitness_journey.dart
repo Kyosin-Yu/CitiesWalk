@@ -5,6 +5,7 @@ class CompletedFitnessJourney {
     required this.estimatedCalories,
     required this.estimatedCarbonSavedKg,
     required this.completedAt,
+    this.stepCount = 0,
   });
 
   final String id;
@@ -12,4 +13,5 @@ class CompletedFitnessJourney {
   final int estimatedCalories;
   final double estimatedCarbonSavedKg;
   final DateTime completedAt;
+  final int stepCount;
 }

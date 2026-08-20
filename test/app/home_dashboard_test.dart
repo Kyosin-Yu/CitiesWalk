@@ -1,4 +1,5 @@
 import 'package:citieswalk/app/home_dashboard.dart';
+import 'package:citieswalk/features/eco_route/business_logic/entities/eco_destination.dart';
 import 'package:citieswalk/features/eco_route/business_logic/entities/eco_journey_history_item.dart';
 import 'package:citieswalk/features/eco_route/business_logic/repositories/journey_history_repository.dart';
 import 'package:flutter/material.dart';
@@ -39,6 +40,8 @@ void main() {
       destinationLongitude: 101.684,
       durationMinutes: 42,
       walkingDistanceMeters: 900,
+      transitDistanceMeters: 2100,
+      stepCount: 1170,
       estimatedCalories: 63,
       estimatedCarbonSavedKg: 1.2,
       completedAt: DateTime(2026, 8, 19),
@@ -65,6 +68,34 @@ void main() {
     expect(find.text('63 kcal · 1.20 kg CO₂ saved'), findsOneWidget);
     await tester.tap(find.text('Plan again'));
     expect(selectedTrip, trip);
+  });
+
+  testWidgets('plans a featured place from Home in Eco-Route', (
+    tester,
+  ) async {
+    EcoDestination? selectedDestination;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: HomeDashboard(
+          userId: 'test-user',
+          journeyHistoryRepository: const _EmptyJourneyHistoryRepository(),
+          historyRefreshSignal: ValueNotifier(0),
+          onNavigate: (_) {},
+          onPlanAgain: (_) {},
+          onPlanDestination: (destination) => selectedDestination = destination,
+        ),
+      ),
+    );
+
+    await tester.scrollUntilVisible(
+      find.text('KLCC Park'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('KLCC Park'));
+
+    expect(selectedDestination?.id, 'klcc-park');
   });
 }
 

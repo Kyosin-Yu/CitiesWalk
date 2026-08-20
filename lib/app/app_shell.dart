@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/di/service_locator.dart';
+import '../core/models/destination_review_summary.dart';
 import '../core/services/destination_review_summary_service.dart';
 import '../features/authentication/business_logic/providers/auth_controller.dart';
 import '../features/authentication/presentation/pages/profile_page.dart';
@@ -44,6 +45,9 @@ class _AppShellState extends State<AppShell> {
   final ValueNotifier<EcoJourneyHistoryItem?> _tripToReplan = ValueNotifier(
     null,
   );
+  final ValueNotifier<EcoDestination?> _destinationToPlan = ValueNotifier(
+    null,
+  );
   late final FitnessController _fitnessController = FitnessController(
     userId: sl<AuthController>().currentUser!.id,
     userName:
@@ -52,11 +56,15 @@ class _AppShellState extends State<AppShell> {
     repository: sl<FitnessRepository>(),
   )..loadDashboard();
   final ValueNotifier<int> _reviewSummaryVersion = ValueNotifier(0);
+  final ValueNotifier<Map<String, DestinationReviewSummary>>
+  _homeReviewSummaries = ValueNotifier(const {});
   late final SupabaseReviewRepository _reviewRepository =
       SupabaseReviewRepository(SupabaseReviewDataSource(sl<SupabaseClient>()));
   late final ReviewImageRepositoryImpl _reviewImageRepository =
       ReviewImageRepositoryImpl(ReviewImageDataSource());
   final Map<String, ReviewsProvider> _reviewProviders = {};
+  ReviewDestination? _activeReviewDestination;
+  ReviewsProvider? _activeReviewsProvider;
 
   late final List<Widget> _pages = [
     HomeDashboard(
@@ -67,13 +75,17 @@ class _AppShellState extends State<AppShell> {
       historyRefreshSignal: _journeyHistoryVersion,
       onNavigate: _selectDestination,
       onPlanAgain: _planSavedTripAgain,
+      onPlanDestination: _planHomeDestination,
+      reviewSummaries: _homeReviewSummaries,
     ),
     _EcoRouteEntryPage(
       onJourneyCompleted: _refreshJourneyHistory,
       tripToReplan: _tripToReplan,
+      destinationToPlan: _destinationToPlan,
       reviewSummaryRefreshSignal: _reviewSummaryVersion,
       reviewSummaryService: _reviewRepository,
       onOpenReviews: _openReviews,
+      onViewFitness: () => _selectDestination(2),
     ),
     ChangeNotifierProvider.value(
       value: _fitnessController,
@@ -84,9 +96,21 @@ class _AppShellState extends State<AppShell> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    unawaited(_refreshHomeReviewSummaries());
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(index: _selectedIndex, children: _pages),
+      body: _activeReviewsProvider == null
+          ? IndexedStack(index: _selectedIndex, children: _pages)
+          : ReviewsScreen(
+              destination: _activeReviewDestination!,
+              reviewsProvider: _activeReviewsProvider!,
+              onClose: _closeReviews,
+            ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: _selectDestination,
@@ -122,6 +146,11 @@ class _AppShellState extends State<AppShell> {
   }
 
   void _selectDestination(int index) {
+    if (_activeReviewsProvider != null) {
+      _activeReviewDestination = null;
+      _activeReviewsProvider = null;
+      _reviewSummaryVersion.value++;
+    }
     if (index == 2) {
       unawaited(_fitnessController.refresh());
     }
@@ -135,12 +164,35 @@ class _AppShellState extends State<AppShell> {
     unawaited(_fitnessController.refresh());
   }
 
+  void _planHomeDestination(EcoDestination destination) {
+    _destinationToPlan.value = destination;
+    _selectDestination(1);
+  }
+
+  Future<void> _refreshHomeReviewSummaries() async {
+    const destinationIds = ['klcc-park', 'central-market', 'batu-caves'];
+    try {
+      final entries = await Future.wait(
+        destinationIds.map(
+          (id) async => MapEntry(
+            id,
+            await _reviewRepository.getDestinationReviewSummary(id),
+          ),
+        ),
+      );
+      _homeReviewSummaries.value = Map.unmodifiable(Map.fromEntries(entries));
+    } catch (_) {
+      // The Home dashboard remains usable when community reviews are offline.
+      _homeReviewSummaries.value = const {};
+    }
+  }
+
   void _planSavedTripAgain(EcoJourneyHistoryItem journey) {
     _tripToReplan.value = journey;
     _selectDestination(1);
   }
 
-  Future<void> _openReviews(EcoDestination destination) async {
+  void _openReviews(EcoDestination destination) {
     final reviewDestination = ReviewDestination(
       id: destination.id,
       name: destination.name,
@@ -158,23 +210,30 @@ class _AppShellState extends State<AppShell> {
       ),
     );
 
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ReviewsScreen(
-          destination: reviewDestination,
-          reviewsProvider: reviewsProvider,
-        ),
-      ),
-    );
+    setState(() {
+      _selectedIndex = 1;
+      _activeReviewDestination = reviewDestination;
+      _activeReviewsProvider = reviewsProvider;
+    });
+  }
+
+  void _closeReviews() {
+    setState(() {
+      _activeReviewDestination = null;
+      _activeReviewsProvider = null;
+    });
     _reviewSummaryVersion.value++;
+    unawaited(_refreshHomeReviewSummaries());
   }
 
   @override
   void dispose() {
     _journeyHistoryVersion.dispose();
     _tripToReplan.dispose();
+    _destinationToPlan.dispose();
     _fitnessController.dispose();
     _reviewSummaryVersion.dispose();
+    _homeReviewSummaries.dispose();
     for (final provider in _reviewProviders.values) {
       provider.dispose();
     }
@@ -186,16 +245,20 @@ class _EcoRouteEntryPage extends StatelessWidget {
   const _EcoRouteEntryPage({
     this.onJourneyCompleted,
     this.tripToReplan,
+    this.destinationToPlan,
     this.reviewSummaryRefreshSignal,
     this.reviewSummaryService,
     this.onOpenReviews,
+    this.onViewFitness,
   });
 
   final VoidCallback? onJourneyCompleted;
   final ValueListenable<EcoJourneyHistoryItem?>? tripToReplan;
+  final ValueNotifier<EcoDestination?>? destinationToPlan;
   final ValueListenable<int>? reviewSummaryRefreshSignal;
   final DestinationReviewSummaryService? reviewSummaryService;
   final ValueChanged<EcoDestination>? onOpenReviews;
+  final VoidCallback? onViewFitness;
 
   @override
   Widget build(BuildContext context) {
@@ -227,8 +290,10 @@ class _EcoRouteEntryPage extends StatelessWidget {
           child: EcoRoutePage(
             onJourneyCompleted: onJourneyCompleted,
             tripToReplan: tripToReplan,
+            destinationToPlan: destinationToPlan,
             reviewSummaryRefreshSignal: reviewSummaryRefreshSignal,
             onOpenReviews: onOpenReviews,
+            onViewFitness: onViewFitness,
           ),
         );
       },

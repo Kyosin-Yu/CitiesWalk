@@ -63,7 +63,16 @@ class SupabaseReviewDataSource {
     required PlaceReview review,
   }) async {
     _ensureAuthenticatedOwner(review.userId);
-    final payload = ReviewRemoteModel.updatePayload(review);
+    // A new review needs its destination identity as well as the editable
+    // review fields. Previously this used `updatePayload`, which excludes
+    // destination columns and caused the database insert to fail its NOT NULL
+    // constraints before a review (or its photos) could be uploaded.
+    final payload = {
+      ...ReviewRemoteModel.insertPayload(review),
+      'destination_id': destination.id,
+      'destination_name': destination.name,
+      'destination_category': destination.category,
+    };
     final inserted = await _client
         .from('destination_reviews')
         .insert(payload)

@@ -13,7 +13,31 @@ abstract interface class JourneyRepository {
     required String journeyId,
     required DateTime endedAt,
     required EcoRoute finalRoute,
+    required int actualDurationMinutes,
+    required double actualWalkingDistanceKm,
+    required double actualTransitDistanceKm,
+    required int actualStepCount,
+    required int actualCaloriesBurned,
+    required double actualCarbonSavedKg,
   });
+
+  /// Persists the real progress achieved when the traveller intentionally ends
+  /// a trip before reaching the destination. It is not a completed journey.
+  Future<void> endJourneyEarly({
+    required String journeyId,
+    required DateTime endedAt,
+    required EcoRoute finalRoute,
+    required int actualDurationMinutes,
+    required double actualWalkingDistanceKm,
+    required double actualTransitDistanceKm,
+    required int actualStepCount,
+    required int actualCaloriesBurned,
+    required double actualCarbonSavedKg,
+  });
+
+  /// Deletes an unfinished journey. Cascading foreign keys remove its route
+  /// steps and GPS samples, so it cannot appear in journey history.
+  Future<void> cancelJourney({required String journeyId});
 
   Future<void> updateRouteEstimates({
     required String journeyId,

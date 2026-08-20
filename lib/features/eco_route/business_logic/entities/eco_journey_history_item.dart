@@ -7,9 +7,12 @@ class EcoJourneyHistoryItem {
     required this.destinationLongitude,
     required this.durationMinutes,
     required this.walkingDistanceMeters,
+    required this.transitDistanceMeters,
+    required this.stepCount,
     required this.estimatedCalories,
     required this.estimatedCarbonSavedKg,
     required this.completedAt,
+    this.isCompleted = true,
   });
 
   final String id;
@@ -19,7 +22,10 @@ class EcoJourneyHistoryItem {
   final double destinationLongitude;
   final int durationMinutes;
   final int walkingDistanceMeters;
+  final int transitDistanceMeters;
+  final int stepCount;
   final int estimatedCalories;
   final double estimatedCarbonSavedKg;
   final DateTime completedAt;
+  final bool isCompleted;
 }

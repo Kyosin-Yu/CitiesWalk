@@ -19,7 +19,9 @@ class SupabaseFitnessDataSource {
         .from('eco_journeys')
         .select(
           'id, estimated_walking_distance_meters, estimated_calories, '
-          'estimated_carbon_saved_kg, ended_at',
+          'estimated_carbon_saved_kg, actual_walking_distance_meters, '
+          'actual_step_count, actual_calories_burned, '
+          'actual_carbon_saved_kg, ended_at',
         )
         .eq('user_id', userId)
         .eq('status', 'completed')
