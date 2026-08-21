@@ -1,5 +1,6 @@
 import '../../business_logic/entities/completed_fitness_journey.dart';
 import '../../business_logic/entities/fitness_goal.dart';
+import '../../business_logic/entities/fitness_recent_badge.dart';
 import '../../business_logic/repositories/fitness_repository.dart';
 import '../data_sources/supabase_fitness_data_source.dart';
 
@@ -23,6 +24,14 @@ class FitnessRepositoryImpl implements FitnessRepository {
   }
 
   @override
+  Future<List<FitnessRecentBadge>> fetchRecentBadges({
+    required String userId,
+  }) async {
+    final models = await _dataSource.fetchRecentBadges(userId: userId);
+    return models.map((model) => model.toEntity()).toList(growable: false);
+  }
+
+  @override
   Future<FitnessGoal> createGoal({
     required String userId,
     required FitnessGoalInput input,
@@ -32,20 +41,11 @@ class FitnessRepositoryImpl implements FitnessRepository {
   }
 
   @override
-  Future<FitnessGoal> updateGoal({
+  Future<FitnessGoal> cancelGoal({
     required String userId,
     required String goalId,
-    required FitnessGoalInput input,
   }) async {
-    final model = await _dataSource.updateGoal(
-      userId: userId,
-      goalId: goalId,
-      input: input,
-    );
+    final model = await _dataSource.cancelGoal(userId: userId, goalId: goalId);
     return model.toEntity();
   }
-
-  @override
-  Future<void> deleteGoal({required String userId, required String goalId}) =>
-      _dataSource.deleteGoal(userId: userId, goalId: goalId);
 }

@@ -96,7 +96,7 @@ class _AppShellState extends State<AppShell> {
     ),
     ChangeNotifierProvider.value(
       value: _fitnessController,
-      child: const FitnessPage(),
+      child: FitnessPage(onViewRewards: () => _selectDestination(3)),
     ),
     const RewardsHubScreen(),
     const ProfilePage(),

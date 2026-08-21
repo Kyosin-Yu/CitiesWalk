@@ -15,19 +15,22 @@ class FitnessGoalsSection extends StatelessWidget {
     required this.goals,
     required this.progressFor,
     required this.onCreate,
-    required this.onUpdate,
-    required this.onDelete,
+    required this.onCancel,
     required this.isBusy,
+    required this.selectedFilter,
+    required this.onFilterChanged,
+    required this.countFor,
     this.errorMessage,
   });
 
   final List<FitnessGoal> goals;
   final FitnessGoalProgressBuilder progressFor;
   final Future<bool> Function(FitnessGoalInput input) onCreate;
-  final Future<bool> Function(FitnessGoal goal, FitnessGoalInput input)
-  onUpdate;
-  final Future<bool> Function(FitnessGoal goal) onDelete;
+  final Future<bool> Function(FitnessGoal goal) onCancel;
   final bool isBusy;
+  final FitnessGoalStatus selectedFilter;
+  final ValueChanged<FitnessGoalStatus> onFilterChanged;
+  final int Function(FitnessGoalStatus status) countFor;
   final String? errorMessage;
 
   @override
@@ -61,7 +64,7 @@ class FitnessGoalsSection extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'Create and track goals from completed Eco Routes.',
+                    'Goals lock after creation and reward completion points.',
                     style: GoogleFonts.poppins(
                       fontSize: 9,
                       color: AppColors.textSecondary,
@@ -82,16 +85,32 @@ class FitnessGoalsSection extends StatelessWidget {
           _GoalError(message: errorMessage!),
         ],
         const SizedBox(height: 12),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (final status in FitnessGoalStatus.values) ...[
+                ChoiceChip(
+                  label: Text('${status.label} (${countFor(status)})'),
+                  selected: selectedFilter == status,
+                  onSelected: (_) => onFilterChanged(status),
+                ),
+                if (status != FitnessGoalStatus.values.last)
+                  const SizedBox(width: 8),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
         if (goals.isEmpty)
-          const _EmptyGoals()
+          _EmptyGoals(status: selectedFilter)
         else
           for (var index = 0; index < goals.length; index++) ...[
             _GoalCard(
               goal: goals[index],
               progress: progressFor(goals[index]),
               isBusy: isBusy,
-              onEdit: () => _editGoal(context, goals[index]),
-              onDelete: () => _deleteGoal(context, goals[index]),
+              onCancel: () => _cancelGoal(context, goals[index]),
             ),
             if (index != goals.length - 1) const SizedBox(height: 10),
           ],
@@ -111,26 +130,15 @@ class FitnessGoalsSection extends StatelessWidget {
     }
   }
 
-  Future<void> _editGoal(BuildContext context, FitnessGoal goal) async {
-    final input = await showDialog<FitnessGoalInput>(
-      context: context,
-      builder: (_) => FitnessGoalDialog(goal: goal),
-    );
-    if (input == null || !context.mounted) return;
-    final saved = await onUpdate(goal, input);
-    if (saved && context.mounted) {
-      _showSuccess(context, 'Fitness goal updated.');
-    }
-  }
-
-  Future<void> _deleteGoal(BuildContext context, FitnessGoal goal) async {
+  Future<void> _cancelGoal(BuildContext context, FitnessGoal goal) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete fitness goal?'),
+        title: const Text('Cancel fitness goal?'),
         content: Text(
-          'Delete your ${goal.period.label.toLowerCase()} '
-          '${goal.metric.label.toLowerCase()} goal?',
+          'This goal cannot be edited. Cancel your '
+          '${goal.period.label.toLowerCase()} '
+          '${goal.metric.label.toLowerCase()} goal and create a new one?',
         ),
         actions: [
           TextButton(
@@ -140,15 +148,15 @@ class FitnessGoalsSection extends StatelessWidget {
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
             style: FilledButton.styleFrom(backgroundColor: AppColors.error),
-            child: const Text('Delete'),
+            child: const Text('Cancel goal'),
           ),
         ],
       ),
     );
     if (confirmed != true || !context.mounted) return;
-    final deleted = await onDelete(goal);
-    if (deleted && context.mounted) {
-      _showSuccess(context, 'Fitness goal deleted.');
+    final cancelled = await onCancel(goal);
+    if (cancelled && context.mounted) {
+      _showSuccess(context, 'Fitness goal cancelled.');
     }
   }
 
@@ -164,15 +172,13 @@ class _GoalCard extends StatelessWidget {
     required this.goal,
     required this.progress,
     required this.isBusy,
-    required this.onEdit,
-    required this.onDelete,
+    required this.onCancel,
   });
 
   final FitnessGoal goal;
   final FitnessGoalProgress progress;
   final bool isBusy;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
+  final VoidCallback onCancel;
 
   @override
   Widget build(BuildContext context) {
@@ -219,58 +225,54 @@ class _GoalCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                PopupMenuButton<_GoalAction>(
-                  enabled: !isBusy,
-                  tooltip: 'Manage fitness goal',
-                  onSelected: (action) {
-                    if (action == _GoalAction.edit) {
-                      onEdit();
-                    } else {
-                      onDelete();
-                    }
-                  },
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(
-                      value: _GoalAction.edit,
-                      child: ListTile(
-                        leading: Icon(Icons.edit_rounded),
-                        title: Text('Edit'),
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                    ),
-                    PopupMenuItem(
-                      value: _GoalAction.delete,
-                      child: ListTile(
-                        leading: Icon(Icons.delete_outline_rounded),
-                        title: Text('Delete'),
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                    ),
-                  ],
-                ),
+                if (goal.isActive)
+                  IconButton(
+                    tooltip: 'Cancel fitness goal',
+                    onPressed: isBusy ? null : onCancel,
+                    icon: const Icon(Icons.cancel_outlined),
+                  )
+                else if (goal.isCompleted)
+                  const Icon(Icons.verified_rounded, color: AppColors.primary)
+                else
+                  const Icon(
+                    Icons.block_rounded,
+                    color: AppColors.textSecondary,
+                  ),
               ],
             ),
-            const SizedBox(height: 10),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                minHeight: 8,
-                value: progress.fraction,
-                backgroundColor: color.withValues(alpha: .12),
-                valueColor: AlwaysStoppedAnimation(color),
+            if (goal.isCancelled) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Goal cancelled. Create a new goal when you are ready.',
+                style: GoogleFonts.poppins(
+                  color: AppColors.textSecondary,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              progress.isComplete
-                  ? 'Goal completed!'
-                  : '${progress.percentage}% completed',
-              style: GoogleFonts.poppins(
-                color: color,
-                fontSize: 9,
-                fontWeight: FontWeight.w600,
+            ] else ...[
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: LinearProgressIndicator(
+                  minHeight: 8,
+                  value: progress.fraction,
+                  backgroundColor: color.withValues(alpha: .12),
+                  valueColor: AlwaysStoppedAnimation(color),
+                ),
               ),
-            ),
+              const SizedBox(height: 6),
+              Text(
+                goal.isCompleted
+                    ? 'Goal completed • +${goal.rewardPoints ?? 0} pts'
+                    : '${progress.percentage}% completed',
+                style: GoogleFonts.poppins(
+                  color: color,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -296,7 +298,9 @@ class _GoalCard extends StatelessWidget {
 }
 
 class _EmptyGoals extends StatelessWidget {
-  const _EmptyGoals();
+  const _EmptyGoals({required this.status});
+
+  final FitnessGoalStatus status;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -311,11 +315,13 @@ class _EmptyGoals extends StatelessWidget {
         const Icon(Icons.flag_outlined, color: AppColors.primary, size: 30),
         const SizedBox(height: 8),
         Text(
-          'No personal goals yet',
+          'No ${status.label.toLowerCase()} goals',
           style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
         ),
         Text(
-          'Tap + to create your first fitness goal.',
+          status == FitnessGoalStatus.active
+              ? 'Tap + to create your first fitness goal.'
+              : 'Your ${status.label.toLowerCase()} goals will appear here.',
           style: GoogleFonts.poppins(
             fontSize: 10,
             color: AppColors.textSecondary,
@@ -353,5 +359,3 @@ class _GoalError extends StatelessWidget {
     ),
   );
 }
-
-enum _GoalAction { edit, delete }

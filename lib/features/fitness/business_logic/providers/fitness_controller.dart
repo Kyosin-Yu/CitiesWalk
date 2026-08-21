@@ -2,10 +2,14 @@ import 'package:flutter/foundation.dart';
 
 import '../../../../core/services/eco_points_service.dart';
 import '../entities/fitness_dashboard.dart';
+import '../entities/completed_fitness_journey.dart';
 import '../entities/fitness_goal.dart';
+import '../entities/fitness_history.dart';
+import '../entities/fitness_recent_badge.dart';
 import '../repositories/fitness_repository.dart';
 import '../services/fitness_dashboard_service.dart';
 import '../services/fitness_goal_progress_service.dart';
+import '../services/fitness_history_service.dart';
 
 enum FitnessStatus { initial, loading, success, failure }
 
@@ -17,6 +21,7 @@ class FitnessController extends ChangeNotifier {
     this.ecoPointsService,
     this.dashboardService = const FitnessDashboardService(),
     this.goalProgressService = const FitnessGoalProgressService(),
+    this.historyService = const FitnessHistoryService(),
   });
 
   final String userId;
@@ -25,25 +30,55 @@ class FitnessController extends ChangeNotifier {
   final EcoPointsService? ecoPointsService;
   final FitnessDashboardService dashboardService;
   final FitnessGoalProgressService goalProgressService;
+  final FitnessHistoryService historyService;
 
   FitnessStatus _status = FitnessStatus.initial;
   FitnessDashboard? _dashboard;
+  List<CompletedFitnessJourney> _journeys = const [];
   List<FitnessGoal> _goals = const [];
+  List<FitnessRecentBadge> _recentBadges = const [];
   String? _errorMessage;
   String? _goalErrorMessage;
   bool _notificationsEnabled = true;
   bool _isRefreshing = false;
   bool _refreshPending = false;
   bool _isGoalMutationInProgress = false;
+  FitnessHistoryPeriod _historyPeriod = FitnessHistoryPeriod.daily;
+  DateTime? _selectedHistoryDate;
+  List<DateTime> _availableHistoryDates = const [];
+  FitnessGoalStatus _goalFilter = FitnessGoalStatus.active;
 
   FitnessStatus get status => _status;
   FitnessDashboard? get dashboard => _dashboard;
   List<FitnessGoal> get goals => List.unmodifiable(_goals);
+  List<FitnessGoal> get visibleGoals =>
+      List.unmodifiable(_goals.where((goal) => goal.status == _goalFilter));
+  List<CompletedFitnessJourney> get recentActivities =>
+      List.unmodifiable(_journeys.take(3));
+  List<FitnessRecentBadge> get recentBadges => List.unmodifiable(_recentBadges);
   String? get errorMessage => _errorMessage;
   String? get goalErrorMessage => _goalErrorMessage;
   bool get notificationsEnabled => _notificationsEnabled;
   bool get isRefreshing => _isRefreshing;
   bool get isGoalMutationInProgress => _isGoalMutationInProgress;
+  FitnessHistoryPeriod get historyPeriod => _historyPeriod;
+  FitnessGoalStatus get goalFilter => _goalFilter;
+  DateTime? get selectedHistoryDate => _selectedHistoryDate;
+  List<DateTime> get availableHistoryDates =>
+      List.unmodifiable(_availableHistoryDates);
+  DateTime? get firstHistoryDate =>
+      _availableHistoryDates.isEmpty ? null : _availableHistoryDates.first;
+  DateTime? get lastHistoryDate =>
+      _availableHistoryDates.isEmpty ? null : _availableHistoryDates.last;
+  FitnessHistorySummary? get historySummary {
+    final selectedDate = _selectedHistoryDate;
+    if (selectedDate == null) return null;
+    return historyService.build(
+      journeys: _journeys,
+      period: _historyPeriod,
+      anchorDate: selectedDate,
+    );
+  }
 
   Future<void> loadDashboard() => _load(showLoading: true);
 
@@ -64,6 +99,8 @@ class FitnessController extends ChangeNotifier {
 
     try {
       final journeys = await repository.fetchCompletedJourneys(userId: userId);
+      _journeys = journeys;
+      _syncHistoryDates();
       final ecoPoints = await _loadCurrentWeekEcoPoints();
       _dashboard = dashboardService.build(
         userName: userName,
@@ -77,6 +114,13 @@ class FitnessController extends ChangeNotifier {
         debugPrint(stackTrace.toString());
         _goalErrorMessage =
             'Goals are unavailable. Apply the Fitness goals migration and try again.';
+      }
+      try {
+        _recentBadges = await repository.fetchRecentBadges(userId: userId);
+      } catch (error, stackTrace) {
+        debugPrint('Unable to load recent Fitness badges: $error');
+        debugPrint(stackTrace.toString());
+        _recentBadges = const [];
       }
       _status = FitnessStatus.success;
     } catch (error, stackTrace) {
@@ -111,6 +155,33 @@ class FitnessController extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool isHistoryDateSelectable(DateTime date) =>
+      historyService.hasActivityOnDate(_availableHistoryDates, date);
+
+  void selectHistoryDate(DateTime date) {
+    if (!isHistoryDateSelectable(date)) return;
+    final local = date.toLocal();
+    final selected = DateTime(local.year, local.month, local.day);
+    if (_selectedHistoryDate == selected) return;
+    _selectedHistoryDate = selected;
+    notifyListeners();
+  }
+
+  void selectHistoryPeriod(FitnessHistoryPeriod period) {
+    if (_historyPeriod == period) return;
+    _historyPeriod = period;
+    notifyListeners();
+  }
+
+  int goalCount(FitnessGoalStatus status) =>
+      _goals.where((goal) => goal.status == status).length;
+
+  void selectGoalFilter(FitnessGoalStatus status) {
+    if (_goalFilter == status) return;
+    _goalFilter = status;
+    notifyListeners();
+  }
+
   FitnessGoalProgress progressFor(FitnessGoal goal) {
     final currentDashboard = _dashboard;
     if (currentDashboard == null) {
@@ -119,10 +190,7 @@ class FitnessController extends ChangeNotifier {
         targetValue: goal.targetValue,
       );
     }
-    return goalProgressService.calculate(
-      goal: goal,
-      dashboard: currentDashboard,
-    );
+    return goalProgressService.calculate(goal: goal, journeys: _journeys);
   }
 
   Future<bool> createGoal(FitnessGoalInput input) async {
@@ -141,37 +209,26 @@ class FitnessController extends ChangeNotifier {
     }
   }
 
-  Future<bool> updateGoal(FitnessGoal goal, FitnessGoalInput input) async {
-    if (!_canSaveGoal(input, existingGoalId: goal.id)) return false;
+  Future<bool> cancelGoal(FitnessGoal goal) async {
+    if (!goal.isActive) {
+      _goalErrorMessage = 'Only an active goal can be cancelled.';
+      notifyListeners();
+      return false;
+    }
     _beginGoalMutation();
     try {
-      final updated = await repository.updateGoal(
+      final cancelled = await repository.cancelGoal(
         userId: userId,
         goalId: goal.id,
-        input: input,
       );
       _goals = [
         for (final item in _goals)
-          if (item.id == updated.id) updated else item,
+          if (item.id == cancelled.id) cancelled else item,
       ];
       _sortGoals();
       return true;
     } catch (error, stackTrace) {
-      _handleGoalMutationError('update', error, stackTrace);
-      return false;
-    } finally {
-      _endGoalMutation();
-    }
-  }
-
-  Future<bool> deleteGoal(FitnessGoal goal) async {
-    _beginGoalMutation();
-    try {
-      await repository.deleteGoal(userId: userId, goalId: goal.id);
-      _goals = _goals.where((item) => item.id != goal.id).toList();
-      return true;
-    } catch (error, stackTrace) {
-      _handleGoalMutationError('delete', error, stackTrace);
+      _handleGoalMutationError('cancel', error, stackTrace);
       return false;
     } finally {
       _endGoalMutation();
@@ -184,7 +241,7 @@ class FitnessController extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool _canSaveGoal(FitnessGoalInput input, {String? existingGoalId}) {
+  bool _canSaveGoal(FitnessGoalInput input) {
     if (!input.targetValue.isFinite || input.targetValue <= 0) {
       _goalErrorMessage = 'Enter a target greater than zero.';
       notifyListeners();
@@ -192,7 +249,7 @@ class FitnessController extends ChangeNotifier {
     }
     final duplicate = _goals.any(
       (goal) =>
-          goal.id != existingGoalId &&
+          goal.isActive &&
           goal.metric == input.metric &&
           goal.period == input.period,
     );
@@ -228,6 +285,10 @@ class FitnessController extends ChangeNotifier {
 
   void _sortGoals() {
     _goals.sort((first, second) {
+      final statusComparison = first.status.index.compareTo(
+        second.status.index,
+      );
+      if (statusComparison != 0) return statusComparison;
       final periodComparison = first.period.index.compareTo(
         second.period.index,
       );
@@ -235,5 +296,17 @@ class FitnessController extends ChangeNotifier {
           ? periodComparison
           : first.metric.index.compareTo(second.metric.index);
     });
+  }
+
+  void _syncHistoryDates() {
+    _availableHistoryDates = historyService.availableDates(_journeys);
+    if (_availableHistoryDates.isEmpty) {
+      _selectedHistoryDate = null;
+      return;
+    }
+    final selected = _selectedHistoryDate;
+    if (selected == null || !isHistoryDateSelectable(selected)) {
+      _selectedHistoryDate = _availableHistoryDates.last;
+    }
   }
 }

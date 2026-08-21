@@ -18,9 +18,9 @@ class FitnessDashboardService {
     );
     final monthStart = DateTime(today.year, today.month);
 
-    final todayJourneys = journeys.where(
-      (journey) => _dateOnly(journey.completedAt) == today,
-    );
+    final todayJourneys = journeys
+        .where((journey) => _dateOnly(journey.completedAt) == today)
+        .toList();
     final sevenDayJourneys = journeys.where((journey) {
       final date = _dateOnly(journey.completedAt);
       return !date.isBefore(sevenDayStart) && !date.isAfter(today);
@@ -58,9 +58,25 @@ class FitnessDashboardService {
         today,
       ),
       stepsToday: _steps(todayJourneys),
+      stepsSource: _combinedSource(
+        todayJourneys,
+        (journey) => journey.stepsSource,
+      ),
       walkingDistanceTodayKm: _distanceKm(todayJourneys),
+      walkingSource: _combinedSource(
+        todayJourneys,
+        (journey) => journey.distanceSource,
+      ),
       caloriesTodayKcal: _calories(todayJourneys),
+      caloriesSource: _combinedSource(
+        todayJourneys,
+        (journey) => journey.caloriesSource,
+      ),
       carbonSavedTodayKg: _carbon(todayJourneys),
+      carbonSource: _combinedSource(
+        todayJourneys,
+        (journey) => journey.carbonSource,
+      ),
       ecoPoints: ecoPoints,
       weeklyWalkingDistanceKm: _distanceKm(sevenDayJourneys),
       previousWeekWalkingDistanceKm: _distanceKm(previousSevenDayJourneys),
@@ -95,6 +111,16 @@ class FitnessDashboardService {
 
   int _steps(Iterable<CompletedFitnessJourney> journeys) =>
       journeys.fold(0, (sum, journey) => sum + journey.stepCount);
+
+  FitnessMetricSource _combinedSource(
+    Iterable<CompletedFitnessJourney> journeys,
+    FitnessMetricSource Function(CompletedFitnessJourney journey) selector,
+  ) {
+    final sources = journeys.map(selector).toSet();
+    if (sources.isEmpty) return FitnessMetricSource.unavailable;
+    if (sources.length == 1) return sources.single;
+    return FitnessMetricSource.mixed;
+  }
 
   int _streakDays(List<CompletedFitnessJourney> journeys, DateTime today) {
     final activeDates = journeys

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../business_logic/entities/fitness_dashboard.dart';
+import '../../business_logic/entities/completed_fitness_journey.dart';
 
 class MetricsGrid extends StatelessWidget {
   const MetricsGrid({super.key, required this.dashboard});
@@ -12,7 +13,7 @@ class MetricsGrid extends StatelessWidget {
     crossAxisCount: 2,
     shrinkWrap: true,
     physics: const NeverScrollableScrollPhysics(),
-    childAspectRatio: 1.55,
+    childAspectRatio: 1.42,
     mainAxisSpacing: 10,
     crossAxisSpacing: 10,
     children: [
@@ -23,6 +24,7 @@ class MetricsGrid extends StatelessWidget {
         icon: Icons.directions_walk_rounded,
         color: const Color(0xFF2E7D32),
         iconColor: const Color(0xFFE7F3E8),
+        source: dashboard.stepsSource,
       ),
       _MetricCard(
         label: 'Walking Today',
@@ -31,27 +33,32 @@ class MetricsGrid extends StatelessWidget {
         icon: Icons.route_rounded,
         color: const Color(0xFF2E7D32),
         iconColor: const Color(0xFFE7F3E8),
+        source: dashboard.walkingSource,
       ),
       _MetricCard(
-        label: 'Estimated Calories',
+        label: 'Calories Today',
         value: '${dashboard.caloriesTodayKcal}',
         unit: 'kcal',
         icon: Icons.local_fire_department_rounded,
         color: const Color(0xFFFF6D00),
         iconColor: const Color(0xFFFFDDCF),
+        source: dashboard.caloriesSource,
       ),
       _MetricCard(
-        label: 'Estimated CO₂ Saved',
+        label: 'CO₂ Saved Today',
         value: dashboard.carbonSavedTodayKg.toStringAsFixed(2),
         unit: 'kg',
         icon: Icons.eco_rounded,
         color: const Color(0xFF1565C0),
         iconColor: const Color(0xFFD9EFFF),
+        source: dashboard.carbonSource,
       ),
       _MetricCard(
         label: 'Eco Points',
         value: dashboard.ecoPoints?.toString() ?? '—',
-        unit: dashboard.ecoPoints == null ? 'rewards not linked' : 'pts this week',
+        unit: dashboard.ecoPoints == null
+            ? 'rewards not linked'
+            : 'pts this week',
         icon: Icons.star_rounded,
         color: const Color(0xFFF9A825),
         iconColor: const Color(0xFFFFF3C6),
@@ -76,6 +83,7 @@ class _MetricCard extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.iconColor,
+    this.source,
   });
 
   final String label;
@@ -84,6 +92,7 @@ class _MetricCard extends StatelessWidget {
   final IconData icon;
   final Color color;
   final Color iconColor;
+  final FitnessMetricSource? source;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -106,14 +115,23 @@ class _MetricCard extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Expanded(
-              child: Text(
-                label,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.poppins(
-                  fontSize: 9,
-                  color: const Color(0xFF777777),
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.poppins(
+                      fontSize: 9,
+                      color: const Color(0xFF777777),
+                    ),
+                  ),
+                  if (source != null) ...[
+                    const SizedBox(height: 3),
+                    _SourceLabel(source: source!),
+                  ],
+                ],
               ),
             ),
             Container(
@@ -148,4 +166,43 @@ class _MetricCard extends StatelessWidget {
       ],
     ),
   );
+}
+
+class _SourceLabel extends StatelessWidget {
+  const _SourceLabel({required this.source});
+
+  final FitnessMetricSource source;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = switch (source) {
+      FitnessMetricSource.recorded => const Color(0xFF2E7D32),
+      FitnessMetricSource.estimated => const Color(0xFFF57C00),
+      FitnessMetricSource.mixed => const Color(0xFF1565C0),
+      FitnessMetricSource.unavailable => const Color(0xFF757575),
+    };
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 5,
+          height: 5,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 4),
+        Flexible(
+          child: Text(
+            source.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.poppins(
+              color: color,
+              fontSize: 7,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }

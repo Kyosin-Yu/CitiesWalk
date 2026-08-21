@@ -15,22 +15,27 @@ void main() {
           walkingDistanceMeters: 1500,
           estimatedCalories: 100,
           estimatedCarbonSavedKg: .4,
+          startedAt: DateTime(2026, 8, 19, 9),
           completedAt: DateTime(2026, 8, 19, 10),
           stepCount: 1950,
+          stepsSource: FitnessMetricSource.recorded,
         ),
         CompletedFitnessJourney(
           id: 'yesterday',
           walkingDistanceMeters: 2500,
           estimatedCalories: 200,
           estimatedCarbonSavedKg: .8,
+          startedAt: DateTime(2026, 8, 18, 9),
           completedAt: DateTime(2026, 8, 18, 10),
           stepCount: 3250,
+          stepsSource: FitnessMetricSource.recorded,
         ),
         CompletedFitnessJourney(
           id: 'old',
           walkingDistanceMeters: 9000,
           estimatedCalories: 900,
           estimatedCarbonSavedKg: 3,
+          startedAt: DateTime(2026, 7, 1, 9),
           completedAt: DateTime(2026, 7, 1),
         ),
       ],
@@ -48,7 +53,38 @@ void main() {
     expect(dashboard.completedJourneysThisWeek, 2);
     expect(dashboard.streakDays, 2);
     expect(dashboard.ecoPoints, 135);
+    expect(dashboard.walkingSource, FitnessMetricSource.estimated);
+    expect(dashboard.stepsSource, FitnessMetricSource.recorded);
     expect(dashboard.dailySummaries, hasLength(7));
+  });
+
+  test('marks a dashboard metric as mixed when its sources differ', () {
+    const service = FitnessDashboardService();
+    final dashboard = service.build(
+      userName: 'Alex',
+      now: DateTime(2026, 8, 19, 12),
+      journeys: [
+        CompletedFitnessJourney(
+          id: 'recorded',
+          walkingDistanceMeters: 1500,
+          estimatedCalories: 100,
+          estimatedCarbonSavedKg: .4,
+          startedAt: DateTime(2026, 8, 19, 8),
+          completedAt: DateTime(2026, 8, 19, 9),
+          distanceSource: FitnessMetricSource.recorded,
+        ),
+        CompletedFitnessJourney(
+          id: 'estimated',
+          walkingDistanceMeters: 1000,
+          estimatedCalories: 70,
+          estimatedCarbonSavedKg: .2,
+          startedAt: DateTime(2026, 8, 19, 10),
+          completedAt: DateTime(2026, 8, 19, 11),
+        ),
+      ],
+    );
+
+    expect(dashboard.walkingSource, FitnessMetricSource.mixed);
   });
 
   test('returns zero totals and seven safe chart points for no journeys', () {
@@ -80,6 +116,7 @@ void main() {
           walkingDistanceMeters: 850,
           estimatedCalories: 56,
           estimatedCarbonSavedKg: .18,
+          startedAt: DateTime(2026, 8, 19, 9, 30),
           completedAt: DateTime(2026, 8, 19, 10),
           stepCount: 1105,
           countsAsCompletedRoute: false,

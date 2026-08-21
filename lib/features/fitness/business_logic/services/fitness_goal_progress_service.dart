@@ -1,4 +1,4 @@
-import '../entities/fitness_dashboard.dart';
+import '../entities/completed_fitness_journey.dart';
 import '../entities/fitness_goal.dart';
 
 class FitnessGoalProgress {
@@ -22,32 +22,69 @@ class FitnessGoalProgressService {
 
   FitnessGoalProgress calculate({
     required FitnessGoal goal,
-    required FitnessDashboard dashboard,
-  }) => FitnessGoalProgress(
-    currentValue: _currentValue(goal, dashboard),
-    targetValue: goal.targetValue,
-  );
+    required List<CompletedFitnessJourney> journeys,
+    DateTime? now,
+  }) {
+    if (goal.isCompleted) {
+      return FitnessGoalProgress(
+        currentValue: goal.completedValue ?? goal.targetValue,
+        targetValue: goal.targetValue,
+      );
+    }
+    if (goal.isCancelled) {
+      return FitnessGoalProgress(
+        currentValue: 0,
+        targetValue: goal.targetValue,
+      );
+    }
 
-  double _currentValue(FitnessGoal goal, FitnessDashboard dashboard) {
-    return switch ((goal.metric, goal.period)) {
-      (FitnessGoalMetric.walkingDistance, FitnessGoalPeriod.daily) =>
-        dashboard.walkingDistanceTodayKm,
-      (FitnessGoalMetric.walkingDistance, FitnessGoalPeriod.weekly) =>
-        dashboard.weeklyWalkingDistanceKm,
-      (FitnessGoalMetric.walkingDistance, FitnessGoalPeriod.monthly) =>
-        dashboard.monthlyWalkingDistanceKm,
-      (FitnessGoalMetric.calories, FitnessGoalPeriod.daily) =>
-        dashboard.caloriesTodayKcal.toDouble(),
-      (FitnessGoalMetric.calories, FitnessGoalPeriod.weekly) =>
-        dashboard.weeklyCaloriesKcal.toDouble(),
-      (FitnessGoalMetric.calories, FitnessGoalPeriod.monthly) =>
-        dashboard.monthlyCaloriesKcal.toDouble(),
-      (FitnessGoalMetric.carbonSaved, FitnessGoalPeriod.daily) =>
-        dashboard.carbonSavedTodayKg,
-      (FitnessGoalMetric.carbonSaved, FitnessGoalPeriod.weekly) =>
-        dashboard.weeklyCarbonSavedKg,
-      (FitnessGoalMetric.carbonSaved, FitnessGoalPeriod.monthly) =>
-        dashboard.monthlyCarbonSavedKg,
+    final reference = (now ?? DateTime.now()).toLocal();
+    final periodStart = _periodStart(goal.period, reference);
+    final progressStart = goal.createdAt.isAfter(periodStart)
+        ? goal.createdAt
+        : periodStart;
+    final eligibleJourneys = journeys.where((journey) {
+      final startedAt = journey.startedAt;
+      return journey.countsAsCompletedRoute &&
+          startedAt != null &&
+          !startedAt.isBefore(progressStart) &&
+          !journey.completedAt.isAfter(reference);
+    });
+
+    final currentValue = switch (goal.metric) {
+      FitnessGoalMetric.walkingDistance => eligibleJourneys.fold<double>(
+        0,
+        (total, journey) => total + journey.walkingDistanceMeters / 1000,
+      ),
+      FitnessGoalMetric.calories => eligibleJourneys.fold<double>(
+        0,
+        (total, journey) => total + journey.estimatedCalories,
+      ),
+      FitnessGoalMetric.carbonSaved => eligibleJourneys.fold<double>(
+        0,
+        (total, journey) => total + journey.estimatedCarbonSavedKg,
+      ),
+    };
+
+    return FitnessGoalProgress(
+      currentValue: (currentValue * 100).round() / 100,
+      targetValue: goal.targetValue,
+    );
+  }
+
+  DateTime _periodStart(FitnessGoalPeriod period, DateTime reference) {
+    return switch (period) {
+      FitnessGoalPeriod.daily => DateTime(
+        reference.year,
+        reference.month,
+        reference.day,
+      ),
+      FitnessGoalPeriod.weekly => DateTime(
+        reference.year,
+        reference.month,
+        reference.day,
+      ).subtract(Duration(days: reference.weekday - DateTime.monday)),
+      FitnessGoalPeriod.monthly => DateTime(reference.year, reference.month),
     };
   }
 }

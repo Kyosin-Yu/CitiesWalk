@@ -1,3 +1,5 @@
+import 'completed_fitness_journey.dart';
+
 class FitnessDaySummary {
   const FitnessDaySummary({
     required this.date,
@@ -34,6 +36,10 @@ class FitnessDashboard {
     this.activityJourneyCount = 0,
     this.stepsToday,
     this.ecoPoints,
+    this.stepsSource = FitnessMetricSource.unavailable,
+    this.walkingSource = FitnessMetricSource.unavailable,
+    this.caloriesSource = FitnessMetricSource.unavailable,
+    this.carbonSource = FitnessMetricSource.unavailable,
   });
 
   final String userName;
@@ -43,6 +49,10 @@ class FitnessDashboard {
   final int caloriesTodayKcal;
   final double carbonSavedTodayKg;
   final int? ecoPoints;
+  final FitnessMetricSource stepsSource;
+  final FitnessMetricSource walkingSource;
+  final FitnessMetricSource caloriesSource;
+  final FitnessMetricSource carbonSource;
   final double weeklyWalkingDistanceKm;
   final double previousWeekWalkingDistanceKm;
   final double monthlyWalkingDistanceKm;

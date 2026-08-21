@@ -7,11 +7,13 @@ class FitnessHeader extends StatelessWidget {
     required this.userName,
     required this.streakDays,
     required this.notificationsEnabled,
+    required this.onHistoryTapped,
     required this.onNotificationsTapped,
   });
   final String userName;
   final int streakDays;
   final bool notificationsEnabled;
+  final VoidCallback onHistoryTapped;
   final VoidCallback onNotificationsTapped;
 
   @override
@@ -67,6 +69,11 @@ class FitnessHeader extends StatelessWidget {
               ),
             ],
           ),
+        ),
+        IconButton(
+          tooltip: 'Open Fitness history',
+          onPressed: onHistoryTapped,
+          icon: const Icon(Icons.calendar_month_rounded, color: Colors.white),
         ),
         IconButton(
           tooltip: notificationsEnabled

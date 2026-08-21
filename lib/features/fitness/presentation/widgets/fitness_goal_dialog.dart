@@ -5,9 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../business_logic/entities/fitness_goal.dart';
 
 class FitnessGoalDialog extends StatefulWidget {
-  const FitnessGoalDialog({super.key, this.goal});
-
-  final FitnessGoal? goal;
+  const FitnessGoalDialog({super.key});
 
   @override
   State<FitnessGoalDialog> createState() => _FitnessGoalDialogState();
@@ -22,11 +20,9 @@ class _FitnessGoalDialogState extends State<FitnessGoalDialog> {
   @override
   void initState() {
     super.initState();
-    _metric = widget.goal?.metric ?? FitnessGoalMetric.walkingDistance;
-    _period = widget.goal?.period ?? FitnessGoalPeriod.daily;
-    _targetController = TextEditingController(
-      text: widget.goal == null ? '' : _formatTarget(widget.goal!.targetValue),
-    );
+    _metric = FitnessGoalMetric.walkingDistance;
+    _period = FitnessGoalPeriod.daily;
+    _targetController = TextEditingController();
   }
 
   @override
@@ -39,7 +35,7 @@ class _FitnessGoalDialogState extends State<FitnessGoalDialog> {
   Widget build(BuildContext context) => AlertDialog(
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     title: Text(
-      widget.goal == null ? 'Create fitness goal' : 'Edit fitness goal',
+      'Create fitness goal',
       style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
     ),
     content: Form(
@@ -103,7 +99,8 @@ class _FitnessGoalDialogState extends State<FitnessGoalDialog> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Only one goal can use the same metric and period.',
+              'The goal is locked after creation. You can only cancel it and '
+              'create a new goal.',
               style: GoogleFonts.poppins(
                 fontSize: 11,
                 color: const Color(0xFF616161),
@@ -118,10 +115,7 @@ class _FitnessGoalDialogState extends State<FitnessGoalDialog> {
         onPressed: () => Navigator.pop(context),
         child: const Text('Cancel'),
       ),
-      FilledButton(
-        onPressed: _submit,
-        child: Text(widget.goal == null ? 'Create' : 'Save'),
-      ),
+      FilledButton(onPressed: _submit, child: const Text('Create')),
     ],
   );
 
@@ -136,8 +130,4 @@ class _FitnessGoalDialogState extends State<FitnessGoalDialog> {
       ),
     );
   }
-
-  String _formatTarget(double value) => value == value.roundToDouble()
-      ? value.toStringAsFixed(0)
-      : value.toStringAsFixed(2);
 }

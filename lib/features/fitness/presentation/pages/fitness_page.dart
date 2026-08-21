@@ -7,11 +7,16 @@ import '../widgets/carbon_savings_chart.dart';
 import '../widgets/fitness_goals_section.dart';
 import '../widgets/fitness_header.dart';
 import '../widgets/metrics_grid.dart';
+import '../widgets/recent_activity_section.dart';
+import '../widgets/recent_badges_section.dart';
 import '../widgets/weekly_insight_card.dart';
 import '../widgets/weekly_walking_chart.dart';
+import 'fitness_history_page.dart';
 
 class FitnessPage extends StatelessWidget {
-  const FitnessPage({super.key});
+  const FitnessPage({super.key, this.onViewRewards});
+
+  final VoidCallback? onViewRewards;
 
   @override
   Widget build(BuildContext context) {
@@ -69,6 +74,7 @@ class FitnessPage extends StatelessWidget {
               userName: dashboard.userName,
               streakDays: dashboard.streakDays,
               notificationsEnabled: controller.notificationsEnabled,
+              onHistoryTapped: () => _openHistory(context, controller),
               onNotificationsTapped: controller.toggleNotifications,
             ),
             Expanded(
@@ -97,14 +103,26 @@ class FitnessPage extends StatelessWidget {
                       totalKg: dashboard.weeklyCarbonSavedKg,
                     ),
                     const SizedBox(height: 12),
+                    RecentActivitySection(
+                      activities: controller.recentActivities,
+                      onViewAll: () => _openHistory(context, controller),
+                    ),
+                    const SizedBox(height: 12),
                     FitnessGoalsSection(
-                      goals: controller.goals,
+                      goals: controller.visibleGoals,
                       progressFor: controller.progressFor,
                       onCreate: controller.createGoal,
-                      onUpdate: controller.updateGoal,
-                      onDelete: controller.deleteGoal,
+                      onCancel: controller.cancelGoal,
                       isBusy: controller.isGoalMutationInProgress,
+                      selectedFilter: controller.goalFilter,
+                      onFilterChanged: controller.selectGoalFilter,
+                      countFor: controller.goalCount,
                       errorMessage: controller.goalErrorMessage,
+                    ),
+                    const SizedBox(height: 12),
+                    RecentBadgesSection(
+                      badges: controller.recentBadges,
+                      onSeeAll: onViewRewards,
                     ),
                     const SizedBox(height: 16),
                     WeeklyInsightCard(dashboard: dashboard),
@@ -113,6 +131,17 @@ class FitnessPage extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  void _openHistory(BuildContext context, FitnessController controller) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ChangeNotifierProvider.value(
+          value: controller,
+          child: const FitnessHistoryPage(),
         ),
       ),
     );
