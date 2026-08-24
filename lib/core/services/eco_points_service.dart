@@ -26,21 +26,22 @@ class EcoPointsService {
   }
 
   Future<int> fetchLifetimePoints({required String userId}) => _sumPoints(
-    _client.from('reward_point_transactions').select('points').eq(
-          'user_id',
-          userId,
-        ),
+    _client
+        .from('reward_point_transactions')
+        .select('points')
+        .eq('user_id', userId),
   );
 
   Future<int> _sumPoints(Future<dynamic> request) async {
     final rows = await request as List<dynamic>;
     return rows.fold<int>(0, (total, row) {
       final value = (row as Map<dynamic, dynamic>)['points'];
-      return total + switch (value) {
-        num number => number.toInt(),
-        String text => int.tryParse(text) ?? 0,
-        _ => 0,
-      };
+      return total +
+          switch (value) {
+            num number => number.toInt(),
+            String text => int.tryParse(text) ?? 0,
+            _ => 0,
+          };
     });
   }
 

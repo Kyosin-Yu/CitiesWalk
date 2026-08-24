@@ -47,9 +47,7 @@ class _AppShellState extends State<AppShell> {
   final ValueNotifier<EcoJourneyHistoryItem?> _tripToReplan = ValueNotifier(
     null,
   );
-  final ValueNotifier<EcoDestination?> _destinationToPlan = ValueNotifier(
-    null,
-  );
+  final ValueNotifier<EcoDestination?> _destinationToPlan = ValueNotifier(null);
   final ValueNotifier<FitnessDashboard?> _homeFitnessDashboard = ValueNotifier(
     null,
   );

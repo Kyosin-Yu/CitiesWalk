@@ -9,12 +9,15 @@ import '../entities/eco_destination.dart';
 import '../entities/eco_journey.dart';
 import '../entities/eco_journey_history_item.dart';
 import '../entities/eco_location.dart';
+import '../entities/eco_nearby_distance.dart';
 import '../entities/eco_place_category.dart';
 import '../entities/eco_route.dart';
 import '../entities/eco_route_segment.dart';
 import '../repositories/eco_route_repository.dart';
 import '../repositories/journey_repository.dart';
 import '../services/location_service.dart';
+
+enum _LocationSettingsAction { deviceLocation, appSettings }
 
 class EcoRouteController extends ChangeNotifier {
   EcoRouteController({
@@ -44,6 +47,7 @@ class EcoRouteController extends ChangeNotifier {
   EcoLocation _origin = _fallbackLocation;
   List<EcoDestination> _destinations = const [];
   EcoPlaceCategory _selectedCategory = EcoPlaceCategory.all;
+  EcoNearbyDistance _selectedNearbyDistance = EcoNearbyDistance.oneKm;
   bool _isLoadingDestinations = false;
   EcoRoute? _route;
   EcoJourney? _journey;
@@ -65,6 +69,9 @@ class EcoRouteController extends ChangeNotifier {
   DateTime? _lastRerouteAt;
   EcoDestination? _pendingDestination;
   Map<String, DestinationReviewSummary> _reviewSummaries = const {};
+  int _destinationSearchRequest = 0;
+  _LocationSettingsAction? _locationSettingsAction;
+  bool _retryLocationAfterSettings = false;
 
   static const _offRouteThresholdKm = 0.09;
   static const _arrivalThresholdKm = 0.06;
@@ -80,6 +87,7 @@ class EcoRouteController extends ChangeNotifier {
   EcoLocation get origin => _origin;
   List<EcoDestination> get destinations => _destinations;
   EcoPlaceCategory get selectedCategory => _selectedCategory;
+  EcoNearbyDistance get selectedNearbyDistance => _selectedNearbyDistance;
   bool get isLoadingDestinations => _isLoadingDestinations;
   EcoRoute? get route => _route;
   EcoJourney? get journey => _journey;
@@ -94,6 +102,7 @@ class EcoRouteController extends ChangeNotifier {
   double get liveCarbonSavedKg => _liveCarbonSavedKg;
   bool get isRerouting => _isRerouting;
   bool get isCompletingJourney => _isCompletingJourney;
+  bool get canOpenLocationSettings => _locationSettingsAction != null;
   bool get isAtDestination {
     final route = _route;
     final location = _currentJourneyLocation;
@@ -102,6 +111,7 @@ class EcoRouteController extends ChangeNotifier {
         _distanceBetween(location, route.destination.location) <=
             _arrivalThresholdKm;
   }
+
   DestinationReviewSummary reviewSummaryFor(EcoDestination destination) =>
       _reviewSummaries[destination.id] ?? DestinationReviewSummary.empty;
   DestinationReviewSummary get selectedDestinationReviewSummary {
@@ -125,6 +135,7 @@ class EcoRouteController extends ChangeNotifier {
         .clamp(0, 1)
         .toDouble();
   }
+
   bool get isJourneyTracking => _journey?.status == EcoJourneyStatus.inProgress;
   String? get nextInstruction {
     final selectedRoute = _route;
@@ -152,6 +163,7 @@ class EcoRouteController extends ChangeNotifier {
     _isLoading = true;
     _hasInitialised = true;
     _message = null;
+    _locationSettingsAction = null;
     _origin = _fallbackLocation;
     _isUsingDeviceLocation = false;
     _hasUsableOrigin = false;
@@ -168,6 +180,15 @@ class EcoRouteController extends ChangeNotifier {
         _hasUsableOrigin = true;
         _startLocationTracking();
       } on LocationServiceException catch (error) {
+        _locationSettingsAction = switch (error.failure) {
+          LocationServiceFailure.servicesDisabled ||
+          LocationServiceFailure.insufficientAccuracy =>
+            _LocationSettingsAction.deviceLocation,
+          LocationServiceFailure.permissionDeniedForever ||
+          LocationServiceFailure.reducedAccuracy =>
+            _LocationSettingsAction.appSettings,
+          _ => null,
+        };
         _isLoading = false;
         _hasInitialised = false;
         _message = '${error.message} Choose a starting point on the map.';
@@ -187,17 +208,7 @@ class EcoRouteController extends ChangeNotifier {
     }
 
     try {
-      _destinations = await repository.fetchNearbyDestinations(
-        origin: _origin,
-        category: _selectedCategory,
-      );
-      _destinations = [..._destinations]
-        ..sort(
-          (first, second) => _distanceSquared(
-            first.location,
-          ).compareTo(_distanceSquared(second.location)),
-        );
-      await _refreshDestinationReviewSummaries();
+      await _loadNearbyDestinations();
     } catch (_) {
       _message = 'Destinations are unavailable right now. Please try again.';
     } finally {
@@ -208,41 +219,82 @@ class EcoRouteController extends ChangeNotifier {
 
   Future<void> refreshDeviceLocation() => initialise();
 
-  Future<void> searchDestinations(String query) async {
-    try {
-      _destinations = await repository.searchDestinations(
-        query: query,
-        origin: _origin,
-      );
-      await _refreshDestinationReviewSummaries();
-      notifyListeners();
-    } catch (_) {
-      _message = 'Search is unavailable right now. Please try again.';
-      notifyListeners();
+  /// Opens the relevant settings screen after a location-access failure.
+  /// The page retries GPS acquisition when the user returns to CitiesWalk.
+  Future<void> openLocationAccessSettings() async {
+    final action = _locationSettingsAction;
+    if (action == null) return;
+    _retryLocationAfterSettings = true;
+    if (action == _LocationSettingsAction.deviceLocation) {
+      await locationService.openLocationSettings();
+    } else {
+      await locationService.openAppSettings();
     }
   }
 
-  Future<void> selectCategory(EcoPlaceCategory category) async {
-    if (_selectedCategory == category && _destinations.isNotEmpty) return;
-    _selectedCategory = category;
+  Future<void> retryLocationAfterSettings() async {
+    if (!_retryLocationAfterSettings) return;
+    _retryLocationAfterSettings = false;
+    await initialise();
+  }
+
+  Future<void> searchDestinations(String query) async {
+    final normalizedQuery = query.trim();
+    if (normalizedQuery.isEmpty) {
+      await applyNearbyFilters();
+      return;
+    }
+
+    final requestId = ++_destinationSearchRequest;
     _isLoadingDestinations = true;
     _message = null;
     notifyListeners();
     try {
-      _destinations = await repository.fetchNearbyDestinations(
+      final destinations = await repository.searchDestinations(
+        query: normalizedQuery,
         origin: _origin,
-        category: category,
       );
-      _destinations = [..._destinations]
-        ..sort(
-          (first, second) => _distanceSquared(
-            first.location,
-          ).compareTo(_distanceSquared(second.location)),
-        );
+      if (requestId != _destinationSearchRequest) return;
+
+      _destinations = destinations;
       await _refreshDestinationReviewSummaries();
     } catch (_) {
+      if (requestId == _destinationSearchRequest) {
+        _message = 'Search is unavailable right now. Please try again.';
+      }
+    } finally {
+      if (requestId == _destinationSearchRequest) {
+        _isLoadingDestinations = false;
+        notifyListeners();
+      }
+    }
+  }
+
+  Future<void> selectCategory(EcoPlaceCategory category) async {
+    await applyNearbyFilters(category: category);
+  }
+
+  Future<void> selectNearbyDistance(EcoNearbyDistance distance) async {
+    await applyNearbyFilters(nearbyDistance: distance);
+  }
+
+  Future<void> applyNearbyFilters({
+    EcoPlaceCategory? category,
+    EcoNearbyDistance? nearbyDistance,
+  }) async {
+    ++_destinationSearchRequest;
+    final selectedCategory = category ?? _selectedCategory;
+    final selectedDistance = nearbyDistance ?? _selectedNearbyDistance;
+    _selectedCategory = selectedCategory;
+    _selectedNearbyDistance = selectedDistance;
+    _isLoadingDestinations = true;
+    _message = null;
+    notifyListeners();
+    try {
+      await _loadNearbyDestinations();
+    } catch (_) {
       _message =
-          'Nearby ${category.label.toLowerCase()} are unavailable right now.';
+          'Nearby ${selectedCategory.label.toLowerCase()} places ${selectedDistance.nearbyDescription} are unavailable right now.';
     } finally {
       _isLoadingDestinations = false;
       notifyListeners();
@@ -338,17 +390,7 @@ class EcoRouteController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _destinations = await repository.fetchNearbyDestinations(
-        origin: _origin,
-        category: _selectedCategory,
-      );
-      _destinations = [..._destinations]
-        ..sort(
-          (first, second) => _distanceSquared(
-            first.location,
-          ).compareTo(_distanceSquared(second.location)),
-        );
-      await _refreshDestinationReviewSummaries();
+      await _loadNearbyDestinations();
     } catch (_) {
       _message = 'Starting point updated, but nearby places are unavailable.';
     }
@@ -403,6 +445,21 @@ class EcoRouteController extends ChangeNotifier {
     _reviewSummaries = Map.unmodifiable(Map.fromEntries(summaries));
   }
 
+  Future<void> _loadNearbyDestinations() async {
+    _destinations = await repository.fetchNearbyDestinations(
+      origin: _origin,
+      category: _selectedCategory,
+      nearbyDistance: _selectedNearbyDistance,
+    );
+    _destinations = [..._destinations]
+      ..sort(
+        (first, second) => _distanceSquared(
+          first.location,
+        ).compareTo(_distanceSquared(second.location)),
+      );
+    await _refreshDestinationReviewSummaries();
+  }
+
   void _startLocationTracking() {
     _locationSubscription = locationService.watchCurrentLocation().listen((
       location,
@@ -434,8 +491,7 @@ class EcoRouteController extends ChangeNotifier {
         if (nearestSegment?.type == EcoRouteSegmentType.walk) {
           _trackedWalkingDistanceKm += movementKm;
           _estimatedStepCount =
-              (_trackedWalkingDistanceKm * _estimatedStepsPerWalkingKm)
-                  .round();
+              (_trackedWalkingDistanceKm * _estimatedStepsPerWalkingKm).round();
         } else if (nearestSegment?.type == EcoRouteSegmentType.transit) {
           _trackedTransitDistanceKm += movementKm;
         }
@@ -606,7 +662,8 @@ class EcoRouteController extends ChangeNotifier {
   /// Completes a trip only when its latest GPS point is near the destination.
   Future<bool> finishJourneyIfArrived() async {
     final activeJourney = _journey;
-    if (activeJourney == null || activeJourney.status != EcoJourneyStatus.inProgress) {
+    if (activeJourney == null ||
+        activeJourney.status != EcoJourneyStatus.inProgress) {
       return false;
     }
     if (!isAtDestination) {

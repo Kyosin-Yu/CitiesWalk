@@ -108,7 +108,11 @@ class _CarbonPainter extends CustomPainter {
       ..strokeWidth = 1;
     for (var index = 0; index < 3; index++) {
       final y = 4 + chartHeight * index / 2;
-      canvas.drawLine(Offset(left, y), Offset(size.width - right, y), gridPaint);
+      canvas.drawLine(
+        Offset(left, y),
+        Offset(size.width - right, y),
+        gridPaint,
+      );
     }
     _drawVerticalLabels(canvas, maxValue, chartHeight);
 
@@ -148,11 +152,7 @@ class _CarbonPainter extends CustomPainter {
     }
   }
 
-  void _drawVerticalLabels(
-    Canvas canvas,
-    double maxValue,
-    double chartHeight,
-  ) {
+  void _drawVerticalLabels(Canvas canvas, double maxValue, double chartHeight) {
     for (var index = 0; index < 3; index++) {
       final value = maxValue * (1 - index / 2);
       final painter = TextPainter(

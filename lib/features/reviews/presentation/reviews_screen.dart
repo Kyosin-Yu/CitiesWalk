@@ -107,8 +107,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
               _showPage(_ReviewPage.write);
             },
             onMyReviews: () => _showPage(_ReviewPage.mine),
-            onBack:
-                widget.onClose ?? () => Navigator.of(context).maybePop(),
+            onBack: widget.onClose ?? () => Navigator.of(context).maybePop(),
           ),
           _ReviewPage.detail => _ReviewDetailPage(
             destination: _destination,

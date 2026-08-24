@@ -5,7 +5,10 @@ enum EcoPlaceCategory {
   history,
   parks,
   museums,
-  markets;
+  markets,
+  campus,
+  malls,
+  transit;
 
   String get label => switch (this) {
     EcoPlaceCategory.all => 'All',
@@ -15,6 +18,9 @@ enum EcoPlaceCategory {
     EcoPlaceCategory.parks => 'Parks',
     EcoPlaceCategory.museums => 'Museums',
     EcoPlaceCategory.markets => 'Markets',
+    EcoPlaceCategory.campus => 'Campus',
+    EcoPlaceCategory.malls => 'Malls',
+    EcoPlaceCategory.transit => 'Transit',
   };
 
   String get apiValue => name;

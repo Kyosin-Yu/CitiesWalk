@@ -22,6 +22,7 @@ class DeviceLocationDataSource implements LocationService {
     if (!serviceEnabled) {
       throw const LocationServiceException(
         'Turn on location services to use your current location.',
+        failure: LocationServiceFailure.servicesDisabled,
       );
     }
 
@@ -33,12 +34,14 @@ class DeviceLocationDataSource implements LocationService {
     if (permission == LocationPermission.denied) {
       throw const LocationServiceException(
         'Location permission was not granted.',
+        failure: LocationServiceFailure.permissionDenied,
       );
     }
 
     if (permission == LocationPermission.deniedForever) {
       throw const LocationServiceException(
         'Location permission is permanently denied. Enable it in device settings.',
+        failure: LocationServiceFailure.permissionDeniedForever,
       );
     }
 
@@ -46,6 +49,7 @@ class DeviceLocationDataSource implements LocationService {
     if (accuracyStatus == LocationAccuracyStatus.reduced) {
       throw const LocationServiceException(
         'Precise location is turned off. Enable Precise location for CitiesWalk in your device settings, then try again.',
+        failure: LocationServiceFailure.reducedAccuracy,
       );
     }
 
@@ -74,6 +78,7 @@ class DeviceLocationDataSource implements LocationService {
     } on TimeoutException {
       throw LocationServiceException(
         'GPS is currently only accurate to ±${initialPosition.accuracy.round()} m. Move outdoors, turn on Google Location Accuracy, then refresh your location.',
+        failure: LocationServiceFailure.insufficientAccuracy,
       );
     }
   }
@@ -85,6 +90,12 @@ class DeviceLocationDataSource implements LocationService {
             (position) => position.accuracy <= _maximumAcceptedAccuracyMeters,
           )
           .map(_toEcoLocation);
+
+  @override
+  Future<bool> openLocationSettings() => Geolocator.openLocationSettings();
+
+  @override
+  Future<bool> openAppSettings() => Geolocator.openAppSettings();
 
   EcoLocation _toEcoLocation(Position position) => EcoLocation(
     latitude: position.latitude,

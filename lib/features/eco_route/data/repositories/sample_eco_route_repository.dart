@@ -1,5 +1,8 @@
+import 'dart:math' as math;
+
 import '../../business_logic/entities/eco_destination.dart';
 import '../../business_logic/entities/eco_location.dart';
+import '../../business_logic/entities/eco_nearby_distance.dart';
 import '../../business_logic/entities/eco_place_category.dart';
 import '../../business_logic/entities/eco_route.dart';
 import '../../business_logic/entities/eco_route_segment.dart';
@@ -102,25 +105,49 @@ class SampleEcoRouteRepository implements EcoRouteRepository {
   Future<List<EcoDestination>> fetchNearbyDestinations({
     required EcoLocation origin,
     EcoPlaceCategory category = EcoPlaceCategory.all,
-  }) async => category == EcoPlaceCategory.all
-      ? _destinations
-      : _destinations
-            .where(
-              (destination) => destination.category.toLowerCase().contains(
-                category == EcoPlaceCategory.food
-                    ? 'food'
-                    : category == EcoPlaceCategory.parks
-                    ? 'park'
-                    : category == EcoPlaceCategory.markets
-                    ? 'market'
-                    : category == EcoPlaceCategory.history
-                    ? 'heritage'
-                    : category == EcoPlaceCategory.museums
-                    ? 'museum'
-                    : 'landmark',
-              ),
-            )
-            .toList();
+    EcoNearbyDistance nearbyDistance = EcoNearbyDistance.oneKm,
+  }) async => _destinations.where((destination) {
+    final matchesCategory =
+        category == EcoPlaceCategory.all ||
+        destination.category.toLowerCase().contains(
+          category == EcoPlaceCategory.food
+              ? 'food'
+              : category == EcoPlaceCategory.parks
+              ? 'park'
+              : category == EcoPlaceCategory.markets
+              ? 'market'
+              : category == EcoPlaceCategory.history
+              ? 'heritage'
+              : category == EcoPlaceCategory.museums
+              ? 'museum'
+              : category == EcoPlaceCategory.campus
+              ? 'campus'
+              : category == EcoPlaceCategory.malls
+              ? 'mall'
+              : category == EcoPlaceCategory.transit
+              ? 'station'
+              : 'landmark',
+        );
+    return matchesCategory &&
+        nearbyDistance.includes(_distanceBetween(origin, destination.location));
+  }).toList();
+
+  double _distanceBetween(EcoLocation first, EcoLocation second) {
+    const earthRadiusKm = 6371.0;
+    final latitudeDelta = _degreesToRadians(second.latitude - first.latitude);
+    final longitudeDelta = _degreesToRadians(
+      second.longitude - first.longitude,
+    );
+    final a =
+        math.sin(latitudeDelta / 2) * math.sin(latitudeDelta / 2) +
+        math.cos(_degreesToRadians(first.latitude)) *
+            math.cos(_degreesToRadians(second.latitude)) *
+            math.sin(longitudeDelta / 2) *
+            math.sin(longitudeDelta / 2);
+    return earthRadiusKm * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+  }
+
+  double _degreesToRadians(double degrees) => degrees * math.pi / 180;
 
   @override
   Future<List<EcoDestination>> searchDestinations({

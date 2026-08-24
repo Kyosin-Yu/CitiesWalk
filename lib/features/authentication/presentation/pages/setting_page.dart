@@ -140,7 +140,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             title: const Text('Delete Account'),
                             content: const Text(
                               'This will permanently remove your account and profile data. '
-                                  'This action cannot be undone.',
+                              'This action cannot be undone.',
                             ),
                             actions: [
                               TextButton(

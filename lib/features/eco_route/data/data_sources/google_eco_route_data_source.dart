@@ -18,11 +18,13 @@ class GoogleEcoRouteDataSource {
   Future<List<EcoDestination>> fetchNearby({
     required EcoLocation origin,
     required EcoPlaceCategory category,
+    required double radiusKm,
   }) async {
     final data = await _invoke({
       'action': 'nearby',
       'origin': _locationPayload(origin),
       'category': category.apiValue,
+      'radiusKm': radiusKm,
     });
     return _destinationsFrom(data['places']);
   }

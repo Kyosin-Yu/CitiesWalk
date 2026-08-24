@@ -70,9 +70,7 @@ void main() {
     expect(selectedTrip, trip);
   });
 
-  testWidgets('plans a featured place from Home in Eco-Route', (
-    tester,
-  ) async {
+  testWidgets('plans a featured place from Home in Eco-Route', (tester) async {
     EcoDestination? selectedDestination;
 
     await tester.pumpWidget(

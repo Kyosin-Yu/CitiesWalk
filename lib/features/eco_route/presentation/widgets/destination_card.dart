@@ -144,6 +144,18 @@ class DestinationCard extends StatelessWidget {
         Color(0xFFF57C00),
       );
     }
+    if (normalized.contains('mall')) {
+      return const _DestinationStyle(
+        Icons.local_mall_rounded,
+        Color(0xFF7E57C2),
+      );
+    }
+    if (normalized.contains('transit') || normalized.contains('station')) {
+      return const _DestinationStyle(
+        Icons.train_rounded,
+        Color(0xFF1565C0),
+      );
+    }
     return const _DestinationStyle(
       Icons.account_balance_rounded,
       Color(0xFF5C6BC0),
