@@ -47,60 +47,67 @@ class _AchievementLockerScreenState extends State<AchievementLockerScreen> {
               _BadgeFilter.locked =>
                 badges.where((badge) => !badge.isUnlocked).toList(),
             };
-            return CustomScrollView(
-              slivers: <Widget>[
-                SliverToBoxAdapter(
-                  child: _LockerHeader(
-                    unlocked: unlocked,
-                    total: badges.length,
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
-                    child: _FilterTabs(
-                      selected: _filter,
-                      allCount: badges.length,
-                      unlockedCount: unlocked,
-                      onSelected: (filter) => setState(() => _filter = filter),
+            return RefreshIndicator(
+              onRefresh: controller.load,
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: <Widget>[
+                  SliverToBoxAdapter(
+                    child: _LockerHeader(
+                      unlocked: unlocked,
+                      total: badges.length,
                     ),
                   ),
-                ),
-                if (filtered.isEmpty)
-                  const SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: Center(child: Text('No badges in this filter yet.')),
-                  )
-                else
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 22),
-                    sliver: SliverGrid(
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 14,
-                            mainAxisSpacing: 14,
-                            childAspectRatio: 0.84,
-                          ),
-                      delegate: SliverChildBuilderDelegate((
-                        BuildContext context,
-                        int index,
-                      ) {
-                        final badge = filtered[index];
-                        return BadgeItemCard(
-                          badge: badge,
-                          onTap: () {
-                            BadgeDetailModal.show(
-                              context,
-                              badge,
-                              onStartJourney: _showJourneyMessage,
-                            );
-                          },
-                        );
-                      }, childCount: filtered.length),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
+                      child: _FilterTabs(
+                        selected: _filter,
+                        allCount: badges.length,
+                        unlockedCount: unlocked,
+                        onSelected: (filter) =>
+                            setState(() => _filter = filter),
+                      ),
                     ),
                   ),
-              ],
+                  if (filtered.isEmpty)
+                    const SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: Center(
+                        child: Text('No badges in this filter yet.'),
+                      ),
+                    )
+                  else
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 22),
+                      sliver: SliverGrid(
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              crossAxisSpacing: 14,
+                              mainAxisSpacing: 14,
+                              childAspectRatio: 0.84,
+                            ),
+                        delegate: SliverChildBuilderDelegate((
+                          BuildContext context,
+                          int index,
+                        ) {
+                          final badge = filtered[index];
+                          return BadgeItemCard(
+                            badge: badge,
+                            onTap: () {
+                              BadgeDetailModal.show(
+                                context,
+                                badge,
+                                onStartJourney: _showJourneyMessage,
+                              );
+                            },
+                          );
+                        }, childCount: filtered.length),
+                      ),
+                    ),
+                ],
+              ),
             );
           },
         ),
