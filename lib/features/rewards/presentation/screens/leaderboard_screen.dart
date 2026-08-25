@@ -86,55 +86,58 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
           return Scaffold(
             bottomNavigationBar: _CurrentUserBar(entry: currentUser),
-            body: CustomScrollView(
-              slivers: <Widget>[
-                SliverToBoxAdapter(
-                  child: _LeaderboardHero(
-                    entries: entries,
-                    currentUser: currentUser,
-                    showBackButton: !widget.isEmbedded,
+            body: RefreshIndicator(
+              onRefresh: controller.load,
+              child: CustomScrollView(
+                slivers: <Widget>[
+                  SliverToBoxAdapter(
+                    child: _LeaderboardHero(
+                      entries: entries,
+                      currentUser: currentUser,
+                      showBackButton: !widget.isEmbedded,
+                    ),
                   ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
-                  sliver: SliverList(
-                    delegate: SliverChildListDelegate(<Widget>[
-                      Row(
-                        children: <Widget>[
-                          const Text(
-                            'Rankings',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const Spacer(),
-                          if (rankedEntries.length > 3)
-                            TextButton(
-                              onPressed: () {
-                                setState(() {
-                                  _showsAllRankings = !_showsAllRankings;
-                                });
-                              },
-                              child: Text(
-                                _showsAllRankings
-                                    ? 'Show less'
-                                    : 'View all (${rankedEntries.length})',
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+                    sliver: SliverList(
+                      delegate: SliverChildListDelegate(<Widget>[
+                        Row(
+                          children: <Widget>[
+                            const Text(
+                              'Rankings',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
                               ),
                             ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      ...visibleRankedEntries.map(
-                        (entry) => Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: _RankRow(entry: entry),
+                            const Spacer(),
+                            if (rankedEntries.length > 3)
+                              TextButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _showsAllRankings = !_showsAllRankings;
+                                  });
+                                },
+                                child: Text(
+                                  _showsAllRankings
+                                      ? 'Show less'
+                                      : 'View all (${rankedEntries.length})',
+                                ),
+                              ),
+                          ],
                         ),
-                      ),
-                    ]),
+                        const SizedBox(height: 4),
+                        ...visibleRankedEntries.map(
+                          (entry) => Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: _RankRow(entry: entry),
+                          ),
+                        ),
+                      ]),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           );
         },

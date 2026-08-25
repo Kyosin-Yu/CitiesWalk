@@ -10,13 +10,9 @@ class PodiumWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final podiumEntries = entries
-        .where((entry) => entry.rank >= 1 && entry.rank <= 3)
-        .toList(growable: false);
-    if (podiumEntries.length < 3) return const SizedBox.shrink();
-    final first = podiumEntries.firstWhere((entry) => entry.rank == 1);
-    final second = podiumEntries.firstWhere((entry) => entry.rank == 2);
-    final third = podiumEntries.firstWhere((entry) => entry.rank == 3);
+    final first = _entryAtRank(1);
+    final second = _entryAtRank(2);
+    final third = _entryAtRank(3);
 
     return SizedBox(
       height: 212,
@@ -24,30 +20,43 @@ class PodiumWidget extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: <Widget>[
           Expanded(
-            child: _PodiumPlace(
-              entry: second,
-              height: 66,
-              medalColor: const Color(0xFFC8D1D7),
-            ),
+            child: second == null
+                ? const SizedBox.shrink()
+                : _PodiumPlace(
+                    entry: second,
+                    height: 66,
+                    medalColor: const Color(0xFFC8D1D7),
+                  ),
           ),
           Expanded(
-            child: _PodiumPlace(
-              entry: first,
-              height: 104,
-              medalColor: const Color(0xFFFFD600),
-              isWinner: true,
-            ),
+            child: first == null
+                ? const SizedBox.shrink()
+                : _PodiumPlace(
+                    entry: first,
+                    height: 104,
+                    medalColor: const Color(0xFFFFD600),
+                    isWinner: true,
+                  ),
           ),
           Expanded(
-            child: _PodiumPlace(
-              entry: third,
-              height: 50,
-              medalColor: const Color(0xFFD2A679),
-            ),
+            child: third == null
+                ? const SizedBox.shrink()
+                : _PodiumPlace(
+                    entry: third,
+                    height: 50,
+                    medalColor: const Color(0xFFD2A679),
+                  ),
           ),
         ],
       ),
     );
+  }
+
+  LeaderboardEntry? _entryAtRank(int rank) {
+    for (final entry in entries) {
+      if (entry.rank == rank) return entry;
+    }
+    return null;
   }
 }
 
