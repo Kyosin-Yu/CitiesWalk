@@ -114,6 +114,22 @@ Create the required local environment configuration using the template provided
 by the team. Do not commit API keys, passwords, service-role keys, or other
 secrets to GitHub.
 
+### Google authentication setup
+
+Google login uses Supabase Auth and the mobile redirect URL
+`com.citieswalk.citieswalk://login-callback/`. Before testing it:
+
+1. Create a Web OAuth client in Google Auth Platform.
+2. Add the Supabase callback URL shown in **Authentication > Providers >
+   Google** to the Google client's authorised redirect URIs.
+3. Enable Google in the Supabase Auth providers page and enter the Web client ID
+   and client secret there. Never add the client secret to this repository.
+4. Add `com.citieswalk.citieswalk://login-callback/` to **Authentication > URL
+   Configuration > Redirect URLs** in Supabase.
+
+The Flutter app stores only the Supabase publishable key. Google credentials
+remain in Google Cloud and Supabase configuration.
+
 Run the application:
 
 ```bash

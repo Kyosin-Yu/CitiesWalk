@@ -1,6 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupabaseAuthDataSource {
+  static const oauthRedirectUrl = 'com.citieswalk.citieswalk://login-callback/';
+
   final SupabaseClient _client;
 
   const SupabaseAuthDataSource(this._client);
@@ -23,6 +25,14 @@ class SupabaseAuthDataSource {
     required String password,
   }) {
     return _client.auth.signInWithPassword(email: email, password: password);
+  }
+
+  Future<bool> signInWithGoogle() {
+    return _client.auth.signInWithOAuth(
+      OAuthProvider.google,
+      redirectTo: oauthRedirectUrl,
+      authScreenLaunchMode: LaunchMode.externalApplication,
+    );
   }
 
   Future<void> signOut() {
