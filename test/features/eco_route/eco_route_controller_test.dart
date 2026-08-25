@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:citieswalk/features/eco_route/data/repositories/sample_eco_route_repository.dart';
 import 'package:citieswalk/features/eco_route/business_logic/entities/eco_location.dart';
+import 'package:citieswalk/features/eco_route/business_logic/entities/eco_nearby_distance.dart';
 import 'package:citieswalk/features/eco_route/business_logic/entities/eco_place_category.dart';
 import 'package:citieswalk/features/eco_route/business_logic/entities/eco_destination.dart';
 import 'package:citieswalk/features/eco_route/business_logic/entities/eco_journey.dart';
@@ -25,6 +26,12 @@ class _FixedLocationService implements LocationService {
 
   @override
   Future<EcoLocation> getCurrentLocation() async => currentLocation;
+
+  @override
+  Future<bool> openAppSettings() async => true;
+
+  @override
+  Future<bool> openLocationSettings() async => true;
 
   @override
   Stream<EcoLocation> watchCurrentLocation() => _locations.stream;
@@ -146,14 +153,19 @@ void main() {
       await controller.initialise();
 
       expect(controller.origin.label, 'Test location');
+      expect(controller.selectedNearbyDistance, EcoNearbyDistance.oneKm);
       expect(controller.destinations, isNotEmpty);
     });
 
     test('filters nearby recommendations by place category', () async {
       await controller.initialise();
-      await controller.selectCategory(EcoPlaceCategory.food);
+      await controller.applyNearbyFilters(
+        category: EcoPlaceCategory.food,
+        nearbyDistance: EcoNearbyDistance.fiveKm,
+      );
 
       expect(controller.selectedCategory, EcoPlaceCategory.food);
+      expect(controller.selectedNearbyDistance, EcoNearbyDistance.fiveKm);
       expect(controller.destinations, isNotEmpty);
       expect(
         controller.destinations,
@@ -166,21 +178,34 @@ void main() {
       );
     });
 
-    test('does not complete a journey before GPS reaches the destination', () async {
+    test('filters nearby recommendations by selected distance', () async {
       await controller.initialise();
-      await controller.selectDestination(controller.destinations.first);
-      await controller.startJourney();
+      await controller.selectNearbyDistance(EcoNearbyDistance.oneKm);
 
-      expect(controller.journey, isNotNull);
-      expect(controller.journey!.userId, 'user-123');
-      expect(controller.journey!.id, 'journey-1');
-
-      final didComplete = await controller.finishJourneyIfArrived();
-
-      expect(didComplete, isFalse);
-      expect(controller.journey!.status, EcoJourneyStatus.inProgress);
-      expect(journeyRepository.completedAt, isNull);
+      expect(controller.selectedNearbyDistance, EcoNearbyDistance.oneKm);
+      expect(controller.destinations.map((destination) => destination.name), [
+        'Perdana Botanical Garden',
+      ]);
     });
+
+    test(
+      'does not complete a journey before GPS reaches the destination',
+      () async {
+        await controller.initialise();
+        await controller.selectDestination(controller.destinations.first);
+        await controller.startJourney();
+
+        expect(controller.journey, isNotNull);
+        expect(controller.journey!.userId, 'user-123');
+        expect(controller.journey!.id, 'journey-1');
+
+        final didComplete = await controller.finishJourneyIfArrived();
+
+        expect(didComplete, isFalse);
+        expect(controller.journey!.status, EcoJourneyStatus.inProgress);
+        expect(journeyRepository.completedAt, isNull);
+      },
+    );
 
     test('does not create a second record while a journey is active', () async {
       await controller.initialise();
@@ -192,18 +217,21 @@ void main() {
       expect(controller.journey!.status, EcoJourneyStatus.inProgress);
     });
 
-    test('completes only when the GPS location reaches the destination', () async {
-      await controller.initialise();
-      await controller.selectDestination(controller.destinations.first);
-      await controller.startJourney();
+    test(
+      'completes only when the GPS location reaches the destination',
+      () async {
+        await controller.initialise();
+        await controller.selectDestination(controller.destinations.first);
+        await controller.startJourney();
 
-      locationService.emit(controller.route!.destination.location);
-      await Future<void>.delayed(const Duration(milliseconds: 1));
+        locationService.emit(controller.route!.destination.location);
+        await Future<void>.delayed(const Duration(milliseconds: 1));
 
-      expect(controller.journey!.status, EcoJourneyStatus.completed);
-      expect(journeyRepository.completedAt, isNotNull);
-      expect(journeyRepository.actualStepCount, isNotNull);
-    });
+        expect(controller.journey!.status, EcoJourneyStatus.completed);
+        expect(journeyRepository.completedAt, isNotNull);
+        expect(journeyRepository.actualStepCount, isNotNull);
+      },
+    );
 
     test('cancelling removes an unfinished journey from persistence', () async {
       await controller.initialise();
@@ -248,34 +276,39 @@ void main() {
       },
     );
 
-    test('completes on resume when the fresh GPS fix is at the destination',
-        () async {
-      await controller.initialise();
-      await controller.selectDestination(controller.destinations.first);
-      await controller.startJourney();
-      await controller.pauseJourney();
-      locationService.currentLocation = controller.route!.destination.location;
+    test(
+      'completes on resume when the fresh GPS fix is at the destination',
+      () async {
+        await controller.initialise();
+        await controller.selectDestination(controller.destinations.first);
+        await controller.startJourney();
+        await controller.pauseJourney();
+        locationService.currentLocation =
+            controller.route!.destination.location;
 
-      await controller.resumeJourney();
-      await Future<void>.delayed(const Duration(milliseconds: 1));
+        await controller.resumeJourney();
+        await Future<void>.delayed(const Duration(milliseconds: 1));
 
-      expect(controller.journey!.status, EcoJourneyStatus.completed);
-      expect(journeyRepository.completedAt, isNotNull);
-      expect(controller.trackedWalkingDistanceKm, 0);
-    });
+        expect(controller.journey!.status, EcoJourneyStatus.completed);
+        expect(journeyRepository.completedAt, isNotNull);
+        expect(controller.trackedWalkingDistanceKm, 0);
+      },
+    );
 
-    test('does not clear an active journey when the user leaves route preview',
-        () async {
-      await controller.initialise();
-      await controller.selectDestination(controller.destinations.first);
-      await controller.startJourney();
+    test(
+      'does not clear an active journey when the user leaves route preview',
+      () async {
+        await controller.initialise();
+        await controller.selectDestination(controller.destinations.first);
+        await controller.startJourney();
 
-      controller.clearRoute();
+        controller.clearRoute();
 
-      expect(controller.route, isNotNull);
-      expect(controller.journey?.status, EcoJourneyStatus.inProgress);
-      expect(controller.message, contains('still active'));
-    });
+        expect(controller.route, isNotNull);
+        expect(controller.journey?.status, EcoJourneyStatus.inProgress);
+        expect(controller.message, contains('still active'));
+      },
+    );
 
     test('creates route geometry for the map preview', () async {
       await controller.initialise();

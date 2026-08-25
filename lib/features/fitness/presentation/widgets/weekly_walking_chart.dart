@@ -124,7 +124,11 @@ class _WalkingPainter extends CustomPainter {
       ..strokeWidth = 1;
     for (var index = 0; index < 3; index++) {
       final y = top + chartHeight * index / 2;
-      canvas.drawLine(Offset(left, y), Offset(size.width - right, y), gridPaint);
+      canvas.drawLine(
+        Offset(left, y),
+        Offset(size.width - right, y),
+        gridPaint,
+      );
     }
     final points = List.generate(values.length, (index) {
       final y = top + chartHeight * (1 - values[index] / maxValue);

@@ -28,12 +28,11 @@ class SupabaseRewardsDataSource implements RewardsDataSource {
     final result = await _client.rpc('get_current_weekly_leaderboard');
     final entries = _rows(result)
         .map(
-          (row) =>
-          LeaderboardEntryModel.fromLeaderboardRow(
+          (row) => LeaderboardEntryModel.fromLeaderboardRow(
             row,
             currentUserId: userId,
           ),
-    )
+        )
         .toList(growable: true);
 
     if (!entries.any((entry) => entry.isCurrentUser)) {
@@ -88,25 +87,25 @@ class SupabaseRewardsDataSource implements RewardsDataSource {
 
     return badges
         .map((badge) {
-      final progress = progressByBadge[badge['id'] as String];
-      final unlockedAt = progress?['unlocked_at'] as String?;
-      final journeyId = progress?['unlocked_journey_id'] as String?;
-      return BadgeModel(
-        id: badge['id'] as String,
-        title: badge['title'] as String,
-        description: badge['description'] as String,
-        unlocked: unlockedAt != null,
-        icon: _badgeIcon(badge['icon_key']),
-        progress: _number(progress?['progress']).toInt(),
-        goal: _number(badge['target_value']).toInt(),
-        earnedOn: unlockedAt == null
-            ? null
-            : DateTime.parse(unlockedAt).toLocal(),
-        completionLocation: journeyId == null
-            ? null
-            : locationsByJourney[journeyId],
-      );
-    })
+          final progress = progressByBadge[badge['id'] as String];
+          final unlockedAt = progress?['unlocked_at'] as String?;
+          final journeyId = progress?['unlocked_journey_id'] as String?;
+          return BadgeModel(
+            id: badge['id'] as String,
+            title: badge['title'] as String,
+            description: badge['description'] as String,
+            unlocked: unlockedAt != null,
+            icon: _badgeIcon(badge['icon_key']),
+            progress: _number(progress?['progress']).toInt(),
+            goal: _number(badge['target_value']).toInt(),
+            earnedOn: unlockedAt == null
+                ? null
+                : DateTime.parse(unlockedAt).toLocal(),
+            completionLocation: journeyId == null
+                ? null
+                : locationsByJourney[journeyId],
+          );
+        })
         .toList(growable: false);
   }
 
@@ -128,33 +127,31 @@ class SupabaseRewardsDataSource implements RewardsDataSource {
 
     return rows
         .map((row) {
-      final journey = journeysById[row['journey_id'] as String];
-      final origin = _nonEmptyString(journey?['origin_name']);
-      final destination = _nonEmptyString(journey?['destination_name']);
-      final hasTransit =
-          _number(journey?['actual_transit_distance_meters']) > 0;
-      return PointTransactionModel(
-        id: row['id'] as String,
-        title: _journeyTitle(origin: origin, destination: destination),
-        completedAt: DateTime.parse(
-          row['journey_completed_at'] as String,
-        ).toLocal(),
-        points: _number(row['points']).toInt(),
-        carbonSavedKg: _number(row['carbon_saved_kg']).toDouble(),
-        calories: _number(row['calories_burned']).toInt(),
-        distanceKm: _number(row['walking_distance_km']).toDouble(),
-        journeyType: hasTransit ? 'transit' : 'walk',
-        icon: hasTransit ? 'accountBalance' : 'directionsWalk',
-      );
-    })
+          final journey = journeysById[row['journey_id'] as String];
+          final origin = _nonEmptyString(journey?['origin_name']);
+          final destination = _nonEmptyString(journey?['destination_name']);
+          final hasTransit =
+              _number(journey?['actual_transit_distance_meters']) > 0;
+          return PointTransactionModel(
+            id: row['id'] as String,
+            title: _journeyTitle(origin: origin, destination: destination),
+            completedAt: DateTime.parse(
+              row['journey_completed_at'] as String,
+            ).toLocal(),
+            points: _number(row['points']).toInt(),
+            carbonSavedKg: _number(row['carbon_saved_kg']).toDouble(),
+            calories: _number(row['calories_burned']).toInt(),
+            distanceKm: _number(row['walking_distance_km']).toDouble(),
+            journeyType: hasTransit ? 'transit' : 'walk',
+            icon: hasTransit ? 'accountBalance' : 'directionsWalk',
+          );
+        })
         .toList(growable: false);
   }
 
   @override
   Future<int> fetchCurrentUserPoints() async {
-    return _ecoPointsService.fetchLifetimePoints(
-      userId: _requireUserId(),
-    );
+    return _ecoPointsService.fetchLifetimePoints(userId: _requireUserId());
   }
 
   Future<Map<String, String>> _fetchLocations(List<String> journeyIds) async {
@@ -172,14 +169,15 @@ class SupabaseRewardsDataSource implements RewardsDataSource {
   }
 
   Future<Map<String, Map<String, dynamic>>> _fetchJourneys(
-      List<String> journeyIds,) async {
+    List<String> journeyIds,
+  ) async {
     if (journeyIds.isEmpty) return const <String, Map<String, dynamic>>{};
     final rows = _rows(
       await _client
           .from('eco_journeys')
           .select(
-        'id, origin_name, destination_name, actual_transit_distance_meters',
-      )
+            'id, origin_name, destination_name, actual_transit_distance_meters',
+          )
           .inFilter('id', journeyIds),
     );
     return <String, Map<String, dynamic>>{
@@ -195,23 +193,19 @@ class SupabaseRewardsDataSource implements RewardsDataSource {
     return userId;
   }
 
-  List<Map<String, dynamic>> _rows(dynamic result) =>
-      (result as List<dynamic>)
-          .map((row) => Map<String, dynamic>.from(row as Map<dynamic, dynamic>))
-          .toList(growable: false);
+  List<Map<String, dynamic>> _rows(dynamic result) => (result as List<dynamic>)
+      .map((row) => Map<String, dynamic>.from(row as Map<dynamic, dynamic>))
+      .toList(growable: false);
 
-  num _number(dynamic value) =>
-      switch (value) {
-        num number => number,
-        String text => num.tryParse(text) ?? 0,
-        _ => 0,
-      };
+  num _number(dynamic value) => switch (value) {
+    num number => number,
+    String text => num.tryParse(text) ?? 0,
+    _ => 0,
+  };
 
   String? _nonEmptyString(dynamic value) {
     final text = value as String?;
-    return text == null || text
-        .trim()
-        .isEmpty ? null : text.trim();
+    return text == null || text.trim().isEmpty ? null : text.trim();
   }
 
   String _initials(String name) {

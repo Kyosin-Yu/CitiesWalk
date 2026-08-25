@@ -138,7 +138,7 @@ class SupabaseJourneyDataSource {
         'actual_carbon_saved_kg': actualCarbonSavedKg,
         'ended_at': endedAt.toIso8601String(),
         'updated_at': endedAt.toIso8601String(),
-       })
+      })
       .eq('id', journeyId);
 
   Future<void> endJourneyEarly({

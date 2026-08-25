@@ -56,10 +56,8 @@ Future<void> setupServiceLocator() async {
   );
 
   sl.registerLazySingleton<RewardsDataSource>(
-    () => SupabaseRewardsDataSource(
-      sl<SupabaseClient>(),
-      sl<EcoPointsService>(),
-    ),
+    () =>
+        SupabaseRewardsDataSource(sl<SupabaseClient>(), sl<EcoPointsService>()),
   );
   sl.registerLazySingleton<RewardsRepository>(
     () => RewardsRepositoryImpl(sl<RewardsDataSource>()),

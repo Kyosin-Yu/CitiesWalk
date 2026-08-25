@@ -38,13 +38,60 @@ class _NearbyPlacesMapState extends State<NearbyPlacesMap> {
   @override
   void didUpdateWidget(covariant NearbyPlacesMap oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.origin.latitude == widget.origin.latitude &&
-        oldWidget.origin.longitude == widget.origin.longitude) {
+    final originChanged =
+        oldWidget.origin.latitude != widget.origin.latitude ||
+        oldWidget.origin.longitude != widget.origin.longitude;
+    final destinationsChanged = !listEquals(
+      oldWidget.destinations.map((destination) => destination.id).toList(),
+      widget.destinations.map((destination) => destination.id).toList(),
+    );
+    if (originChanged) {
+      _mapController?.animateCamera(
+        CameraUpdate.newLatLng(
+          LatLng(widget.origin.latitude, widget.origin.longitude),
+        ),
+      );
+    } else if (destinationsChanged) {
+      _fitCameraToVisiblePlaces();
+    }
+  }
+
+  Future<void> _fitCameraToVisiblePlaces() async {
+    final controller = _mapController;
+    if (controller == null || widget.destinations.isEmpty) return;
+
+    final points = [
+      LatLng(widget.origin.latitude, widget.origin.longitude),
+      ...widget.destinations.map(
+        (destination) => LatLng(
+          destination.location.latitude,
+          destination.location.longitude,
+        ),
+      ),
+    ];
+    if (points.length == 1) return;
+
+    var south = points.first.latitude;
+    var north = south;
+    var west = points.first.longitude;
+    var east = west;
+    for (final point in points.skip(1)) {
+      south = point.latitude < south ? point.latitude : south;
+      north = point.latitude > north ? point.latitude : north;
+      west = point.longitude < west ? point.longitude : west;
+      east = point.longitude > east ? point.longitude : east;
+    }
+    if (south == north && west == east) {
+      await controller.animateCamera(CameraUpdate.newLatLngZoom(points.first, 15));
       return;
     }
-    _mapController?.animateCamera(
-      CameraUpdate.newLatLng(
-        LatLng(widget.origin.latitude, widget.origin.longitude),
+    await controller.animateCamera(
+      CameraUpdate.newLatLngBounds(
+        LatLngBounds(
+          southwest: LatLng(south, west),
+          northeast: LatLng(north, east),
+        ),
+        42,
       ),
     );
   }

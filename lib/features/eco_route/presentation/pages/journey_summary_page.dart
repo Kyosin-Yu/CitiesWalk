@@ -204,10 +204,7 @@ class _SummaryMetric extends StatelessWidget {
       children: [
         Icon(icon, color: AppColors.primary),
         const Spacer(),
-        Text(
-          value,
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
-        ),
+        Text(value, style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
         Text(
           label,
           style: GoogleFonts.poppins(
