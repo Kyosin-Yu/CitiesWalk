@@ -67,6 +67,10 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
+  Future<void> _onGoogleLogin() async {
+    await _authController.signInWithGoogle();
+  }
+
   Future<void> _onForgotPassword() async {
     final email = _emailController.text.trim();
 
@@ -193,6 +197,44 @@ class _LoginPageState extends State<LoginPage> {
                             : const Text('Login'),
                       ),
 
+                      const SizedBox(height: 24),
+
+                      const Row(
+                        children: [
+                          Expanded(child: Divider()),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 12),
+                            child: Text('OR'),
+                          ),
+                          Expanded(child: Divider()),
+                        ],
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      SizedBox(
+                        height: 52,
+                        child: OutlinedButton.icon(
+                          onPressed: _authController.isLoading
+                              ? null
+                              : _onGoogleLogin,
+                          icon: const _GoogleLogo(),
+                          label: const Text('Continue with Google'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.black87,
+                            backgroundColor: Colors.white,
+                            side: BorderSide(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.outlineVariant,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                        ),
+                      ),
+
                       const SizedBox(height: 16),
 
                       // Navigate to Register
@@ -223,6 +265,26 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GoogleLogo extends StatelessWidget {
+  const _GoogleLogo();
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'Google',
+      image: true,
+      child: const Text(
+        'G',
+        style: TextStyle(
+          color: Color(0xFF4285F4),
+          fontSize: 20,
+          fontWeight: FontWeight.w800,
         ),
       ),
     );

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../../../../core/errors/app_exception.dart';
@@ -6,8 +8,25 @@ import '../repositories/auth_repository.dart';
 
 class AuthController extends ChangeNotifier {
   final AuthRepository _repository;
+  late final StreamSubscription<AppUser?> _authStateSubscription;
 
-  AuthController(this._repository);
+  AuthController(this._repository) {
+    _authStateSubscription = _repository.authStateChanges().listen(
+      (user) {
+        _currentUser = user;
+        _isLoading = false;
+        _errorMessage = null;
+        notifyListeners();
+      },
+      onError: (Object error) {
+        _isLoading = false;
+        _errorMessage = error is AppException
+            ? error.message
+            : 'Unable to restore your sign-in session.';
+        notifyListeners();
+      },
+    );
+  }
 
   AppUser? _currentUser;
   bool _isLoading = false;
@@ -61,6 +80,27 @@ class AuthController extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<void> signInWithGoogle() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _repository.signInWithGoogle();
+    } on AppException catch (e) {
+      _errorMessage = e.message;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  @override
+  void dispose() {
+    _authStateSubscription.cancel();
+    super.dispose();
   }
 
   Future<void> signOut() async {

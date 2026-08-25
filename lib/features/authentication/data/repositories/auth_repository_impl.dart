@@ -89,6 +89,29 @@ class AuthRepositoryImpl implements AuthRepository {
     }
   }
 
+  @override
+  Future<void> signInWithGoogle() async {
+    try {
+      final launched = await _authDatasource.signInWithGoogle();
+
+      if (!launched) {
+        throw const AppException('Unable to open Google sign-in.');
+      }
+    } on AppException {
+      rethrow;
+    } on AuthException catch (e) {
+      throw AppException(e.message);
+    } catch (e, stackTrace) {
+      debugPrint('========== GOOGLE SIGN IN ERROR ==========');
+      debugPrint(e.toString());
+      debugPrintStack(stackTrace: stackTrace);
+
+      throw const AppException(
+        'Unable to sign in with Google. Please try again.',
+      );
+    }
+  }
+
   Future<AppUser> _buildAppUserWithImage({
     required User user,
     Map<String, dynamic>? profile,
