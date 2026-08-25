@@ -1,4 +1,5 @@
 import 'completed_fitness_journey.dart';
+import 'health_activity.dart';
 
 class FitnessDaySummary {
   const FitnessDaySummary({
@@ -40,6 +41,7 @@ class FitnessDashboard {
     this.walkingSource = FitnessMetricSource.unavailable,
     this.caloriesSource = FitnessMetricSource.unavailable,
     this.carbonSource = FitnessMetricSource.unavailable,
+    this.healthActivity,
   });
 
   final String userName;
@@ -53,6 +55,7 @@ class FitnessDashboard {
   final FitnessMetricSource walkingSource;
   final FitnessMetricSource caloriesSource;
   final FitnessMetricSource carbonSource;
+  final HealthActivitySnapshot? healthActivity;
   final double weeklyWalkingDistanceKm;
   final double previousWeekWalkingDistanceKm;
   final double monthlyWalkingDistanceKm;
@@ -66,5 +69,6 @@ class FitnessDashboard {
   final int activityJourneyCount;
 
   bool get hasCompletedJourney => totalCompletedJourneys > 0;
-  bool get hasRecordedActivity => activityJourneyCount > 0;
+  bool get hasRecordedActivity =>
+      activityJourneyCount > 0 || (healthActivity?.hasActivity ?? false);
 }

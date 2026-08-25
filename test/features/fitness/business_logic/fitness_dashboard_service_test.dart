@@ -1,4 +1,5 @@
 import 'package:citieswalk/features/fitness/business_logic/entities/completed_fitness_journey.dart';
+import 'package:citieswalk/features/fitness/business_logic/entities/health_activity.dart';
 import 'package:citieswalk/features/fitness/business_logic/services/fitness_dashboard_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -86,6 +87,42 @@ void main() {
 
     expect(dashboard.walkingSource, FitnessMetricSource.mixed);
   });
+
+  test(
+    'uses Health Connect as the source for today without double counting',
+    () {
+      const service = FitnessDashboardService();
+      final dashboard = service.build(
+        userName: 'Alex',
+        now: DateTime(2026, 8, 19, 12),
+        healthActivity: HealthActivitySnapshot(
+          syncedAt: DateTime(2026, 8, 19, 12),
+          stepsToday: 6200,
+          walkingDistanceMetersToday: 4800,
+          activeCaloriesToday: 310,
+        ),
+        journeys: [
+          CompletedFitnessJourney(
+            id: 'route',
+            walkingDistanceMeters: 1500,
+            estimatedCalories: 100,
+            estimatedCarbonSavedKg: .4,
+            startedAt: DateTime(2026, 8, 19, 9),
+            completedAt: DateTime(2026, 8, 19, 10),
+          ),
+        ],
+      );
+
+      expect(dashboard.stepsToday, 6200);
+      expect(dashboard.walkingDistanceTodayKm, 4.8);
+      expect(dashboard.caloriesTodayKcal, 310);
+      expect(dashboard.carbonSavedTodayKg, .4);
+      expect(dashboard.weeklyWalkingDistanceKm, 1.5);
+      expect(dashboard.stepsSource, FitnessMetricSource.recorded);
+      expect(dashboard.walkingSource, FitnessMetricSource.recorded);
+      expect(dashboard.caloriesSource, FitnessMetricSource.recorded);
+    },
+  );
 
   test('returns zero totals and seven safe chart points for no journeys', () {
     const service = FitnessDashboardService();

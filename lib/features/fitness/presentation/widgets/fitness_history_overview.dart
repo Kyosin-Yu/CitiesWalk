@@ -2,12 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../business_logic/entities/completed_fitness_journey.dart';
 import '../../business_logic/entities/fitness_history.dart';
 
 class FitnessHistoryOverview extends StatelessWidget {
-  const FitnessHistoryOverview({super.key, required this.summary});
+  const FitnessHistoryOverview({
+    super.key,
+    required this.summary,
+    required this.onViewRoute,
+  });
 
   final FitnessHistorySummary summary;
+  final ValueChanged<CompletedFitnessJourney> onViewRoute;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -27,6 +33,29 @@ class FitnessHistoryOverview extends StatelessWidget {
           _ActivityCard(bucket: summary.buckets[index], period: summary.period),
           if (index != summary.buckets.length - 1) const SizedBox(height: 8),
         ],
+      if (summary.hasActivity) ...[
+        const SizedBox(height: 24),
+        Text(
+          'Route maps',
+          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Open a journey to see where it started, ended, and the GPS track that was recorded.',
+          style: GoogleFonts.poppins(
+            fontSize: 10,
+            color: AppColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 8),
+        for (var index = 0; index < summary.journeys.length; index++) ...[
+          _RouteHistoryCard(
+            journey: summary.journeys[index],
+            onViewRoute: () => onViewRoute(summary.journeys[index]),
+          ),
+          if (index != summary.journeys.length - 1) const SizedBox(height: 8),
+        ],
+      ],
     ],
   );
 
@@ -36,6 +65,106 @@ class FitnessHistoryOverview extends StatelessWidget {
     FitnessHistoryPeriod.monthly => 'Active days this month',
     FitnessHistoryPeriod.yearly => 'Active months this year',
   };
+}
+
+class _RouteHistoryCard extends StatelessWidget {
+  const _RouteHistoryCard({required this.journey, required this.onViewRoute});
+
+  final CompletedFitnessJourney journey;
+  final VoidCallback onViewRoute;
+
+  @override
+  Widget build(BuildContext context) {
+    final completed = journey.countsAsCompletedRoute;
+    final statusColor = completed ? AppColors.success : AppColors.warning;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE8EEE9)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.accent.withValues(alpha: .18),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.route_rounded,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      journey.routeLabel,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${_fullDate(journey.completedAt)} • ${_bucketLabel(journey.completedAt, FitnessHistoryPeriod.daily)}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 9,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: .12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  completed ? 'Completed' : 'Ended early',
+                  style: GoogleFonts.poppins(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w600,
+                    color: statusColor,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: onViewRoute,
+                icon: const Icon(Icons.map_rounded, size: 18),
+                label: const Text('View route'),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  textStyle: GoogleFonts.poppins(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _SummaryCard extends StatelessWidget {

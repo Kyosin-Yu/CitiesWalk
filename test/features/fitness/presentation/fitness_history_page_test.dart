@@ -2,6 +2,7 @@ import 'package:citieswalk/features/fitness/business_logic/entities/completed_fi
 import 'package:citieswalk/features/fitness/business_logic/entities/fitness_goal.dart';
 import 'package:citieswalk/features/fitness/business_logic/entities/fitness_history.dart';
 import 'package:citieswalk/features/fitness/business_logic/entities/fitness_recent_badge.dart';
+import 'package:citieswalk/features/fitness/business_logic/entities/fitness_route_point.dart';
 import 'package:citieswalk/features/fitness/business_logic/providers/fitness_controller.dart';
 import 'package:citieswalk/features/fitness/business_logic/repositories/fitness_repository.dart';
 import 'package:citieswalk/features/fitness/presentation/pages/fitness_history_page.dart';
@@ -45,6 +46,18 @@ void main() {
     expect(controller.historyPeriod, FitnessHistoryPeriod.monthly);
     expect(controller.historySummary?.journeyCount, 2);
     expect(controller.historySummary?.walkingDistanceKm, 5);
+    expect(find.text('Route maps'), findsOneWidget);
+    expect(find.text('View route'), findsNWidgets(2));
+
+    await tester.ensureVisible(find.text('View route').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('View route').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Route details'), findsOneWidget);
+    expect(find.text('Journey ended early'), findsNothing);
+    expect(find.text('Central Market'), findsOneWidget);
+    expect(find.text('KLCC Park'), findsOneWidget);
   });
 }
 
@@ -60,6 +73,12 @@ class _HistoryRepository implements FitnessRepository {
       estimatedCarbonSavedKg: .5,
       startedAt: DateTime(2026, 8, 3, 8),
       completedAt: DateTime(2026, 8, 3, 9),
+      originName: 'KL Sentral',
+      destinationName: 'Merdeka Square',
+      originLatitude: 3.1343,
+      originLongitude: 101.6861,
+      destinationLatitude: 3.1478,
+      destinationLongitude: 101.6937,
     ),
     CompletedFitnessJourney(
       id: 'second',
@@ -68,11 +87,23 @@ class _HistoryRepository implements FitnessRepository {
       estimatedCarbonSavedKg: .8,
       startedAt: DateTime(2026, 8, 5, 8),
       completedAt: DateTime(2026, 8, 5, 9),
+      originName: 'Central Market',
+      destinationName: 'KLCC Park',
+      originLatitude: 3.1457,
+      originLongitude: 101.6953,
+      destinationLatitude: 3.1536,
+      destinationLongitude: 101.7131,
     ),
   ];
 
   @override
   Future<List<FitnessGoal>> fetchGoals({required String userId}) async => [];
+
+  @override
+  Future<List<FitnessRoutePoint>> fetchJourneyRoutePoints({
+    required String userId,
+    required String journeyId,
+  }) async => const [];
 
   @override
   Future<List<FitnessRecentBadge>> fetchRecentBadges({

@@ -23,6 +23,7 @@ import '../features/eco_route/presentation/pages/eco_route_page.dart';
 import '../features/fitness/business_logic/providers/fitness_controller.dart';
 import '../features/fitness/business_logic/entities/fitness_dashboard.dart';
 import '../features/fitness/business_logic/repositories/fitness_repository.dart';
+import '../features/fitness/business_logic/repositories/health_activity_repository.dart';
 import '../features/fitness/presentation/pages/fitness_page.dart';
 import '../features/rewards/presentation/screens/rewards_hub_screen.dart';
 import '../features/reviews/business_logic/providers/reviews_provider.dart';
@@ -57,6 +58,7 @@ class _AppShellState extends State<AppShell> {
         sl<AuthController>().currentUser!.fullName ??
         sl<AuthController>().currentUser!.email,
     repository: sl<FitnessRepository>(),
+    healthActivityRepository: sl<HealthActivityRepository>(),
     ecoPointsService: sl<EcoPointsService>(),
   );
   final ValueNotifier<int> _reviewSummaryVersion = ValueNotifier(0);

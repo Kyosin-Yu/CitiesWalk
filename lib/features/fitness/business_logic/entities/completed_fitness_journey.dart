@@ -21,6 +21,10 @@ class CompletedFitnessJourney {
     this.countsAsCompletedRoute = true,
     this.originName,
     this.destinationName,
+    this.originLatitude,
+    this.originLongitude,
+    this.destinationLatitude,
+    this.destinationLongitude,
     this.distanceSource = FitnessMetricSource.estimated,
     this.caloriesSource = FitnessMetricSource.estimated,
     this.carbonSource = FitnessMetricSource.estimated,
@@ -37,10 +41,20 @@ class CompletedFitnessJourney {
   final bool countsAsCompletedRoute;
   final String? originName;
   final String? destinationName;
+  final double? originLatitude;
+  final double? originLongitude;
+  final double? destinationLatitude;
+  final double? destinationLongitude;
   final FitnessMetricSource distanceSource;
   final FitnessMetricSource caloriesSource;
   final FitnessMetricSource carbonSource;
   final FitnessMetricSource stepsSource;
+
+  bool get hasRouteCoordinates =>
+      originLatitude != null &&
+      originLongitude != null &&
+      destinationLatitude != null &&
+      destinationLongitude != null;
 
   String get routeLabel {
     final origin = originName?.trim();

@@ -12,6 +12,10 @@ class FitnessJourneyModel {
     this.countsAsCompletedRoute = true,
     this.originName,
     this.destinationName,
+    this.originLatitude,
+    this.originLongitude,
+    this.destinationLatitude,
+    this.destinationLongitude,
     this.distanceSource = FitnessMetricSource.estimated,
     this.caloriesSource = FitnessMetricSource.estimated,
     this.carbonSource = FitnessMetricSource.estimated,
@@ -28,6 +32,10 @@ class FitnessJourneyModel {
   final bool countsAsCompletedRoute;
   final String? originName;
   final String? destinationName;
+  final double? originLatitude;
+  final double? originLongitude;
+  final double? destinationLatitude;
+  final double? destinationLongitude;
   final FitnessMetricSource distanceSource;
   final FitnessMetricSource caloriesSource;
   final FitnessMetricSource carbonSource;
@@ -38,6 +46,10 @@ class FitnessJourneyModel {
       id: row['id'] as String,
       originName: _optionalText(row['origin_name']),
       destinationName: _optionalText(row['destination_name']),
+      originLatitude: (row['origin_latitude'] as num?)?.toDouble(),
+      originLongitude: (row['origin_longitude'] as num?)?.toDouble(),
+      destinationLatitude: (row['destination_latitude'] as num?)?.toDouble(),
+      destinationLongitude: (row['destination_longitude'] as num?)?.toDouble(),
       walkingDistanceMeters:
           (row['actual_walking_distance_meters'] as num?)?.round() ??
           (row['estimated_walking_distance_meters'] as num?)?.round() ??
@@ -80,6 +92,10 @@ class FitnessJourneyModel {
     countsAsCompletedRoute: countsAsCompletedRoute,
     originName: originName,
     destinationName: destinationName,
+    originLatitude: originLatitude,
+    originLongitude: originLongitude,
+    destinationLatitude: destinationLatitude,
+    destinationLongitude: destinationLongitude,
     distanceSource: distanceSource,
     caloriesSource: caloriesSource,
     carbonSource: carbonSource,

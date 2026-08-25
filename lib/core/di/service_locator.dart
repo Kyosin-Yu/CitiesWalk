@@ -9,7 +9,10 @@ import '../../features/authentication/data/data_sources/profile_data_source.dart
 import '../../features/authentication/data/data_sources/supabase_auth_data_source.dart';
 import '../../features/authentication/business_logic/providers/auth_controller.dart';
 import '../../features/fitness/business_logic/repositories/fitness_repository.dart';
+import '../../features/fitness/business_logic/repositories/health_activity_repository.dart';
+import '../../features/fitness/data/data_sources/device_health_data_source.dart';
 import '../../features/fitness/data/data_sources/supabase_fitness_data_source.dart';
+import '../../features/fitness/data/repositories/health_activity_repository_impl.dart';
 import '../../features/fitness/data/repositories/fitness_repository_impl.dart';
 import '../../features/rewards/business_logic/repositories/rewards_repository.dart';
 import '../../features/rewards/data/data_sources/rewards_data_source.dart';
@@ -53,6 +56,10 @@ Future<void> setupServiceLocator() async {
   );
   sl.registerLazySingleton<FitnessRepository>(
     () => FitnessRepositoryImpl(sl<SupabaseFitnessDataSource>()),
+  );
+  sl.registerLazySingleton<DeviceHealthDataSource>(DeviceHealthDataSource.new);
+  sl.registerLazySingleton<HealthActivityRepository>(
+    () => HealthActivityRepositoryImpl(sl<DeviceHealthDataSource>()),
   );
 
   sl.registerLazySingleton<RewardsDataSource>(

@@ -1,10 +1,16 @@
 import '../entities/completed_fitness_journey.dart';
 import '../entities/fitness_goal.dart';
 import '../entities/fitness_recent_badge.dart';
+import '../entities/fitness_route_point.dart';
 
 abstract interface class FitnessRepository {
   Future<List<CompletedFitnessJourney>> fetchCompletedJourneys({
     required String userId,
+  });
+
+  Future<List<FitnessRoutePoint>> fetchJourneyRoutePoints({
+    required String userId,
+    required String journeyId,
   });
 
   Future<List<FitnessGoal>> fetchGoals({required String userId});

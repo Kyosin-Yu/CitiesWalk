@@ -6,6 +6,9 @@ import '../entities/completed_fitness_journey.dart';
 import '../entities/fitness_goal.dart';
 import '../entities/fitness_history.dart';
 import '../entities/fitness_recent_badge.dart';
+import '../entities/fitness_route_point.dart';
+import '../entities/health_activity.dart';
+import '../repositories/health_activity_repository.dart';
 import '../repositories/fitness_repository.dart';
 import '../services/fitness_dashboard_service.dart';
 import '../services/fitness_goal_progress_service.dart';
@@ -22,6 +25,7 @@ class FitnessController extends ChangeNotifier {
     this.dashboardService = const FitnessDashboardService(),
     this.goalProgressService = const FitnessGoalProgressService(),
     this.historyService = const FitnessHistoryService(),
+    this.healthActivityRepository,
   });
 
   final String userId;
@@ -31,6 +35,7 @@ class FitnessController extends ChangeNotifier {
   final FitnessDashboardService dashboardService;
   final FitnessGoalProgressService goalProgressService;
   final FitnessHistoryService historyService;
+  final HealthActivityRepository? healthActivityRepository;
 
   FitnessStatus _status = FitnessStatus.initial;
   FitnessDashboard? _dashboard;
@@ -47,6 +52,14 @@ class FitnessController extends ChangeNotifier {
   DateTime? _selectedHistoryDate;
   List<DateTime> _availableHistoryDates = const [];
   FitnessGoalStatus _goalFilter = FitnessGoalStatus.active;
+  HealthIntegrationStatus _healthIntegrationStatus =
+      HealthIntegrationStatus.unsupported;
+  HealthActivitySnapshot? _healthActivity;
+  String? _healthMessage;
+  bool _isHealthSyncing = false;
+  final Map<String, List<FitnessRoutePoint>> _routePointsByJourney = {};
+  final Set<String> _loadingRouteIds = {};
+  final Map<String, String> _routeErrorsByJourney = {};
 
   FitnessStatus get status => _status;
   FitnessDashboard? get dashboard => _dashboard;
@@ -63,6 +76,17 @@ class FitnessController extends ChangeNotifier {
   bool get isGoalMutationInProgress => _isGoalMutationInProgress;
   FitnessHistoryPeriod get historyPeriod => _historyPeriod;
   FitnessGoalStatus get goalFilter => _goalFilter;
+  HealthIntegrationStatus get healthIntegrationStatus =>
+      _healthIntegrationStatus;
+  HealthActivitySnapshot? get healthActivity => _healthActivity;
+  String? get healthMessage => _healthMessage;
+  bool get isHealthSyncing => _isHealthSyncing;
+  List<FitnessRoutePoint> routePointsFor(String journeyId) =>
+      List.unmodifiable(_routePointsByJourney[journeyId] ?? const []);
+  bool isRouteLoading(String journeyId) => _loadingRouteIds.contains(journeyId);
+  bool hasLoadedRoute(String journeyId) =>
+      _routePointsByJourney.containsKey(journeyId);
+  String? routeErrorFor(String journeyId) => _routeErrorsByJourney[journeyId];
   DateTime? get selectedHistoryDate => _selectedHistoryDate;
   List<DateTime> get availableHistoryDates =>
       List.unmodifiable(_availableHistoryDates);
@@ -84,6 +108,30 @@ class FitnessController extends ChangeNotifier {
 
   Future<void> refresh() => _load(showLoading: false);
 
+  Future<void> loadJourneyRoute(
+    String journeyId, {
+    bool forceRefresh = false,
+  }) async {
+    if (_loadingRouteIds.contains(journeyId)) return;
+    if (!forceRefresh && _routePointsByJourney.containsKey(journeyId)) return;
+
+    _loadingRouteIds.add(journeyId);
+    _routeErrorsByJourney.remove(journeyId);
+    notifyListeners();
+    try {
+      _routePointsByJourney[journeyId] = await repository
+          .fetchJourneyRoutePoints(userId: userId, journeyId: journeyId);
+    } catch (error, stackTrace) {
+      debugPrint('Unable to load Fitness route $journeyId: $error');
+      debugPrint(stackTrace.toString());
+      _routeErrorsByJourney[journeyId] =
+          'Unable to load this route. Please try again.';
+    } finally {
+      _loadingRouteIds.remove(journeyId);
+      notifyListeners();
+    }
+  }
+
   Future<void> _load({required bool showLoading}) async {
     if (_isRefreshing) {
       _refreshPending = true;
@@ -102,10 +150,12 @@ class FitnessController extends ChangeNotifier {
       _journeys = journeys;
       _syncHistoryDates();
       final ecoPoints = await _loadCurrentWeekEcoPoints();
+      await _loadHealthActivity();
       _dashboard = dashboardService.build(
         userName: userName,
         journeys: journeys,
         ecoPoints: ecoPoints,
+        healthActivity: _healthActivity,
       );
       try {
         _goals = await repository.fetchGoals(userId: userId);
@@ -148,6 +198,87 @@ class FitnessController extends ChangeNotifier {
       debugPrint(stackTrace.toString());
       return null;
     }
+  }
+
+  Future<void> _loadHealthActivity() async {
+    final healthRepository = healthActivityRepository;
+    if (healthRepository == null) return;
+    try {
+      _applyHealthAccess(await healthRepository.loadToday());
+    } catch (error, stackTrace) {
+      _handleHealthError(error, stackTrace);
+    }
+  }
+
+  Future<void> connectHealth() async {
+    final healthRepository = healthActivityRepository;
+    if (healthRepository == null || _isHealthSyncing) return;
+    _isHealthSyncing = true;
+    _healthMessage = null;
+    notifyListeners();
+    try {
+      _applyHealthAccess(await healthRepository.requestAccessAndLoadToday());
+      _rebuildDashboardWithHealth();
+    } catch (error, stackTrace) {
+      _handleHealthError(error, stackTrace);
+    } finally {
+      _isHealthSyncing = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> disconnectHealth() async {
+    final healthRepository = healthActivityRepository;
+    if (healthRepository == null || _isHealthSyncing) return;
+    _isHealthSyncing = true;
+    notifyListeners();
+    try {
+      await healthRepository.revokeAccess();
+      _healthIntegrationStatus = HealthIntegrationStatus.permissionRequired;
+      _healthActivity = null;
+      _healthMessage = 'Health Connect has been disconnected.';
+      _rebuildDashboardWithHealth();
+    } catch (error, stackTrace) {
+      _handleHealthError(error, stackTrace);
+    } finally {
+      _isHealthSyncing = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> installHealthConnect() async {
+    final healthRepository = healthActivityRepository;
+    if (healthRepository == null || _isHealthSyncing) return;
+    try {
+      await healthRepository.installHealthConnect();
+    } catch (error, stackTrace) {
+      _handleHealthError(error, stackTrace);
+      notifyListeners();
+    }
+  }
+
+  void _applyHealthAccess(HealthActivityAccess access) {
+    _healthIntegrationStatus = access.status;
+    _healthActivity = access.snapshot;
+    _healthMessage = access.message;
+  }
+
+  void _rebuildDashboardWithHealth() {
+    final dashboard = _dashboard;
+    if (dashboard == null) return;
+    _dashboard = dashboardService.build(
+      userName: userName,
+      journeys: _journeys,
+      ecoPoints: dashboard.ecoPoints,
+      healthActivity: _healthActivity,
+    );
+  }
+
+  void _handleHealthError(Object error, StackTrace stackTrace) {
+    debugPrint('Unable to sync Health Connect: $error');
+    debugPrint(stackTrace.toString());
+    _healthIntegrationStatus = HealthIntegrationStatus.error;
+    _healthMessage = 'Unable to sync Health Connect. Please try again.';
   }
 
   void toggleNotifications() {
