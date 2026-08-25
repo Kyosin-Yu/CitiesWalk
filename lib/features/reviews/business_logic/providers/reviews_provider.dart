@@ -31,6 +31,7 @@ class ReviewsProvider extends ChangeNotifier {
   PlaceReview? _myReview;
   String? _errorMessage;
   List<ReviewPhoto> _draftPhotos = const [];
+  final Set<String> _helpfulReviewIdsBeingUpdated = <String>{};
   bool _isSelectingPhotos = false;
   bool _isLoading = false;
   bool _isSaving = false;
@@ -42,6 +43,8 @@ class ReviewsProvider extends ChangeNotifier {
   bool get isSelectingPhotos => _isSelectingPhotos;
   bool get isLoading => _isLoading;
   bool get isSaving => _isSaving;
+  bool isUpdatingHelpful(String reviewId) =>
+      _helpfulReviewIdsBeingUpdated.contains(reviewId);
   DestinationReviewSummary get summary {
     if (_reviews.isEmpty) return DestinationReviewSummary.empty;
     final total = _reviews.fold<int>(0, (sum, review) => sum + review.rating);
@@ -268,6 +271,11 @@ class ReviewsProvider extends ChangeNotifier {
   }
 
   Future<PlaceReview?> toggleHelpful(String reviewId) async {
+    if (!_helpfulReviewIdsBeingUpdated.add(reviewId)) {
+      return null;
+    }
+    _errorMessage = null;
+    notifyListeners();
     try {
       final updated = await _repository.toggleHelpful(
         reviewId: reviewId,
@@ -286,8 +294,10 @@ class ReviewsProvider extends ChangeNotifier {
       debugPrint('Helpful mark update failed: $error');
       debugPrintStack(stackTrace: stackTrace);
       _errorMessage = 'Unable to update the helpful mark. Please try again.';
-      notifyListeners();
       return null;
+    } finally {
+      _helpfulReviewIdsBeingUpdated.remove(reviewId);
+      notifyListeners();
     }
   }
 

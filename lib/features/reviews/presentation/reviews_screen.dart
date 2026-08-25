@@ -107,12 +107,14 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
               _showPage(_ReviewPage.write);
             },
             onMyReviews: () => _showPage(_ReviewPage.mine),
-            onBack:
-                widget.onClose ?? () => Navigator.of(context).maybePop(),
+            onBack: widget.onClose ?? () => Navigator.of(context).maybePop(),
           ),
           _ReviewPage.detail => _ReviewDetailPage(
             destination: _destination,
             review: _selectedReview!,
+            isUpdatingHelpful: _reviewsProvider.isUpdatingHelpful(
+              _selectedReview!.id,
+            ),
             onBack: () => _showPage(_ReviewPage.list),
             onHelpful: () => _toggleHelpful(_selectedReview!),
             onReport: () => _showReportSheet(_selectedReview!),
@@ -456,12 +458,14 @@ class _ReviewDetailPage extends StatelessWidget {
   const _ReviewDetailPage({
     required this.destination,
     required this.review,
+    required this.isUpdatingHelpful,
     required this.onBack,
     required this.onHelpful,
     required this.onReport,
   });
   final ReviewDestination destination;
   final PlaceReview review;
+  final bool isUpdatingHelpful;
   final VoidCallback onBack;
   final VoidCallback onHelpful;
   final VoidCallback onReport;
@@ -489,19 +493,29 @@ class _ReviewDetailPage extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    InkWell(
-                      onTap: onHelpful,
-                      borderRadius: BorderRadius.circular(12),
-                      child: Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Text(
-                          '${review.isMarkedHelpful ? '♥' : '♧'}  ${review.isMarkedHelpful ? 'Helpful' : 'Mark Helpful'} (${review.helpfulCount})',
-                          style: TextStyle(
-                            color: review.isMarkedHelpful
-                                ? AppColors.primary
-                                : AppColors.textSecondary,
-                          ),
-                        ),
+                    OutlinedButton.icon(
+                      onPressed: isUpdatingHelpful ? null : onHelpful,
+                      icon: isUpdatingHelpful
+                          ? const SizedBox(
+                              height: 16,
+                              width: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Icon(
+                              review.isMarkedHelpful
+                                  ? Icons.favorite_rounded
+                                  : Icons.favorite_border_rounded,
+                              size: 18,
+                            ),
+                      label: Text(
+                        isUpdatingHelpful
+                            ? 'Updating...'
+                            : '${review.isMarkedHelpful ? 'Helpful' : 'Mark Helpful'} (${review.helpfulCount})',
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: review.isMarkedHelpful
+                            ? AppColors.primary
+                            : AppColors.textSecondary,
                       ),
                     ),
                     InkWell(
@@ -1377,24 +1391,65 @@ class _PhotoTile extends StatelessWidget {
   final VoidCallback? onRemove;
 
   @override
-  Widget build(BuildContext context) => Stack(
-    children: [
-      ClipRRect(borderRadius: BorderRadius.circular(10), child: _buildImage()),
-      if (onRemove != null)
-        Positioned(
-          top: 2,
-          right: 2,
-          child: IconButton.filledTonal(
-            tooltip: 'Remove ${photo.name}',
-            onPressed: onRemove,
-            icon: const Icon(Icons.close, size: 15),
-            visualDensity: VisualDensity.compact,
-          ),
+  Widget build(BuildContext context) {
+    final canPreview =
+        onRemove == null && (photo.bytes != null || photo.signedUrl != null);
+    return Semantics(
+      button: canPreview,
+      label: canPreview ? 'Open ${photo.name} in full screen' : photo.name,
+      child: InkWell(
+        key: ValueKey('review-photo-${photo.id}'),
+        onTap: canPreview
+            ? () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => _ReviewPhotoPreviewPage(photo: photo),
+                ),
+              )
+            : null,
+        borderRadius: BorderRadius.circular(10),
+        child: Stack(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: _buildThumbnail(),
+            ),
+            if (canPreview)
+              const Positioned(
+                right: 5,
+                bottom: 5,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.all(4),
+                    child: Icon(
+                      Icons.zoom_in_rounded,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
+                ),
+              ),
+            if (onRemove != null)
+              Positioned(
+                top: 2,
+                right: 2,
+                child: IconButton.filledTonal(
+                  tooltip: 'Remove ${photo.name}',
+                  onPressed: onRemove,
+                  icon: const Icon(Icons.close, size: 15),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+          ],
         ),
-    ],
-  );
+      ),
+    );
+  }
 
-  Widget _buildImage() {
+  Widget _buildThumbnail() {
     const fallback = SizedBox(
       height: 80,
       width: 100,
@@ -1420,6 +1475,61 @@ class _PhotoTile extends StatelessWidget {
         height: 80,
         width: 100,
         fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => fallback,
+      );
+    }
+    return fallback;
+  }
+}
+
+class _ReviewPhotoPreviewPage extends StatelessWidget {
+  const _ReviewPhotoPreviewPage({required this.photo});
+
+  final ReviewPhoto photo;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: Colors.black,
+    appBar: AppBar(
+      backgroundColor: Colors.black,
+      foregroundColor: Colors.white,
+      title: const Text('Photo preview'),
+    ),
+    body: SafeArea(
+      child: Center(
+        child: InteractiveViewer(
+          minScale: 0.8,
+          maxScale: 4,
+          child: _buildPreviewImage(),
+        ),
+      ),
+    ),
+  );
+
+  Widget _buildPreviewImage() {
+    const fallback = SizedBox(
+      height: 180,
+      width: 240,
+      child: ColoredBox(
+        color: Color(0xFF28342B),
+        child: Center(
+          child: Icon(Icons.broken_image_outlined, color: Colors.white),
+        ),
+      ),
+    );
+    final bytes = photo.bytes;
+    if (bytes != null) {
+      return Image.memory(
+        bytes,
+        fit: BoxFit.contain,
+        errorBuilder: (_, _, _) => fallback,
+      );
+    }
+    final signedUrl = photo.signedUrl;
+    if (signedUrl != null) {
+      return Image.network(
+        signedUrl,
+        fit: BoxFit.contain,
         errorBuilder: (_, _, _) => fallback,
       );
     }
