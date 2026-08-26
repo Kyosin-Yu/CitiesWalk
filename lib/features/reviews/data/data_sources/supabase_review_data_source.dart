@@ -4,7 +4,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../business_logic/entities/place_review.dart';
 import '../../business_logic/entities/review_destination.dart';
-import '../../business_logic/repositories/review_repository.dart';
 import '../models/review_remote_model.dart';
 import '../../../../core/models/destination_review_summary.dart';
 

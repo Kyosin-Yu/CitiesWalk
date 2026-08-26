@@ -242,7 +242,6 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
     }
     setState(() => _selectedReview = updated);
   }
-
 }
 
 class _ReviewsListPage extends StatelessWidget {
@@ -905,8 +904,8 @@ class _DestinationInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final category = destination.category?.trim();
-    final label = category == null || category.isEmpty
+    final category = destination.category.trim();
+    final label = category.isEmpty
         ? _destinationArea(destination.name)
         : '${_destinationArea(destination.name)} · $category';
     return Row(
