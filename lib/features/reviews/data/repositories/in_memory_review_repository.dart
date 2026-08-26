@@ -75,16 +75,6 @@ class InMemoryReviewRepository
   }
 
   @override
-  Future<void> reportReview({
-    required String reviewId,
-    required String reporterId,
-    required ReviewReportReason reason,
-    String? details,
-  }) async {
-    // The in-memory variant intentionally has no moderation queue.
-  }
-
-  @override
   Future<PlaceReview> toggleHelpful({
     required String reviewId,
     required String userId,

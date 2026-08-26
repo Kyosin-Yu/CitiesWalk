@@ -190,6 +190,7 @@ void main() {
     await tester.tap(find.text('Mark Helpful (0)'));
     await tester.pumpAndSettle();
     expect(find.text('Helpful (1)'), findsOneWidget);
+    expect(find.text('Report'), findsNothing);
     await tester.tap(find.byTooltip('Back'));
     await tester.pumpAndSettle();
 
@@ -237,18 +238,15 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final photoReview = find.ancestor(
-      of: find.text('Photo reviewer'),
-      matching: find.byType(InkWell),
+    final photoStrip = find.byKey(
+      const ValueKey('review-photo-strip-photo-review'),
     );
     await tester.scrollUntilVisible(
-      photoReview,
+      photoStrip,
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(photoReview);
-    await tester.pumpAndSettle();
-
+    expect(photoStrip, findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('review-photo-photo-1')));
     await tester.pumpAndSettle();
 

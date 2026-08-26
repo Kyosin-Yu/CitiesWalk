@@ -64,9 +64,8 @@ class SupabaseReviewDataSource {
   }) async {
     _ensureAuthenticatedOwner(review.userId);
     // A new review needs its destination identity as well as the editable
-    // review fields. Previously this used `updatePayload`, which excludes
-    // destination columns and caused the database insert to fail its NOT NULL
-    // constraints before a review (or its photos) could be uploaded.
+    // review fields. `updatePayload` deliberately excludes these required
+    // destination columns and therefore cannot be used for inserts.
     final payload = {
       ...ReviewRemoteModel.insertPayload(review),
       'destination_id': destination.id,
@@ -88,18 +87,12 @@ class SupabaseReviewDataSource {
     return _fetchReview(reviewId);
   }
 
-  Future<PlaceReview> updateReview({
-    required ReviewDestination destination,
-    required PlaceReview review,
-  }) async {
+  Future<PlaceReview> updateReview({required PlaceReview review}) async {
     _ensureAuthenticatedOwner(review.userId);
     final existing = await _fetchReview(review.id);
-    final payload = {
-      ...ReviewRemoteModel.insertPayload(review),
-      'destination_id': destination.id,
-      'destination_name': destination.name,
-      'destination_category': destination.category,
-    };
+    // Destination identity is immutable after creation. Including it here
+    // violates the owner-only database grants and makes every edit fail.
+    final payload = ReviewRemoteModel.updatePayload(review);
     await _client
         .from('destination_reviews')
         .update(payload)
@@ -127,21 +120,6 @@ class SupabaseReviewDataSource {
       await _client.storage.from(_photosBucket).remove(storedPaths);
     }
     await _client.from('destination_reviews').delete().eq('id', reviewId);
-  }
-
-  Future<void> reportReview({
-    required String reviewId,
-    required String reporterId,
-    required ReviewReportReason reason,
-    String? details,
-  }) async {
-    _ensureAuthenticatedOwner(reporterId);
-    await _client.from('review_reports').insert({
-      'review_id': reviewId,
-      'reporter_id': reporterId,
-      'reason': reason.name,
-      if (details?.trim().isNotEmpty ?? false) 'details': details!.trim(),
-    });
   }
 
   Future<PlaceReview> toggleHelpful({
@@ -240,40 +218,39 @@ class SupabaseReviewDataSource {
         .map((photo) => photo.storagePath)
         .whereType<String>()
         .toSet();
-    final removed = existingPhotos
-        .where((photo) => photo.storagePath != null)
-        .where((photo) => !retainedPaths.contains(photo.storagePath))
+    final removedPaths = existingPhotos
+        .map((photo) => photo.storagePath)
+        .whereType<String>()
+        .where((path) => !retainedPaths.contains(path))
         .toList();
 
-    for (final photo in removed) {
-      await _client.storage.from(_photosBucket).remove([photo.storagePath!]);
-      await _client.from('review_photos').delete().eq('id', photo.id);
+    // `position` is unique per review. Updating existing rows one at a time
+    // can momentarily create duplicate positions when the user reorders or
+    // replaces photos, so rebuild the lightweight database records first.
+    // Retained Storage objects are reused; only removed files are deleted.
+    if (existingPhotos.isNotEmpty) {
+      await _client.from('review_photos').delete().eq('review_id', reviewId);
     }
-
-    for (final entry in photos.indexed) {
-      final photo = entry.$2;
-      if (photo.storagePath != null) {
-        await _client
-            .from('review_photos')
-            .update({'position': entry.$1})
-            .eq('id', photo.id);
-      }
+    if (removedPaths.isNotEmpty) {
+      await _client.storage.from(_photosBucket).remove(removedPaths);
     }
 
     for (final entry in photos.indexed) {
       final index = entry.$1;
       final photo = entry.$2;
-      if (!photo.isLocal) continue;
-      final bytes = photo.bytes;
-      if (bytes == null) continue;
-      final extension = _fileExtension(photo.name);
-      final storagePath =
-          '$userId/$reviewId/${DateTime.now().microsecondsSinceEpoch}-$index.$extension';
-      await _uploadPhoto(
-        storagePath: storagePath,
-        bytes: bytes,
-        contentType: photo.contentType,
-      );
+      var storagePath = photo.storagePath;
+      if (storagePath == null) {
+        final bytes = photo.bytes;
+        if (bytes == null) continue;
+        final extension = _fileExtension(photo.name);
+        storagePath =
+            '$userId/$reviewId/${DateTime.now().microsecondsSinceEpoch}-$index.$extension';
+        await _uploadPhoto(
+          storagePath: storagePath,
+          bytes: bytes,
+          contentType: photo.contentType,
+        );
+      }
       await _client.from('review_photos').insert({
         'review_id': reviewId,
         'storage_path': storagePath,

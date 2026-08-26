@@ -28,8 +28,6 @@ import '../features/rewards/presentation/screens/rewards_hub_screen.dart';
 import '../features/reviews/business_logic/providers/reviews_provider.dart';
 import '../features/reviews/business_logic/entities/review_destination.dart';
 import '../features/reviews/data/data_sources/review_image_data_source.dart';
-import '../features/reviews/data/datasources/review_seed_data.dart';
-import '../features/reviews/data/repositories/in_memory_review_repository.dart';
 import '../features/reviews/data/repositories/review_image_repository_impl.dart';
 import '../features/reviews/data/repositories/supabase_review_repository.dart';
 import '../features/reviews/data/data_sources/supabase_review_data_source.dart';
@@ -71,16 +69,6 @@ class _AppShellState extends State<AppShell> {
   final Map<String, ReviewsProvider> _reviewProviders = {};
   ReviewDestination? _activeReviewDestination;
   ReviewsProvider? _activeReviewsProvider;
-  late final ReviewDestination _testReviewDestination =
-      reviewDestinations.first;
-  late final ReviewsProvider _testReviewsProvider = ReviewsProvider(
-    InMemoryReviewRepository(),
-    _reviewImageRepository,
-    _testReviewDestination,
-    currentUserId: sl<AuthController>().currentUser!.id,
-    currentUserName:
-        sl<AuthController>().currentUser!.fullName ?? 'CitiesWalk User',
-  );
 
   late final List<Widget> _pages = [
     HomeDashboard(
@@ -165,15 +153,6 @@ class _AppShellState extends State<AppShell> {
           ),
         ],
       ),
-      floatingActionButton: _activeReviewsProvider == null && _selectedIndex == 0
-          ? FloatingActionButton.extended(
-              key: const ValueKey('test-reviews-shortcut'),
-              onPressed: _openTestReviews,
-              icon: const Icon(Icons.rate_review_outlined),
-              label: const Text('Test Reviews'),
-              tooltip: 'Open the Community Reviews test flow',
-            )
-          : null,
     );
   }
 
@@ -249,18 +228,6 @@ class _AppShellState extends State<AppShell> {
     });
   }
 
-  /// Temporary standalone entry for manually checking Community Reviews when
-  /// the live Eco-Route destination request is unavailable. It intentionally
-  /// uses the seeded in-memory repository, so test reviews stay on this device
-  /// and never change Supabase data.
-  void _openTestReviews() {
-    setState(() {
-      _selectedIndex = 0;
-      _activeReviewDestination = _testReviewDestination;
-      _activeReviewsProvider = _testReviewsProvider;
-    });
-  }
-
   void _closeReviews() {
     setState(() {
       _activeReviewDestination = null;
@@ -283,7 +250,6 @@ class _AppShellState extends State<AppShell> {
     for (final provider in _reviewProviders.values) {
       provider.dispose();
     }
-    _testReviewsProvider.dispose();
     super.dispose();
   }
 }

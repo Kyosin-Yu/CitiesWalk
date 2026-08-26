@@ -246,30 +246,6 @@ class ReviewsProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> reportReview({
-    required String reviewId,
-    required ReviewReportReason reason,
-    String? details,
-  }) async {
-    try {
-      await _repository.reportReview(
-        reviewId: reviewId,
-        reporterId: currentUserId,
-        reason: reason,
-        details: details,
-      );
-      _errorMessage = null;
-      notifyListeners();
-      return true;
-    } catch (error, stackTrace) {
-      debugPrint('Review reporting failed: $error');
-      debugPrintStack(stackTrace: stackTrace);
-      _errorMessage = 'Unable to send the report. Please try again.';
-      notifyListeners();
-      return false;
-    }
-  }
-
   Future<PlaceReview?> toggleHelpful(String reviewId) async {
     if (!_helpfulReviewIdsBeingUpdated.add(reviewId)) {
       return null;

@@ -26,7 +26,7 @@ class SupabaseReviewRepository
   Future<PlaceReview> updateReview({
     required ReviewDestination destination,
     required PlaceReview review,
-  }) => _dataSource.updateReview(destination: destination, review: review);
+  }) => _dataSource.updateReview(review: review);
 
   @override
   Future<void> deleteReview({
@@ -34,19 +34,6 @@ class SupabaseReviewRepository
     required String reviewId,
     required String userId,
   }) => _dataSource.deleteReview(reviewId: reviewId, userId: userId);
-
-  @override
-  Future<void> reportReview({
-    required String reviewId,
-    required String reporterId,
-    required ReviewReportReason reason,
-    String? details,
-  }) => _dataSource.reportReview(
-    reviewId: reviewId,
-    reporterId: reporterId,
-    reason: reason,
-    details: details,
-  );
 
   @override
   Future<PlaceReview> toggleHelpful({

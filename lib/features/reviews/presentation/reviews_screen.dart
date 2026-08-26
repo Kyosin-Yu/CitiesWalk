@@ -4,7 +4,6 @@ import '../../../app/theme/app_colors.dart';
 import '../business_logic/entities/place_review.dart';
 import '../business_logic/entities/review_destination.dart';
 import '../business_logic/providers/reviews_provider.dart';
-import '../business_logic/repositories/review_repository.dart';
 
 enum _ReviewPage { list, detail, write, submitted, mine, edit }
 
@@ -117,7 +116,6 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
             ),
             onBack: () => _showPage(_ReviewPage.list),
             onHelpful: () => _toggleHelpful(_selectedReview!),
-            onReport: () => _showReportSheet(_selectedReview!),
           ),
           _ReviewPage.write => _ReviewEditorPage(
             title: 'Write a Review',
@@ -245,65 +243,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
     setState(() => _selectedReview = updated);
   }
 
-  Future<void> _showReportSheet(PlaceReview review) async {
-    if (review.userId == _reviewsProvider.currentUserId) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('You cannot report your own review.')),
-      );
-      return;
-    }
-    final reason = await showModalBottomSheet<ReviewReportReason>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Report review',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 8),
-              const Text('Choose why this review needs moderator attention.'),
-              const SizedBox(height: 12),
-              for (final option in ReviewReportReason.values)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(_reportReasonLabel(option)),
-                  onTap: () => Navigator.pop(context, option),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-    if (reason == null) return;
-    final reported = await _reviewsProvider.reportReview(
-      reviewId: review.id,
-      reason: reason,
-    );
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          reported
-              ? 'Thanks. Your report has been sent for review.'
-              : _reviewsProvider.errorMessage ?? 'Unable to send the report.',
-        ),
-      ),
-    );
-  }
 }
-
-String _reportReasonLabel(ReviewReportReason reason) => switch (reason) {
-  ReviewReportReason.spam => 'Spam or advertising',
-  ReviewReportReason.offensive => 'Offensive or abusive content',
-  ReviewReportReason.misleading => 'Misleading information',
-  ReviewReportReason.other => 'Other concern',
-};
 
 class _ReviewsListPage extends StatelessWidget {
   const _ReviewsListPage({
@@ -366,7 +306,7 @@ class _ReviewsListPage extends StatelessWidget {
               padding: const EdgeInsets.all(18),
               child: Column(
                 children: [
-                  const _DestinationImage(),
+                  _DestinationInfo(destination: destination),
                   const SizedBox(height: 10),
                   _RatingSummary(reviews: reviews),
                   const SizedBox(height: 20),
@@ -418,6 +358,36 @@ class _ReviewsListPage extends StatelessWidget {
                         ],
                       ),
                     )
+                  else if (reviews.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 34,
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.rate_review_outlined,
+                            size: 34,
+                            color: AppColors.primary,
+                          ),
+                          SizedBox(height: 10),
+                          Text(
+                            'No reviews yet.',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Be the first to share your experience!',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: AppColors.textSecondary),
+                          ),
+                        ],
+                      ),
+                    )
                   else if (sorted.isEmpty)
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 24),
@@ -445,6 +415,7 @@ class _ReviewsListPage extends StatelessWidget {
           child: FloatingActionButton.extended(
             onPressed: onWrite,
             backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
             icon: const Icon(Icons.add),
             label: const Text('Write a Review'),
           ),
@@ -461,14 +432,12 @@ class _ReviewDetailPage extends StatelessWidget {
     required this.isUpdatingHelpful,
     required this.onBack,
     required this.onHelpful,
-    required this.onReport,
   });
   final ReviewDestination destination;
   final PlaceReview review;
   final bool isUpdatingHelpful;
   final VoidCallback onBack;
   final VoidCallback onHelpful;
-  final VoidCallback onReport;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -516,17 +485,6 @@ class _ReviewDetailPage extends StatelessWidget {
                         foregroundColor: review.isMarkedHelpful
                             ? AppColors.primary
                             : AppColors.textSecondary,
-                      ),
-                    ),
-                    InkWell(
-                      onTap: onReport,
-                      borderRadius: BorderRadius.circular(12),
-                      child: const Padding(
-                        padding: EdgeInsets.all(8),
-                        child: Text(
-                          '⚑  Report',
-                          style: TextStyle(color: AppColors.textSecondary),
-                        ),
                       ),
                     ),
                   ],
@@ -940,24 +898,43 @@ class _HeroHeader extends StatelessWidget {
   );
 }
 
-class _DestinationImage extends StatelessWidget {
-  const _DestinationImage();
+class _DestinationInfo extends StatelessWidget {
+  const _DestinationInfo({required this.destination});
+
+  final ReviewDestination destination;
+
   @override
-  Widget build(BuildContext context) => Container(
-    height: 87,
-    alignment: Alignment.bottomLeft,
-    padding: const EdgeInsets.all(10),
-    decoration: BoxDecoration(
-      gradient: const LinearGradient(
-        colors: [Color(0xFF203D57), Color(0xFFC68759)],
-      ),
-      borderRadius: BorderRadius.circular(14),
-    ),
-    child: const Chip(
-      label: Text('Heritage Walk', style: TextStyle(fontSize: 9)),
-      visualDensity: VisualDensity.compact,
-    ),
-  );
+  Widget build(BuildContext context) {
+    final category = destination.category?.trim();
+    final label = category == null || category.isEmpty
+        ? _destinationArea(destination.name)
+        : '${_destinationArea(destination.name)} · $category';
+    return Row(
+      children: [
+        const Icon(
+          Icons.location_on_outlined,
+          size: 17,
+          color: AppColors.primary,
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+String _destinationArea(String destinationName) {
+  final match = RegExp(r'\(([^)]+)\)').firstMatch(destinationName);
+  return match?.group(1)?.trim() ?? destinationName;
 }
 
 class _RatingSummary extends StatelessWidget {
@@ -1185,6 +1162,25 @@ class _ReviewPreview extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 11, height: 1.4),
             ),
+            if (review.photos.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Semantics(
+                label: 'Photos attached to this review',
+                child: SizedBox(
+                  height: 80,
+                  child: ListView.separated(
+                    key: ValueKey('review-photo-strip-${review.id}'),
+                    scrollDirection: Axis.horizontal,
+                    itemCount: review.photos.length,
+                    separatorBuilder: (_, _) => const SizedBox(width: 8),
+                    itemBuilder: (context, index) => SizedBox(
+                      width: 100,
+                      child: _PhotoTile(photo: review.photos[index]),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),

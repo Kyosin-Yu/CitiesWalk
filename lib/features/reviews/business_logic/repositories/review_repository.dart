@@ -24,17 +24,8 @@ abstract interface class ReviewRepository {
     required String userId,
   });
 
-  Future<void> reportReview({
-    required String reviewId,
-    required String reporterId,
-    required ReviewReportReason reason,
-    String? details,
-  });
-
   Future<PlaceReview> toggleHelpful({
     required String reviewId,
     required String userId,
   });
 }
-
-enum ReviewReportReason { spam, offensive, misleading, other }
