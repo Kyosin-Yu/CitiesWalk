@@ -1,5 +1,6 @@
 import '../entities/completed_fitness_journey.dart';
 import '../entities/fitness_dashboard.dart';
+import '../entities/health_activity.dart';
 
 class FitnessDashboardService {
   const FitnessDashboardService();
@@ -9,6 +10,7 @@ class FitnessDashboardService {
     required List<CompletedFitnessJourney> journeys,
     int? ecoPoints,
     DateTime? now,
+    HealthActivitySnapshot? healthActivity,
   }) {
     final localNow = now ?? DateTime.now();
     final today = _dateOnly(localNow);
@@ -57,21 +59,21 @@ class FitnessDashboardService {
         journeys.where((journey) => journey.countsAsCompletedRoute).toList(),
         today,
       ),
-      stepsToday: _steps(todayJourneys),
-      stepsSource: _combinedSource(
-        todayJourneys,
-        (journey) => journey.stepsSource,
-      ),
-      walkingDistanceTodayKm: _distanceKm(todayJourneys),
-      walkingSource: _combinedSource(
-        todayJourneys,
-        (journey) => journey.distanceSource,
-      ),
-      caloriesTodayKcal: _calories(todayJourneys),
-      caloriesSource: _combinedSource(
-        todayJourneys,
-        (journey) => journey.caloriesSource,
-      ),
+      stepsToday: healthActivity?.stepsToday ?? _steps(todayJourneys),
+      stepsSource: healthActivity?.stepsToday != null
+          ? FitnessMetricSource.recorded
+          : _combinedSource(todayJourneys, (journey) => journey.stepsSource),
+      walkingDistanceTodayKm: healthActivity?.walkingDistanceMetersToday != null
+          ? healthActivity!.walkingDistanceMetersToday! / 1000
+          : _distanceKm(todayJourneys),
+      walkingSource: healthActivity?.walkingDistanceMetersToday != null
+          ? FitnessMetricSource.recorded
+          : _combinedSource(todayJourneys, (journey) => journey.distanceSource),
+      caloriesTodayKcal:
+          healthActivity?.activeCaloriesToday ?? _calories(todayJourneys),
+      caloriesSource: healthActivity?.activeCaloriesToday != null
+          ? FitnessMetricSource.recorded
+          : _combinedSource(todayJourneys, (journey) => journey.caloriesSource),
       carbonSavedTodayKg: _carbon(todayJourneys),
       carbonSource: _combinedSource(
         todayJourneys,
@@ -93,6 +95,7 @@ class FitnessDashboardService {
           .length,
       dailySummaries: dailySummaries,
       activityJourneyCount: journeys.length,
+      healthActivity: healthActivity,
     );
   }
 

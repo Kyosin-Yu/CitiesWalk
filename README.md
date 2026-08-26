@@ -130,6 +130,24 @@ Google login uses Supabase Auth and the mobile redirect URL
 The Flutter app stores only the Supabase publishable key. Google credentials
 remain in Google Cloud and Supabase configuration.
 
+### Android fitness data setup
+
+CitiesWalk reads today's steps, walking/running distance, and active calories
+through Google Health Connect. This authorization is separate from Google
+login: users must connect Health Connect from the Fitness page and grant the
+three read-only permissions.
+
+- Use an Android 9 (API 28) or newer physical device with Google Play services.
+- On Android 14 or newer, Health Connect is built into Android Settings.
+- On Android 13 or older, install Health Connect from Google Play when prompted.
+- Ensure Google Fit or another activity app is configured to write its data to
+  Health Connect if that app is the desired data source.
+
+Health Connect data replaces only today's dashboard steps, distance, and active
+calories. Eco Route remains the source for CO2 savings, route history, rewards,
+and verified journey completion. No health data is uploaded to Supabase by this
+integration.
+
 Run the application:
 
 ```bash

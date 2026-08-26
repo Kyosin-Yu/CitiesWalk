@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/fitness_journey_model.dart';
 import '../models/fitness_goal_model.dart';
 import '../models/fitness_recent_badge_model.dart';
+import '../models/fitness_route_point_model.dart';
 import '../../business_logic/entities/fitness_goal.dart';
 
 class SupabaseFitnessDataSource {
@@ -21,7 +22,8 @@ class SupabaseFitnessDataSource {
     final rows = await _client
         .from('eco_journeys')
         .select(
-          'id, origin_name, destination_name, '
+          'id, origin_name, origin_latitude, origin_longitude, '
+          'destination_name, destination_latitude, destination_longitude, '
           'estimated_walking_distance_meters, estimated_calories, '
           'estimated_carbon_saved_kg, actual_walking_distance_meters, '
           'actual_step_count, actual_calories_burned, '
@@ -35,6 +37,33 @@ class SupabaseFitnessDataSource {
     return (rows as List<dynamic>)
         .whereType<Map<String, dynamic>>()
         .map(FitnessJourneyModel.fromSupabaseRow)
+        .toList(growable: false);
+  }
+
+  Future<List<FitnessRoutePointModel>> fetchJourneyRoutePoints({
+    required String userId,
+    required String journeyId,
+  }) async {
+    final journey = await _client
+        .from('eco_journeys')
+        .select('id')
+        .eq('id', journeyId)
+        .eq('user_id', userId)
+        .inFilter('status', const ['completed', 'ended_early'])
+        .maybeSingle();
+    if (journey == null) {
+      throw const FormatException('Journey is unavailable for this user.');
+    }
+
+    final rows = await _client
+        .from('eco_journey_track_points')
+        .select('latitude, longitude, recorded_at')
+        .eq('journey_id', journeyId)
+        .order('recorded_at');
+
+    return (rows as List<dynamic>)
+        .whereType<Map<String, dynamic>>()
+        .map(FitnessRoutePointModel.fromSupabaseRow)
         .toList(growable: false);
   }
 

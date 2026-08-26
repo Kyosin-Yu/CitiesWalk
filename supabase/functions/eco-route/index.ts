@@ -14,7 +14,28 @@ const corsHeaders = {
 const googleRoutesUrl = 'https://routes.googleapis.com/directions/v2:computeRoutes'
 const googlePlacesUrl = 'https://places.googleapis.com/v1/places:searchText'
 const googleNearbyPlacesUrl = 'https://places.googleapis.com/v1/places:searchNearby'
-const railModes = new Set(['SUBWAY', 'TRAIN', 'LIGHT_RAIL', 'RAIL', 'MONORAIL'])
+// Google returns a more detailed vehicle value than the modes accepted by
+// TransitPreferences. In Malaysia, MRT/LRT and KTM services are commonly
+// labelled METRO_RAIL, COMMUTER_TRAIN, or HEAVY_RAIL. Treat every rail-based
+// vehicle as eligible, while continuing to reject BUS, taxi, and car legs.
+const railModes = new Set([
+  'SUBWAY',
+  'TRAIN',
+  'LIGHT_RAIL',
+  'RAIL',
+  'MONORAIL',
+  'METRO_RAIL',
+  'COMMUTER_TRAIN',
+  'HEAVY_RAIL',
+  'LONG_DISTANCE_TRAIN',
+  'HIGH_SPEED_TRAIN',
+  'TRAM',
+])
+const maximumWalkingOnlyDistanceMeters = 8000
+// Some Klang residential areas are just beyond the closest KTM station's
+// walkable catchment. Six kilometres still avoids an impractical full walk
+// while allowing a rail connection where Google has no local feeder rail.
+const maximumStationAccessWalkingMeters = 6000
 
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') {
@@ -220,9 +241,6 @@ async function searchPlacesForCategory(
   if (category === 'all') {
     return searchRecommendedPlaces(origin, apiKey, radiusKm)
   }
-  if (category === 'campus') {
-    return searchCampusPlaces(origin, apiKey, radiusKm)
-  }
   const placeTypes = nearbyPlaceTypes(category)
   if (placeTypes != null) {
     return searchNearbyPlacesByType(origin, apiKey, radiusKm, placeTypes)
@@ -322,6 +340,38 @@ async function searchNearbyPlacesByType(
     )
 }
 
+const railStationPlaceTypes = [
+  'subway_station',
+  'light_rail_station',
+  'train_station',
+]
+
+const namedRailStationPattern = /\b(ktm|ktmb|komuter|mrt|lrt|monorail|rapid\s*rail)\b/i
+
+/// Nearby Search can rank planned stations before operating ones. Combine it
+/// with text searches for the named Malaysian rail networks and put those
+/// confirmed rail results first, before falling back to generic station types.
+async function searchRailStations(
+  origin: Coordinates,
+  apiKey: string,
+) {
+  const results = await Promise.allSettled([
+    searchNearbyPlacesByType(origin, apiKey, 10, railStationPlaceTypes),
+    searchPlaces('KTM Komuter railway station', origin, apiKey, 10),
+    searchPlaces('MRT LRT monorail station', origin, apiKey, 10),
+  ])
+  const places = results.flatMap((result) =>
+    result.status === 'fulfilled' ? result.value : [],
+  )
+  const namedRailStations = places
+    .filter((place) => namedRailStationPattern.test(`${place.name} ${place.description}`))
+    .sort((first, second) => distanceBetweenKm(origin, first) - distanceBetweenKm(origin, second))
+  const fallbackStations = places
+    .filter((place) => !namedRailStationPattern.test(`${place.name} ${place.description}`))
+    .sort((first, second) => distanceBetweenKm(origin, first) - distanceBetweenKm(origin, second))
+  return deduplicatePlaces([...namedRailStations, ...fallbackStations]).slice(0, 3)
+}
+
 function mapGooglePlace(place: Record<string, unknown>): GooglePlace {
   const location = place.location as Record<string, unknown>
   return {
@@ -367,9 +417,29 @@ async function buildRailAndWalkRoute(origin: Coordinates, destination: Coordinat
   const walkingResponse = walkingResult.status === 'fulfilled' ? walkingResult.value : { routes: [] }
   const drivingResponse = drivingResult.status === 'fulfilled' ? drivingResult.value : { routes: [] }
   const transitRoute = findRailOnlyRoute(transitResponse.routes ?? [])
-  const selectedRoute = transitRoute ?? walkingResponse.routes?.[0]
+  const walkingRoute = walkingResponse.routes?.[0]
+  const walkingOnlyDistanceMeters = Number(walkingRoute?.distanceMeters ?? 0)
+  // A direct origin-to-destination transit query can prefer a feeder bus even
+  // when there is a practical rail trip. Station-assisted routing is only
+  // needed when walking is unavailable or impractically long; short nearby
+  // journeys must keep their direct walking route without extra API calls.
+  const stationAssistedRoute =
+    !transitRoute &&
+    (!walkingRoute || walkingOnlyDistanceMeters > maximumWalkingOnlyDistanceMeters)
+      ? await buildStationAssistedRailRoute(origin, destination, apiKey)
+      : null
+  const selectedRoute = transitRoute ?? stationAssistedRoute ?? walkingRoute
   if (!selectedRoute) {
     throw new Error('No eligible rail-and-walk or walking route is available for this journey.')
+  }
+  if (
+    !transitRoute &&
+    !stationAssistedRoute &&
+    walkingOnlyDistanceMeters > maximumWalkingOnlyDistanceMeters
+  ) {
+    throw new Error(
+      'No rail-and-walk route is currently available for this long journey. Walking the full distance is not recommended.',
+    )
   }
 
   const steps = selectedRoute.legs?.flatMap((leg: Record<string, unknown>) => leg.steps ?? []) ?? []
@@ -394,8 +464,85 @@ async function buildRailAndWalkRoute(origin: Coordinates, destination: Coordinat
   }
 }
 
+async function buildStationAssistedRailRoute(
+  origin: Coordinates,
+  destination: Coordinates,
+  apiKey: string,
+) {
+  let originStations: GooglePlace[]
+  let destinationStations: GooglePlace[]
+  try {
+    [originStations, destinationStations] = await Promise.all([
+      searchRailStations(origin, apiKey),
+      searchRailStations(destination, apiKey),
+    ])
+  } catch (error) {
+    console.warn('Rail station fallback is unavailable', error)
+    return null
+  }
+  const stationPairs = originStations
+    .slice(0, 2)
+    .flatMap((originStation) =>
+      destinationStations
+        .slice(0, 2)
+        .filter((destinationStation) => destinationStation.id !== originStation.id)
+        .map((destinationStation) => ({ originStation, destinationStation })),
+    )
+
+  const candidateResults = await Promise.allSettled(
+    stationPairs.map(async ({ originStation, destinationStation }) => {
+      const [accessResponse, transitResponse, egressResponse] = await Promise.all([
+        requestGoogleRoute(origin, originStation, 'WALK', apiKey),
+        requestGoogleRoute(originStation, destinationStation, 'TRANSIT', apiKey),
+        requestGoogleRoute(destinationStation, destination, 'WALK', apiKey),
+      ])
+      const accessRoute = accessResponse.routes?.[0]
+      const railRoute = findRailOnlyRoute(transitResponse.routes ?? [])
+      const egressRoute = egressResponse.routes?.[0]
+      if (!accessRoute || !railRoute || !egressRoute) return null
+
+      const accessDistance = Number(accessRoute.distanceMeters ?? 0)
+      const egressDistance = Number(egressRoute.distanceMeters ?? 0)
+      if (
+        accessDistance > maximumStationAccessWalkingMeters ||
+        egressDistance > maximumStationAccessWalkingMeters
+      ) {
+        return null
+      }
+      return combineRouteLegs([accessRoute, railRoute, egressRoute])
+    }),
+  )
+
+  return candidateResults
+    .filter(
+      (result): result is PromiseFulfilledResult<Record<string, unknown> | null> =>
+        result.status === 'fulfilled' && result.value != null,
+    )
+    .map((result) => result.value!)
+    .sort((first, second) => {
+      const walkingDifference = walkingDistanceMeters(first) - walkingDistanceMeters(second)
+      if (walkingDifference !== 0) return walkingDifference
+      return durationSeconds(first) - durationSeconds(second)
+    })[0]
+}
+
+function combineRouteLegs(routes: Record<string, unknown>[]) {
+  const distanceMeters = routes.reduce(
+    (total, route) => total + Number(route.distanceMeters ?? 0),
+    0,
+  )
+  const duration = routes.reduce((total, route) => total + durationSeconds(route), 0)
+  return {
+    distanceMeters,
+    duration: `${duration}s`,
+    legs: routes.flatMap(
+      (route) => (route.legs as Record<string, unknown>[] | undefined) ?? [],
+    ),
+  }
+}
+
 function findRailOnlyRoute(routes: Record<string, unknown>[]) {
-  return routes.find((route) => {
+  const eligibleRoutes = routes.filter((route) => {
     const steps = (route.legs as Record<string, unknown>[] | undefined)?.flatMap(
       (leg) => (leg.steps as Record<string, unknown>[] | undefined) ?? [],
     ) ?? []
@@ -407,6 +554,26 @@ function findRailOnlyRoute(routes: Record<string, unknown>[]) {
       return railModes.has(String(vehicle?.type ?? ''))
     })
   })
+  // Google can return up to three alternatives. Prefer the one with the
+  // least walking, then the shortest total duration when walking is equal.
+  return eligibleRoutes.sort((first, second) => {
+    const walkingDifference = walkingDistanceMeters(first) - walkingDistanceMeters(second)
+    if (walkingDifference !== 0) return walkingDifference
+    return durationSeconds(first) - durationSeconds(second)
+  })[0]
+}
+
+function walkingDistanceMeters(route: Record<string, unknown>) {
+  const steps = (route.legs as Record<string, unknown>[] | undefined)?.flatMap(
+    (leg) => (leg.steps as Record<string, unknown>[] | undefined) ?? [],
+  ) ?? []
+  return steps
+    .filter((step) => step.travelMode === 'WALK')
+    .reduce((total, step) => total + Number(step.distanceMeters ?? 0), 0)
+}
+
+function durationSeconds(route: Record<string, unknown>) {
+  return parseDurationSeconds(String(route.duration ?? route.staticDuration ?? '0s'))
 }
 
 function groupSteps(steps: Record<string, unknown>[]) {
@@ -462,8 +629,19 @@ async function requestGoogleRoute(
         : 'routes.distanceMeters',
     },
     body: JSON.stringify({
-      origin: { location: { latLng: origin } },
-      destination: { location: { latLng: destination } },
+      // Station search results carry display metadata. Routes only accepts a
+      // LatLng object, so pass coordinates explicitly rather than the full
+      // GooglePlace object.
+      origin: {
+        location: {
+          latLng: { latitude: origin.latitude, longitude: origin.longitude },
+        },
+      },
+      destination: {
+        location: {
+          latLng: { latitude: destination.latitude, longitude: destination.longitude },
+        },
+      },
       travelMode,
       languageCode: 'en',
       units: 'METRIC',
@@ -619,6 +797,12 @@ function parseDurationSeconds(value: string) {
 
 function friendlyCategory(primaryType: string) {
   if (
+    primaryType.includes('university') ||
+    primaryType.includes('school') ||
+    primaryType.includes('educational_institution') ||
+    primaryType.includes('academic_department')
+  ) return 'Campus'
+  if (
     primaryType.includes('restaurant') ||
     primaryType.includes('food') ||
     primaryType.includes('cafe') ||
@@ -652,6 +836,23 @@ function nearbyQuery(category: string) {
 function nearbyPlaceTypes(category: string): string[] | null {
   const categoryTypes: Record<string, string[]> = {
     food: ['restaurant', 'cafe', 'cafeteria', 'food_court'],
+    attractions: [
+      'amusement_park',
+      'aquarium',
+      'art_gallery',
+      'botanical_garden',
+      'zoo',
+    ],
+    history: ['historical_place', 'cultural_landmark', 'monument', 'museum'],
+    parks: ['park', 'botanical_garden'],
+    museums: ['museum', 'art_gallery'],
+    markets: ['market'],
+    campus: [
+      'university',
+      'school',
+      'educational_institution',
+      'academic_department',
+    ],
     malls: ['shopping_mall', 'department_store'],
     transit: [
       'subway_station',
@@ -665,11 +866,8 @@ function nearbyPlaceTypes(category: string): string[] | null {
 const campusDiscoveryTypes = [
   'university',
   'school',
-  'cafeteria',
-  'food_court',
-  'cafe',
-  'restaurant',
-  'stadium',
+  'educational_institution',
+  'academic_department',
 ]
 
 function response(data: unknown, status = 200) {

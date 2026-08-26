@@ -2,8 +2,11 @@ import 'package:citieswalk/features/fitness/business_logic/entities/completed_fi
 import 'package:citieswalk/features/fitness/business_logic/entities/fitness_goal.dart';
 import 'package:citieswalk/features/fitness/business_logic/entities/fitness_history.dart';
 import 'package:citieswalk/features/fitness/business_logic/entities/fitness_recent_badge.dart';
+import 'package:citieswalk/features/fitness/business_logic/entities/fitness_route_point.dart';
+import 'package:citieswalk/features/fitness/business_logic/entities/health_activity.dart';
 import 'package:citieswalk/features/fitness/business_logic/providers/fitness_controller.dart';
 import 'package:citieswalk/features/fitness/business_logic/repositories/fitness_repository.dart';
+import 'package:citieswalk/features/fitness/business_logic/repositories/health_activity_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -117,11 +120,59 @@ void main() {
     expect(controller.goals, hasLength(1));
     expect(controller.goalErrorMessage, contains('already exists'));
   });
+
+  test('loads and caches the recorded points for a history route', () async {
+    final repository = _FakeFitnessRepository();
+    final controller = FitnessController(
+      userId: 'user-1',
+      userName: 'Alex',
+      repository: repository,
+    );
+
+    await controller.loadJourneyRoute('journey-1');
+    await controller.loadJourneyRoute('journey-1');
+
+    expect(controller.hasLoadedRoute('journey-1'), isTrue);
+    expect(controller.routePointsFor('journey-1'), hasLength(2));
+    expect(controller.routeErrorFor('journey-1'), isNull);
+    expect(repository.routeFetchCount, 1);
+  });
+
+  test(
+    'connects Health Connect and refreshes today dashboard metrics',
+    () async {
+      final healthRepository = _FakeHealthActivityRepository();
+      final controller = FitnessController(
+        userId: 'user-1',
+        userName: 'Alex',
+        repository: _FakeFitnessRepository(),
+        healthActivityRepository: healthRepository,
+      );
+
+      await controller.loadDashboard();
+      expect(
+        controller.healthIntegrationStatus,
+        HealthIntegrationStatus.permissionRequired,
+      );
+
+      await controller.connectHealth();
+
+      expect(
+        controller.healthIntegrationStatus,
+        HealthIntegrationStatus.connected,
+      );
+      expect(controller.dashboard?.stepsToday, 6400);
+      expect(controller.dashboard?.walkingDistanceTodayKm, 4.9);
+      expect(controller.dashboard?.caloriesTodayKcal, 320);
+      expect(controller.dashboard?.weeklyCarbonSavedKg, .6);
+    },
+  );
 }
 
 class _FakeFitnessRepository implements FitnessRepository {
   final List<FitnessGoal> _goals = [];
   var _nextId = 1;
+  var routeFetchCount = 0;
 
   @override
   Future<List<CompletedFitnessJourney>> fetchCompletedJourneys({
@@ -140,6 +191,26 @@ class _FakeFitnessRepository implements FitnessRepository {
   @override
   Future<List<FitnessGoal>> fetchGoals({required String userId}) async =>
       List.of(_goals);
+
+  @override
+  Future<List<FitnessRoutePoint>> fetchJourneyRoutePoints({
+    required String userId,
+    required String journeyId,
+  }) async {
+    routeFetchCount++;
+    return [
+      FitnessRoutePoint(
+        latitude: 3.139,
+        longitude: 101.6869,
+        recordedAt: DateTime(2026, 8, 25, 8),
+      ),
+      FitnessRoutePoint(
+        latitude: 3.14,
+        longitude: 101.69,
+        recordedAt: DateTime(2026, 8, 25, 8, 5),
+      ),
+    ];
+  }
 
   @override
   Future<List<FitnessRecentBadge>> fetchRecentBadges({
@@ -207,6 +278,12 @@ class _FailingFitnessRepository implements FitnessRepository {
   Future<List<FitnessGoal>> fetchGoals({required String userId}) async => [];
 
   @override
+  Future<List<FitnessRoutePoint>> fetchJourneyRoutePoints({
+    required String userId,
+    required String journeyId,
+  }) => Future.error(Exception('offline'));
+
+  @override
   Future<List<FitnessRecentBadge>> fetchRecentBadges({
     required String userId,
   }) async => [];
@@ -222,4 +299,29 @@ class _FailingFitnessRepository implements FitnessRepository {
     required String userId,
     required String goalId,
   }) => throw UnimplementedError();
+}
+
+class _FakeHealthActivityRepository implements HealthActivityRepository {
+  @override
+  Future<HealthActivityAccess> loadToday() async => const HealthActivityAccess(
+    status: HealthIntegrationStatus.permissionRequired,
+  );
+
+  @override
+  Future<HealthActivityAccess> requestAccessAndLoadToday() async =>
+      HealthActivityAccess(
+        status: HealthIntegrationStatus.connected,
+        snapshot: HealthActivitySnapshot(
+          syncedAt: DateTime.now(),
+          stepsToday: 6400,
+          walkingDistanceMetersToday: 4900,
+          activeCaloriesToday: 320,
+        ),
+      );
+
+  @override
+  Future<void> installHealthConnect() async {}
+
+  @override
+  Future<void> revokeAccess() async {}
 }

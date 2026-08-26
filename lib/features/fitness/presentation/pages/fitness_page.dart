@@ -6,6 +6,7 @@ import '../../business_logic/providers/fitness_controller.dart';
 import '../widgets/carbon_savings_chart.dart';
 import '../widgets/fitness_goals_section.dart';
 import '../widgets/fitness_header.dart';
+import '../widgets/health_connect_card.dart';
 import '../widgets/metrics_grid.dart';
 import '../widgets/recent_activity_section.dart';
 import '../widgets/recent_badges_section.dart';
@@ -92,6 +93,16 @@ class FitnessPage extends StatelessWidget {
                       const SizedBox(height: 12),
                     ],
                     MetricsGrid(dashboard: dashboard),
+                    const SizedBox(height: 12),
+                    HealthConnectCard(
+                      status: controller.healthIntegrationStatus,
+                      snapshot: controller.healthActivity,
+                      message: controller.healthMessage,
+                      isBusy: controller.isHealthSyncing,
+                      onConnect: controller.connectHealth,
+                      onDisconnect: controller.disconnectHealth,
+                      onInstall: controller.installHealthConnect,
+                    ),
                     const SizedBox(height: 12),
                     WeeklyWalkingChart(
                       days: dashboard.dailySummaries,

@@ -72,6 +72,10 @@ void main() {
     expect(summary.carbonSavedKg, .5);
     expect(summary.steps, 2700);
     expect(summary.buckets, hasLength(2));
+    expect(summary.journeys.map((journey) => journey.id), [
+      'evening-walk',
+      'morning-walk',
+    ]);
   });
 
   test('groups weekly and monthly history by active day', () {

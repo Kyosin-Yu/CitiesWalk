@@ -442,6 +442,8 @@ class _EcoRoutePageState extends State<EcoRoutePage>
                                 ...controller.destinations.map(
                                   (destination) => DestinationCard(
                                     destination: destination,
+                                    nearbyDistanceKm: controller
+                                        .nearbyDistanceKm(destination),
                                     reviewSummary: controller.reviewSummaryFor(
                                       destination,
                                     ),
@@ -836,34 +838,42 @@ class _DestinationSearch extends StatefulWidget {
 }
 
 class _DestinationSearchState extends State<_DestinationSearch> {
-  Timer? _debounce;
+  final _controller = TextEditingController();
 
   @override
   void dispose() {
-    _debounce?.cancel();
+    _controller.dispose();
     super.dispose();
   }
 
-  void _handleChanged(String value) {
-    _debounce?.cancel();
-    final query = value.trim();
+  void _submitSearch([String? value]) {
+    final query = (value ?? _controller.text).trim();
     if (query.isEmpty) {
       widget.onChanged('');
       return;
     }
-    _debounce = Timer(
-      const Duration(milliseconds: 400),
-      () => widget.onChanged(query),
-    );
+    widget.onChanged(query);
+  }
+
+  void _handleChanged(String value) {
+    if (value.trim().isEmpty) _submitSearch(value);
   }
 
   @override
   Widget build(BuildContext context) {
     return TextField(
+      controller: _controller,
       onChanged: _handleChanged,
+      onSubmitted: _submitSearch,
+      textInputAction: TextInputAction.search,
       decoration: InputDecoration(
-        hintText: 'Search parks, food, landmarks…',
+        hintText: 'Search an address, park, food, landmark…',
         prefixIcon: const Icon(Icons.search_rounded),
+        suffixIcon: IconButton(
+          tooltip: 'Search',
+          onPressed: _submitSearch,
+          icon: const Icon(Icons.arrow_forward_rounded),
+        ),
         filled: true,
         fillColor: AppColors.surface,
         contentPadding: const EdgeInsets.symmetric(vertical: 16),

@@ -51,6 +51,7 @@ class FitnessHistoryService {
       caloriesKcal: _calories(selected),
       carbonSavedKg: _carbon(selected),
       buckets: buckets,
+      journeys: List.unmodifiable(selected),
     );
   }
 

@@ -9,11 +9,13 @@ class DestinationCard extends StatelessWidget {
   const DestinationCard({
     super.key,
     required this.destination,
+    required this.nearbyDistanceKm,
     required this.reviewSummary,
     required this.onTap,
   });
 
   final EcoDestination destination;
+  final double nearbyDistanceKm;
   final DestinationReviewSummary reviewSummary;
   final VoidCallback onTap;
 
@@ -85,6 +87,25 @@ class DestinationCard extends StatelessWidget {
                         style: Theme.of(
                           context,
                         ).textTheme.bodyMedium?.copyWith(fontSize: 12),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.near_me_outlined,
+                            size: 13,
+                            color: AppColors.primary,
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            '${nearbyDistanceKm.toStringAsFixed(1)} km away',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ],
                       ),
                       if (reviewSummary.hasReviews) ...[
                         const SizedBox(height: 4),

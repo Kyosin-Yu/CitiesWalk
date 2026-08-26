@@ -58,7 +58,6 @@ class EcoRouteController extends ChangeNotifier {
   EcoLocation? _lastTrackedLocation;
   EcoLocation? _lastPersistedLocation;
   double _trackedDistanceKm = 0;
-  double _trackedDistanceAtRouteStartKm = 0;
   double _trackedWalkingDistanceKm = 0;
   double _trackedTransitDistanceKm = 0;
   int _estimatedStepCount = 0;
@@ -73,8 +72,8 @@ class EcoRouteController extends ChangeNotifier {
   _LocationSettingsAction? _locationSettingsAction;
   bool _retryLocationAfterSettings = false;
 
-  static const _offRouteThresholdKm = 0.09;
-  static const _arrivalThresholdKm = 0.06;
+  static const _offRouteThresholdKm = 0.06;
+  static const _arrivalThresholdKm = 0.03;
   // Provisional MVP conversion for a GPS-derived walking estimate. This is
   // deliberately not presented as a hardware pedometer reading.
   static const _estimatedStepsPerWalkingKm = 1300;
@@ -114,6 +113,13 @@ class EcoRouteController extends ChangeNotifier {
 
   DestinationReviewSummary reviewSummaryFor(EcoDestination destination) =>
       _reviewSummaries[destination.id] ?? DestinationReviewSummary.empty;
+
+  /// Straight-line GPS distance used for the nearby recommendation bands.
+  /// This is intentionally different from the walking or rail distance shown
+  /// after a route has been planned.
+  double nearbyDistanceKm(EcoDestination destination) =>
+      _distanceBetween(_origin, destination.location);
+
   DestinationReviewSummary get selectedDestinationReviewSummary {
     final destination = _route?.destination;
     return destination == null
@@ -121,29 +127,26 @@ class EcoRouteController extends ChangeNotifier {
         : reviewSummaryFor(destination);
   }
 
-  double get remainingDistanceKm => _route == null
-      ? 0
-      : math.max(
-          0,
-          _route!.totalDistanceKm -
-              (_trackedDistanceKm - _trackedDistanceAtRouteStartKm),
-        );
+  double get remainingDistanceKm {
+    final route = _route;
+    if (route == null) return 0;
+    return route.totalDistanceKm * (1 - journeyProgress);
+  }
+
   double get journeyProgress {
     final route = _route;
     if (route == null || route.totalDistanceKm <= 0) return 0;
-    return (1 - (remainingDistanceKm / route.totalDistanceKm))
-        .clamp(0, 1)
-        .toDouble();
+    if (isAtDestination) return 1;
+    final currentLocation = _currentJourneyLocation;
+    if (currentLocation == null) return 0;
+    return _routeProgressAt(currentLocation);
   }
 
   bool get isJourneyTracking => _journey?.status == EcoJourneyStatus.inProgress;
   String? get nextInstruction {
     final selectedRoute = _route;
     if (selectedRoute == null || !isJourneyTracking) return null;
-    final progress = selectedRoute.totalDistanceKm == 0
-        ? 0.0
-        : (_trackedDistanceKm - _trackedDistanceAtRouteStartKm) /
-              selectedRoute.totalDistanceKm;
+    final progress = journeyProgress;
     final segmentIndex = (progress * selectedRoute.segments.length)
         .floor()
         .clamp(0, selectedRoute.segments.length - 1);
@@ -446,12 +449,21 @@ class EcoRouteController extends ChangeNotifier {
   }
 
   Future<void> _loadNearbyDestinations() async {
-    _destinations = await repository.fetchNearbyDestinations(
+    final fetchedDestinations = await repository.fetchNearbyDestinations(
       origin: _origin,
       category: _selectedCategory,
       nearbyDistance: _selectedNearbyDistance,
     );
-    _destinations = [..._destinations]
+    // Keep a client-side guard as well as the Edge Function filter. This
+    // prevents an outdated deployed function or an API result outside the
+    // requested ring from appearing under an incorrect distance label.
+    _destinations = fetchedDestinations
+        .where(
+          (destination) => _selectedNearbyDistance.includes(
+            nearbyDistanceKm(destination),
+          ),
+        )
+        .toList(growable: false)
       ..sort(
         (first, second) => _distanceSquared(
           first.location,
@@ -571,7 +583,6 @@ class EcoRouteController extends ChangeNotifier {
         destination: selectedRoute.destination,
       );
       _route = updatedRoute;
-      _trackedDistanceAtRouteStartKm = _trackedDistanceKm;
       _lastRerouteAt = DateTime.now();
       _journey = EcoJourney(
         id: activeJourney?.id,
@@ -878,7 +889,6 @@ class EcoRouteController extends ChangeNotifier {
     _lastTrackedLocation = null;
     _lastPersistedLocation = null;
     _trackedDistanceKm = 0;
-    _trackedDistanceAtRouteStartKm = 0;
     _trackedWalkingDistanceKm = 0;
     _trackedTransitDistanceKm = 0;
     _estimatedStepCount = 0;
@@ -907,6 +917,41 @@ class EcoRouteController extends ChangeNotifier {
             math.sin(longitudeDelta / 2) *
             math.sin(longitudeDelta / 2);
     return earthRadiusKm * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+  }
+
+  /// Estimates position along the drawn route instead of treating every metre
+  /// travelled as progress. This prevents a detour, a car ride, or a GPS jump
+  /// from filling the progress bar before the route is actually followed.
+  double _routeProgressAt(EcoLocation location) {
+    final selectedRoute = _route;
+    if (selectedRoute == null) return 0;
+    final routePoints = <EcoLocation>[
+      selectedRoute.origin,
+      for (final segment in selectedRoute.segments) ...segment.mapPath,
+      selectedRoute.destination.location,
+    ];
+    if (routePoints.length < 2) return 0;
+
+    var totalRouteLengthKm = 0.0;
+    var bestDistanceFromRouteKm = double.infinity;
+    var bestDistanceAlongRouteKm = 0.0;
+    for (var index = 0; index < routePoints.length - 1; index++) {
+      final start = routePoints[index];
+      final end = routePoints[index + 1];
+      final segmentLengthKm = _distanceBetween(start, end);
+      if (segmentLengthKm == 0) continue;
+      final projection = _projectOntoLineSegment(location, start, end);
+      if (projection.$1 < bestDistanceFromRouteKm) {
+        bestDistanceFromRouteKm = projection.$1;
+        bestDistanceAlongRouteKm =
+            totalRouteLengthKm + segmentLengthKm * projection.$2;
+      }
+      totalRouteLengthKm += segmentLengthKm;
+    }
+    if (totalRouteLengthKm == 0 || !bestDistanceFromRouteKm.isFinite) return 0;
+    return (bestDistanceAlongRouteKm / totalRouteLengthKm)
+        .clamp(0.0, 1.0)
+        .toDouble();
   }
 
   EcoRouteSegment? _nearestRouteSegment(EcoLocation location) {
@@ -955,6 +1000,14 @@ class EcoRouteController extends ChangeNotifier {
     EcoLocation point,
     EcoLocation start,
     EcoLocation end,
+  ) => _projectOntoLineSegment(point, start, end).$1;
+
+  /// Returns the shortest distance to a route line and the projected position
+  /// on that line (0 at its start and 1 at its end).
+  (double, double) _projectOntoLineSegment(
+    EcoLocation point,
+    EcoLocation start,
+    EcoLocation end,
   ) {
     const latitudeKm = 110.574;
     final longitudeKm = 111.320 * math.cos(_degreesToRadians(point.latitude));
@@ -964,13 +1017,13 @@ class EcoRouteController extends ChangeNotifier {
     final pointY = (point.latitude - start.latitude) * latitudeKm;
     final segmentLengthSquared = endX * endX + endY * endY;
     if (segmentLengthSquared == 0) {
-      return math.sqrt(pointX * pointX + pointY * pointY);
+      return (math.sqrt(pointX * pointX + pointY * pointY), 0);
     }
     final projection = ((pointX * endX + pointY * endY) / segmentLengthSquared)
         .clamp(0.0, 1.0);
     final deltaX = pointX - projection * endX;
     final deltaY = pointY - projection * endY;
-    return math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    return (math.sqrt(deltaX * deltaX + deltaY * deltaY), projection);
   }
 
   double _degreesToRadians(double degrees) => degrees * math.pi / 180;
@@ -979,6 +1032,9 @@ class EcoRouteController extends ChangeNotifier {
     final detail = error.toString();
     if (detail.contains('Google Maps service is not configured')) {
       return 'Live route service is not configured yet. Add the Google server key to Supabase Edge Function secrets.';
+    }
+    if (detail.contains('No rail-and-walk route is currently available')) {
+      return 'No rail-and-walk route is available for this long journey right now. Try another time or choose a destination closer to a rail station.';
     }
     return 'A live rail-and-walk route could not be created. Check your connection and try another destination.';
   }

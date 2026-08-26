@@ -63,80 +63,89 @@ class _PointsHistoryScreenState extends State<PointsHistoryScreen> {
                 ? 'This month'
                 : _monthLabel(activeMonth);
 
-            return CustomScrollView(
-              slivers: <Widget>[
-                SliverToBoxAdapter(
-                  child: _HistoryHeader(
-                    total: total,
-                    journeys: visibleTransactions.length,
-                    carbon: carbon,
-                    periodLabel: periodLabel,
-                    showsAllActivity: _showAllActivity,
+            return RefreshIndicator(
+              onRefresh: controller.load,
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: <Widget>[
+                  SliverToBoxAdapter(
+                    child: _HistoryHeader(
+                      total: total,
+                      journeys: visibleTransactions
+                          .where((item) => item.type != JourneyType.fitnessGoal)
+                          .length,
+                      carbon: carbon,
+                      periodLabel: periodLabel,
+                      showsAllActivity: _showAllActivity,
+                    ),
                   ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-                  sliver: SliverList(
-                    delegate: SliverChildListDelegate(<Widget>[
-                      Row(
-                        children: <Widget>[
-                          const Text(
-                            'Activity Log',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 17,
-                            ),
-                          ),
-                          const Spacer(),
-                          PopupMenuButton<int>(
-                            tooltip: 'Filter activity period',
-                            position: PopupMenuPosition.under,
-                            onSelected: (index) => setState(() {
-                              _showAllActivity = index == -1;
-                              if (index >= 0) _selectedMonth = months[index];
-                            }),
-                            itemBuilder: (context) => <PopupMenuEntry<int>>[
-                              CheckedPopupMenuItem<int>(
-                                value: -1,
-                                checked: _showAllActivity,
-                                child: const Text('All activity'),
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                    sliver: SliverList(
+                      delegate: SliverChildListDelegate(<Widget>[
+                        Row(
+                          children: <Widget>[
+                            const Text(
+                              'Activity Log',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 17,
                               ),
-                              if (months.isNotEmpty) const PopupMenuDivider(),
-                              ...List<PopupMenuEntry<int>>.generate(
-                                months.length,
-                                (index) => CheckedPopupMenuItem<int>(
-                                  value: index,
-                                  checked:
-                                      !_showAllActivity &&
-                                      _isSameMonth(activeMonth, months[index]),
-                                  child: Text(_monthLabel(months[index])),
+                            ),
+                            const Spacer(),
+                            PopupMenuButton<int>(
+                              tooltip: 'Filter activity period',
+                              position: PopupMenuPosition.under,
+                              onSelected: (index) => setState(() {
+                                _showAllActivity = index == -1;
+                                if (index >= 0) _selectedMonth = months[index];
+                              }),
+                              itemBuilder: (context) => <PopupMenuEntry<int>>[
+                                CheckedPopupMenuItem<int>(
+                                  value: -1,
+                                  checked: _showAllActivity,
+                                  child: const Text('All activity'),
                                 ),
+                                if (months.isNotEmpty) const PopupMenuDivider(),
+                                ...List<PopupMenuEntry<int>>.generate(
+                                  months.length,
+                                  (index) => CheckedPopupMenuItem<int>(
+                                    value: index,
+                                    checked:
+                                        !_showAllActivity &&
+                                        _isSameMonth(
+                                          activeMonth,
+                                          months[index],
+                                        ),
+                                    child: Text(_monthLabel(months[index])),
+                                  ),
+                                ),
+                              ],
+                              child: _PeriodButton(label: periodLabel),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        if (visibleTransactions.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 48),
+                            child: Center(
+                              child: Text(
+                                'No points have been earned in this period yet.',
                               ),
-                            ],
-                            child: _PeriodButton(label: periodLabel),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      if (visibleTransactions.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 48),
-                          child: Center(
-                            child: Text(
-                              'No points have been earned in this period yet.',
                             ),
                           ),
+                        ...visibleTransactions.map(
+                          (item) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _TransactionCard(transaction: item),
+                          ),
                         ),
-                      ...visibleTransactions.map(
-                        (item) => Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: _TransactionCard(transaction: item),
-                        ),
-                      ),
-                    ]),
+                      ]),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             );
           },
         ),
@@ -412,7 +421,7 @@ class _TransactionCard extends StatelessWidget {
               ),
               const SizedBox(height: 7),
               Text(
-                '${_dateTimeLabel(transaction.completedAt)}  •  ${transaction.type == JourneyType.walk ? 'Walk' : 'Transit'}',
+                '${_dateTimeLabel(transaction.completedAt)}  •  ${_transactionTypeLabel(transaction.type)}',
                 style: const TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 11,
@@ -514,7 +523,14 @@ IconData _iconForTransaction(String icon) => switch (icon) {
   'city' => Icons.location_city_rounded,
   'accountBalance' => Icons.account_balance_rounded,
   'storefront' => Icons.storefront_rounded,
+  'emojiEvents' => Icons.emoji_events_rounded,
   _ => Icons.eco_rounded,
+};
+
+String _transactionTypeLabel(JourneyType type) => switch (type) {
+  JourneyType.walk => 'Walk',
+  JourneyType.transit => 'Transit',
+  JourneyType.fitnessGoal => 'Fitness goal',
 };
 
 String _formatPoints(int value) {

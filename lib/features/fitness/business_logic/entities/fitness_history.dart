@@ -1,3 +1,5 @@
+import 'completed_fitness_journey.dart';
+
 enum FitnessHistoryPeriod {
   daily('Daily'),
   weekly('Weekly'),
@@ -43,6 +45,7 @@ class FitnessHistorySummary {
     required this.caloriesKcal,
     required this.carbonSavedKg,
     required this.buckets,
+    required this.journeys,
   });
 
   final FitnessHistoryPeriod period;
@@ -57,6 +60,7 @@ class FitnessHistorySummary {
   final int caloriesKcal;
   final double carbonSavedKg;
   final List<FitnessHistoryBucket> buckets;
+  final List<CompletedFitnessJourney> journeys;
 
   bool get hasActivity => journeyCount > 0;
 }

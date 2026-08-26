@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../entities/badge.dart';
 import '../entities/leaderboard_entry.dart';
@@ -39,7 +40,16 @@ class RewardsController extends ChangeNotifier {
       _leaderboard = result[0] as List<LeaderboardEntry>;
       _badges = result[1] as List<RewardBadge>;
       _pointHistory = result[2] as List<PointTransaction>;
+      debugPrint('Loaded ${_leaderboard.length} leaderboard entries.');
       _status = RewardsStatus.success;
+    } on PostgrestException catch (error, stackTrace) {
+      debugPrint(
+        'Supabase error while loading Rewards data: '
+        '${error.message} (code: ${error.code})',
+      );
+      debugPrintStack(stackTrace: stackTrace);
+      _status = RewardsStatus.failure;
+      _errorMessage = 'Unable to load rewards at the moment.';
     } catch (error, stackTrace) {
       debugPrint('Unable to load Rewards data: $error');
       debugPrintStack(stackTrace: stackTrace);

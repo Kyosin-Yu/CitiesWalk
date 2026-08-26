@@ -19,7 +19,7 @@ class SupabaseRewardsDataSource implements RewardsDataSource {
   static const _badgeColumns =
       'id, title, description, icon_key, target_value, display_order';
   static const _transactionColumns =
-      'id, journey_id, points, walking_distance_km, carbon_saved_kg, '
+      'id, journey_id, source_type, points, walking_distance_km, carbon_saved_kg, '
       'calories_burned, journey_completed_at';
 
   @override
@@ -127,23 +127,10 @@ class SupabaseRewardsDataSource implements RewardsDataSource {
 
     return rows
         .map((row) {
-          final journey = journeysById[row['journey_id'] as String];
-          final origin = _nonEmptyString(journey?['origin_name']);
-          final destination = _nonEmptyString(journey?['destination_name']);
-          final hasTransit =
-              _number(journey?['actual_transit_distance_meters']) > 0;
-          return PointTransactionModel(
-            id: row['id'] as String,
-            title: _journeyTitle(origin: origin, destination: destination),
-            completedAt: DateTime.parse(
-              row['journey_completed_at'] as String,
-            ).toLocal(),
-            points: _number(row['points']).toInt(),
-            carbonSavedKg: _number(row['carbon_saved_kg']).toDouble(),
-            calories: _number(row['calories_burned']).toInt(),
-            distanceKm: _number(row['walking_distance_km']).toDouble(),
-            journeyType: hasTransit ? 'transit' : 'walk',
-            icon: hasTransit ? 'accountBalance' : 'directionsWalk',
+          final journeyId = row['journey_id'] as String?;
+          return PointTransactionModel.fromRewardTransactionRow(
+            row,
+            journey: journeyId == null ? null : journeysById[journeyId],
           );
         })
         .toList(growable: false);
@@ -211,11 +198,6 @@ class SupabaseRewardsDataSource implements RewardsDataSource {
   String _initials(String name) {
     final parts = name.trim().split(RegExp(r'\s+'));
     return parts.take(2).map((part) => part[0].toUpperCase()).join();
-  }
-
-  String _journeyTitle({String? origin, String? destination}) {
-    if (origin != null && destination != null) return '$origin → $destination';
-    return destination ?? origin ?? 'Completed eco-journey';
   }
 
   String _badgeIcon(dynamic iconKey) {

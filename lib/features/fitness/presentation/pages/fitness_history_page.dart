@@ -3,10 +3,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../business_logic/entities/completed_fitness_journey.dart';
 import '../../business_logic/entities/fitness_history.dart';
 import '../../business_logic/providers/fitness_controller.dart';
 import '../widgets/fitness_history_calendar.dart';
 import '../widgets/fitness_history_overview.dart';
+import 'fitness_route_detail_page.dart';
 
 class FitnessHistoryPage extends StatelessWidget {
   const FitnessHistoryPage({super.key});
@@ -53,9 +55,28 @@ class FitnessHistoryPage extends StatelessWidget {
                 onDateSelected: controller.selectHistoryDate,
               ),
               const SizedBox(height: 16),
-              FitnessHistoryOverview(summary: summary),
+              FitnessHistoryOverview(
+                summary: summary,
+                onViewRoute: (journey) =>
+                    _openRoute(context, controller, journey),
+              ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+
+  void _openRoute(
+    BuildContext context,
+    FitnessController controller,
+    CompletedFitnessJourney journey,
+  ) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ChangeNotifierProvider.value(
+          value: controller,
+          child: FitnessRouteDetailPage(journey: journey),
         ),
       ),
     );
