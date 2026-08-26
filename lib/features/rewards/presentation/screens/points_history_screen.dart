@@ -71,7 +71,9 @@ class _PointsHistoryScreenState extends State<PointsHistoryScreen> {
                   SliverToBoxAdapter(
                     child: _HistoryHeader(
                       total: total,
-                      journeys: visibleTransactions.length,
+                      journeys: visibleTransactions
+                          .where((item) => item.type != JourneyType.fitnessGoal)
+                          .length,
                       carbon: carbon,
                       periodLabel: periodLabel,
                       showsAllActivity: _showAllActivity,
@@ -419,7 +421,7 @@ class _TransactionCard extends StatelessWidget {
               ),
               const SizedBox(height: 7),
               Text(
-                '${_dateTimeLabel(transaction.completedAt)}  •  ${transaction.type == JourneyType.walk ? 'Walk' : 'Transit'}',
+                '${_dateTimeLabel(transaction.completedAt)}  •  ${_transactionTypeLabel(transaction.type)}',
                 style: const TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 11,
@@ -521,7 +523,14 @@ IconData _iconForTransaction(String icon) => switch (icon) {
   'city' => Icons.location_city_rounded,
   'accountBalance' => Icons.account_balance_rounded,
   'storefront' => Icons.storefront_rounded,
+  'emojiEvents' => Icons.emoji_events_rounded,
   _ => Icons.eco_rounded,
+};
+
+String _transactionTypeLabel(JourneyType type) => switch (type) {
+  JourneyType.walk => 'Walk',
+  JourneyType.transit => 'Transit',
+  JourneyType.fitnessGoal => 'Fitness goal',
 };
 
 String _formatPoints(int value) {
