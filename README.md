@@ -197,6 +197,14 @@ Completed journeys store GPS-derived walking and transit distance separately;
 the displayed step count is an estimate derived from walking distance, not a
 hardware pedometer count.
 
+Completing an eligible journey atomically inserts its immutable Rewards
+transaction through a private database trigger. Reward policy `v1` rounds the
+walking distance and carbon saving to three decimal places, then awards
+`round(30 × walking km + 45 × carbon kg)` points. Very short journeys may
+therefore earn zero points, but their zero-point transaction is still retained
+and displayed in Points History. The unique journey constraint keeps repeated
+completion attempts idempotent.
+
 ## Team Workflow
 
 1. Create or select a GitHub issue or Trello task.
