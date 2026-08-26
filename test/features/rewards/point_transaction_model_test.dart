@@ -49,4 +49,31 @@ void main() {
     expect(transaction.type, JourneyType.transit);
     expect(transaction.icon, 'accountBalance');
   });
+
+  test('keeps a zero-point short journey in point history', () {
+    final model = PointTransactionModel.fromRewardTransactionRow(
+      <String, dynamic>{
+        'id': 'short-journey-transaction',
+        'journey_id': 'short-journey',
+        'source_type': 'journey',
+        'points': 0,
+        'walking_distance_km': 0.005,
+        'carbon_saved_kg': 0,
+        'calories_burned': 0,
+        'journey_completed_at': '2026-08-26T07:30:00Z',
+      },
+      journey: <String, dynamic>{
+        'origin_name': 'GPS location',
+        'destination_name': 'Nearby stop',
+        'actual_transit_distance_meters': 0,
+      },
+    );
+
+    final transaction = model.toEntity();
+
+    expect(transaction.points, 0);
+    expect(transaction.distanceKm, 0.005);
+    expect(transaction.title, 'GPS location → Nearby stop');
+    expect(transaction.type, JourneyType.walk);
+  });
 }

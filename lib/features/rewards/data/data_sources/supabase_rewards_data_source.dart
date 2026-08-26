@@ -8,8 +8,9 @@ import 'rewards_data_source.dart';
 
 /// Reads the current user's rewards data from the shared Supabase project.
 ///
-/// Point creation remains server-side in the `rewards-process` Edge Function.
-/// This data source is read-only and relies on the database RLS policies.
+/// Point creation remains server-side in the completed-journey database
+/// trigger. This data source is read-only and relies on the database RLS
+/// policies.
 class SupabaseRewardsDataSource implements RewardsDataSource {
   const SupabaseRewardsDataSource(this._client, this._ecoPointsService);
 

@@ -140,21 +140,14 @@ class SupabaseJourneyDataSource {
           'ended_at': endedAt.toIso8601String(),
           'updated_at': endedAt.toIso8601String(),
         })
-        .eq('id', journeyId);
+        .eq('id', journeyId)
+        .select('id')
+        .single();
 
-    // The protected function owns the points policy and inserts the immutable
-    // transaction. Its existing insert trigger refreshes badges and the weekly
-    // leaderboard before this call returns.
-    final response = await _client.functions.invoke(
-      'rewards-process',
-      body: <String, String>{'journeyId': journeyId},
-    );
-    final reward = response.data;
-    if (reward is! Map || reward['points'] is! num) {
-      throw const FormatException(
-        'The Rewards service returned an invalid response.',
-      );
-    }
+    // The completed-journey database trigger inserts the immutable point
+    // transaction and refreshes badges and the weekly leaderboard in this same
+    // PATCH transaction. A successful response therefore means the complete
+    // pipeline committed, including valid zero-point journeys.
   }
 
   Future<void> endJourneyEarly({

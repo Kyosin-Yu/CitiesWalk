@@ -1,5 +1,8 @@
 import 'package:citieswalk/features/rewards/business_logic/entities/leaderboard_entry.dart';
+import 'package:citieswalk/features/rewards/business_logic/entities/badge.dart';
+import 'package:citieswalk/features/rewards/business_logic/entities/point_transaction.dart';
 import 'package:citieswalk/features/rewards/business_logic/providers/rewards_controller.dart';
+import 'package:citieswalk/features/rewards/business_logic/repositories/rewards_repository.dart';
 import 'package:citieswalk/features/rewards/data/data_sources/rewards_mock_data_source.dart';
 import 'package:citieswalk/features/rewards/data/repositories/rewards_repository_impl.dart';
 import 'package:citieswalk/features/rewards/presentation/screens/achievement_locker_screen.dart';
@@ -31,6 +34,35 @@ class _RecordingRewardsController extends RewardsController {
     loadCount += 1;
     return super.load();
   }
+}
+
+class _ZeroPointRewardsRepository implements RewardsRepository {
+  const _ZeroPointRewardsRepository();
+
+  @override
+  Future<List<RewardBadge>> getBadges() async => const <RewardBadge>[];
+
+  @override
+  Future<int> getCurrentUserPoints() async => 0;
+
+  @override
+  Future<List<LeaderboardEntry>> getLeaderboard() async =>
+      const <LeaderboardEntry>[];
+
+  @override
+  Future<List<PointTransaction>> getPointHistory() async => <PointTransaction>[
+    PointTransaction(
+      id: 'short-journey',
+      title: 'GPS location → Nearby stop',
+      completedAt: DateTime(2026, 8, 26, 15, 30),
+      points: 0,
+      carbonSavedKg: 0,
+      calories: 0,
+      distanceKm: 0.005,
+      type: JourneyType.walk,
+      icon: 'directionsWalk',
+    ),
+  ];
 }
 
 void main() {
@@ -124,6 +156,26 @@ void main() {
     expect(find.text('Bukit Bintang Green Walk'), findsOneWidget);
     expect(find.text('River of Life Transit Route'), findsOneWidget);
     expect(find.textContaining('KLCC Park'), findsNothing);
+  });
+
+  testWidgets('Points history displays a zero-point short journey', (
+    WidgetTester tester,
+  ) async {
+    final controller = RewardsController(const _ZeroPointRewardsRepository())
+      ..load();
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider<RewardsController>.value(
+        value: controller,
+        child: const MaterialApp(home: PointsHistoryScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('GPS location → Nearby stop'), findsOneWidget);
+    expect(find.text('+0 pts'), findsOneWidget);
+    expect(find.text('📍 0.0 km'), findsOneWidget);
+    expect(find.text('1'), findsOneWidget);
   });
 
   testWidgets('View all expands the remaining leaderboard rankings', (
