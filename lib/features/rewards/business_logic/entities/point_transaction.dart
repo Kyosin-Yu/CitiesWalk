@@ -1,6 +1,6 @@
-enum JourneyType { walk, transit }
+enum JourneyType { walk, transit, fitnessGoal }
 
-/// Points awarded for one completed eco-journey.
+/// One entry in the user's rewards point history.
 class PointTransaction {
   const PointTransaction({
     required this.id,
