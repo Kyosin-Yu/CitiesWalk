@@ -420,9 +420,10 @@ async function buildRailAndWalkRoute(origin: Coordinates, destination: Coordinat
   const walkingRoute = walkingResponse.routes?.[0]
   const walkingOnlyDistanceMeters = Number(walkingRoute?.distanceMeters ?? 0)
   // A direct origin-to-destination transit query can prefer a feeder bus even
-  // when there is a practical rail trip. Station-assisted routing is only
-  // needed when walking is unavailable or impractically long; short nearby
-  // journeys must keep their direct walking route without extra API calls.
+  // when there is a practical rail trip. For long journeys, try station-
+  // assisted rail routing first. If no eligible rail option exists, retain
+  // Google's pedestrian route so every accessible selected place remains
+  // reviewable and navigable.
   const stationAssistedRoute =
     !transitRoute &&
     (!walkingRoute || walkingOnlyDistanceMeters > maximumWalkingOnlyDistanceMeters)
@@ -432,16 +433,6 @@ async function buildRailAndWalkRoute(origin: Coordinates, destination: Coordinat
   if (!selectedRoute) {
     throw new Error('No eligible rail-and-walk or walking route is available for this journey.')
   }
-  if (
-    !transitRoute &&
-    !stationAssistedRoute &&
-    walkingOnlyDistanceMeters > maximumWalkingOnlyDistanceMeters
-  ) {
-    throw new Error(
-      'No rail-and-walk route is currently available for this long journey. Walking the full distance is not recommended.',
-    )
-  }
-
   const steps = selectedRoute.legs?.flatMap((leg: Record<string, unknown>) => leg.steps ?? []) ?? []
   const routeSteps = steps
     .filter(
