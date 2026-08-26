@@ -94,15 +94,7 @@ class FitnessPage extends StatelessWidget {
                     ],
                     MetricsGrid(dashboard: dashboard),
                     const SizedBox(height: 12),
-                    HealthConnectCard(
-                      status: controller.healthIntegrationStatus,
-                      snapshot: controller.healthActivity,
-                      message: controller.healthMessage,
-                      isBusy: controller.isHealthSyncing,
-                      onConnect: controller.connectHealth,
-                      onDisconnect: controller.disconnectHealth,
-                      onInstall: controller.installHealthConnect,
-                    ),
+                    const HealthConnectCard(),
                     const SizedBox(height: 12),
                     WeeklyWalkingChart(
                       days: dashboard.dailySummaries,
