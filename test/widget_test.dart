@@ -1,5 +1,8 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:citieswalk/features/reviews/business_logic/entities/place_review.dart';
 import 'package:citieswalk/features/reviews/business_logic/providers/reviews_provider.dart';
 import 'package:citieswalk/features/reviews/data/data_sources/review_image_data_source.dart';
 import 'package:citieswalk/features/reviews/data/datasources/review_seed_data.dart';
@@ -184,12 +187,70 @@ void main() {
     await tester.tap(sarahReview);
     await tester.pumpAndSettle();
     expect(find.text('Review Detail'), findsOneWidget);
+    await tester.tap(find.text('Mark Helpful (0)'));
+    await tester.pumpAndSettle();
+    expect(find.text('Helpful (1)'), findsOneWidget);
+    expect(find.text('Report'), findsNothing);
     await tester.tap(find.byTooltip('Back'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('My Reviews'));
     await tester.pumpAndSettle();
     expect(find.text('My Reviews'), findsOneWidget);
+  });
+
+  testWidgets('a posted review photo opens in a full screen preview', (
+    WidgetTester tester,
+  ) async {
+    final destination = reviewDestinations.first;
+    final repository = InMemoryReviewRepository();
+    await repository.addReview(
+      destination: destination,
+      review: PlaceReview(
+        id: 'photo-review',
+        userId: 'photo-owner',
+        authorName: 'Photo reviewer',
+        rating: 5,
+        comment: 'The photo can be opened after the review is posted.',
+        createdAt: DateTime(2026, 8, 24),
+        photos: [
+          ReviewPhoto(
+            id: 'photo-1',
+            name: 'photo-test.png',
+            bytes: Uint8List(0),
+          ),
+        ],
+      ),
+    );
+    final provider = ReviewsProvider(
+      repository,
+      ReviewImageRepositoryImpl(ReviewImageDataSource()),
+      destination,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReviewsScreen(
+          destination: destination,
+          reviewsProvider: provider,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final photoStrip = find.byKey(
+      const ValueKey('review-photo-strip-photo-review'),
+    );
+    await tester.scrollUntilVisible(
+      photoStrip,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(photoStrip, findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('review-photo-photo-1')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('1 of 1'), findsOneWidget);
   });
 
   testWidgets('user can edit and delete their own review', (
@@ -231,6 +292,7 @@ void main() {
     expect(find.text('Delete Review?'), findsOneWidget);
     await tester.tap(find.text('Delete').last);
     await tester.pumpAndSettle();
+    expect(find.text('Review deleted.'), findsOneWidget);
     expect(find.text('No reviews written'), findsOneWidget);
   });
 }

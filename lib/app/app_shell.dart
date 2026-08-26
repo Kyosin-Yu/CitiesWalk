@@ -193,9 +193,15 @@ class _AppShellState extends State<AppShell> {
           ),
         ),
       );
+      if (!mounted) {
+        return;
+      }
       _homeReviewSummaries.value = Map.unmodifiable(Map.fromEntries(entries));
     } catch (_) {
       // The Home dashboard remains usable when community reviews are offline.
+      if (!mounted) {
+        return;
+      }
       _homeReviewSummaries.value = const {};
     }
   }

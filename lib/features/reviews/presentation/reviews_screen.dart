@@ -4,7 +4,6 @@ import '../../../app/theme/app_colors.dart';
 import '../business_logic/entities/place_review.dart';
 import '../business_logic/entities/review_destination.dart';
 import '../business_logic/providers/reviews_provider.dart';
-import '../business_logic/repositories/review_repository.dart';
 
 enum _ReviewPage { list, detail, write, submitted, mine, edit }
 
@@ -92,6 +91,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
           _ReviewPage.list => _ReviewsListPage(
             destination: _destination,
             reviews: _reviewsProvider.reviews,
+            currentUserId: _reviewsProvider.currentUserId,
             isLoading: _reviewsProvider.isLoading,
             errorMessage: _reviewsProvider.errorMessage,
             onRetry: _reviewsProvider.loadReviews,
@@ -112,9 +112,11 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
           _ReviewPage.detail => _ReviewDetailPage(
             destination: _destination,
             review: _selectedReview!,
+            isUpdatingHelpful: _reviewsProvider.isUpdatingHelpful(
+              _selectedReview!.id,
+            ),
             onBack: () => _showPage(_ReviewPage.list),
             onHelpful: () => _toggleHelpful(_selectedReview!),
-            onReport: () => _showReportSheet(_selectedReview!),
           ),
           _ReviewPage.write => _ReviewEditorPage(
             title: 'Write a Review',
@@ -201,7 +203,15 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
     );
     if (confirmed == true && mounted) {
       final deleted = await _reviewsProvider.deleteMyReview();
-      if (!mounted || deleted || _reviewsProvider.errorMessage == null) return;
+      if (!mounted) return;
+      if (deleted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Review deleted.')),
+        );
+        _showPage(_ReviewPage.list);
+        return;
+      }
+      if (_reviewsProvider.errorMessage == null) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(_reviewsProvider.errorMessage!)));
@@ -241,71 +251,13 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
     }
     setState(() => _selectedReview = updated);
   }
-
-  Future<void> _showReportSheet(PlaceReview review) async {
-    if (review.userId == _reviewsProvider.currentUserId) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('You cannot report your own review.')),
-      );
-      return;
-    }
-    final reason = await showModalBottomSheet<ReviewReportReason>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Report review',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 8),
-              const Text('Choose why this review needs moderator attention.'),
-              const SizedBox(height: 12),
-              for (final option in ReviewReportReason.values)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(_reportReasonLabel(option)),
-                  onTap: () => Navigator.pop(context, option),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-    if (reason == null) return;
-    final reported = await _reviewsProvider.reportReview(
-      reviewId: review.id,
-      reason: reason,
-    );
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          reported
-              ? 'Thanks. Your report has been sent for review.'
-              : _reviewsProvider.errorMessage ?? 'Unable to send the report.',
-        ),
-      ),
-    );
-  }
 }
-
-String _reportReasonLabel(ReviewReportReason reason) => switch (reason) {
-  ReviewReportReason.spam => 'Spam or advertising',
-  ReviewReportReason.offensive => 'Offensive or abusive content',
-  ReviewReportReason.misleading => 'Misleading information',
-  ReviewReportReason.other => 'Other concern',
-};
 
 class _ReviewsListPage extends StatelessWidget {
   const _ReviewsListPage({
     required this.destination,
     required this.reviews,
+    required this.currentUserId,
     required this.isLoading,
     required this.errorMessage,
     required this.onRetry,
@@ -321,6 +273,7 @@ class _ReviewsListPage extends StatelessWidget {
 
   final ReviewDestination destination;
   final List<PlaceReview> reviews;
+  final String currentUserId;
   final bool isLoading;
   final String? errorMessage;
   final Future<void> Function() onRetry;
@@ -363,7 +316,7 @@ class _ReviewsListPage extends StatelessWidget {
               padding: const EdgeInsets.all(18),
               child: Column(
                 children: [
-                  const _DestinationImage(),
+                  _DestinationInfo(destination: destination),
                   const SizedBox(height: 10),
                   _RatingSummary(reviews: reviews),
                   const SizedBox(height: 20),
@@ -415,6 +368,36 @@ class _ReviewsListPage extends StatelessWidget {
                         ],
                       ),
                     )
+                  else if (reviews.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 34,
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.rate_review_outlined,
+                            size: 34,
+                            color: AppColors.primary,
+                          ),
+                          SizedBox(height: 10),
+                          Text(
+                            'No reviews yet.',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Be the first to share your experience!',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: AppColors.textSecondary),
+                          ),
+                        ],
+                      ),
+                    )
                   else if (sorted.isEmpty)
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 24),
@@ -428,6 +411,7 @@ class _ReviewsListPage extends StatelessWidget {
                     ...sorted.map(
                       (review) => _ReviewPreview(
                         review: review,
+                        isCurrentUsersReview: review.userId == currentUserId,
                         onTap: () => onReviewTap(review),
                       ),
                     ),
@@ -442,6 +426,7 @@ class _ReviewsListPage extends StatelessWidget {
           child: FloatingActionButton.extended(
             onPressed: onWrite,
             backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
             icon: const Icon(Icons.add),
             label: const Text('Write a Review'),
           ),
@@ -455,15 +440,15 @@ class _ReviewDetailPage extends StatelessWidget {
   const _ReviewDetailPage({
     required this.destination,
     required this.review,
+    required this.isUpdatingHelpful,
     required this.onBack,
     required this.onHelpful,
-    required this.onReport,
   });
   final ReviewDestination destination;
   final PlaceReview review;
+  final bool isUpdatingHelpful;
   final VoidCallback onBack;
   final VoidCallback onHelpful;
-  final VoidCallback onReport;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -488,30 +473,29 @@ class _ReviewDetailPage extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    InkWell(
-                      onTap: onHelpful,
-                      borderRadius: BorderRadius.circular(12),
-                      child: Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Text(
-                          '${review.isMarkedHelpful ? '♥' : '♧'}  ${review.isMarkedHelpful ? 'Helpful' : 'Mark Helpful'} (${review.helpfulCount})',
-                          style: TextStyle(
-                            color: review.isMarkedHelpful
-                                ? AppColors.primary
-                                : AppColors.textSecondary,
-                          ),
-                        ),
+                    OutlinedButton.icon(
+                      onPressed: isUpdatingHelpful ? null : onHelpful,
+                      icon: isUpdatingHelpful
+                          ? const SizedBox(
+                              height: 16,
+                              width: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Icon(
+                              review.isMarkedHelpful
+                                  ? Icons.favorite_rounded
+                                  : Icons.favorite_border_rounded,
+                              size: 18,
+                            ),
+                      label: Text(
+                        isUpdatingHelpful
+                            ? 'Updating...'
+                            : '${review.isMarkedHelpful ? 'Helpful' : 'Mark Helpful'} (${review.helpfulCount})',
                       ),
-                    ),
-                    InkWell(
-                      onTap: onReport,
-                      borderRadius: BorderRadius.circular(12),
-                      child: const Padding(
-                        padding: EdgeInsets.all(8),
-                        child: Text(
-                          '⚑  Report',
-                          style: TextStyle(color: AppColors.textSecondary),
-                        ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: review.isMarkedHelpful
+                            ? AppColors.primary
+                            : AppColors.textSecondary,
                       ),
                     ),
                   ],
@@ -925,24 +909,43 @@ class _HeroHeader extends StatelessWidget {
   );
 }
 
-class _DestinationImage extends StatelessWidget {
-  const _DestinationImage();
+class _DestinationInfo extends StatelessWidget {
+  const _DestinationInfo({required this.destination});
+
+  final ReviewDestination destination;
+
   @override
-  Widget build(BuildContext context) => Container(
-    height: 87,
-    alignment: Alignment.bottomLeft,
-    padding: const EdgeInsets.all(10),
-    decoration: BoxDecoration(
-      gradient: const LinearGradient(
-        colors: [Color(0xFF203D57), Color(0xFFC68759)],
-      ),
-      borderRadius: BorderRadius.circular(14),
-    ),
-    child: const Chip(
-      label: Text('Heritage Walk', style: TextStyle(fontSize: 9)),
-      visualDensity: VisualDensity.compact,
-    ),
-  );
+  Widget build(BuildContext context) {
+    final category = destination.category.trim();
+    final label = category.isEmpty
+        ? _destinationArea(destination.name)
+        : '${_destinationArea(destination.name)} · $category';
+    return Row(
+      children: [
+        const Icon(
+          Icons.location_on_outlined,
+          size: 17,
+          color: AppColors.primary,
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+String _destinationArea(String destinationName) {
+  final match = RegExp(r'\(([^)]+)\)').firstMatch(destinationName);
+  return match?.group(1)?.trim() ?? destinationName;
 }
 
 class _RatingSummary extends StatelessWidget {
@@ -1120,8 +1123,13 @@ class _RatingFilterBar extends StatelessWidget {
 }
 
 class _ReviewPreview extends StatelessWidget {
-  const _ReviewPreview({required this.review, required this.onTap});
+  const _ReviewPreview({
+    required this.review,
+    required this.isCurrentUsersReview,
+    required this.onTap,
+  });
   final PlaceReview review;
+  final bool isCurrentUsersReview;
   final VoidCallback onTap;
   @override
   Widget build(BuildContext context) => Card(
@@ -1151,6 +1159,10 @@ class _ReviewPreview extends StatelessWidget {
                     fontSize: 12,
                   ),
                 ),
+                if (isCurrentUsersReview) ...[
+                  const SizedBox(width: 6),
+                  const _OwnReviewBadge(),
+                ],
                 const Spacer(),
                 Text(
                   _formatDate(review.createdAt),
@@ -1170,6 +1182,32 @@ class _ReviewPreview extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 11, height: 1.4),
             ),
+            if (review.photos.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Semantics(
+                label: 'Photos attached to this review',
+                child: SizedBox(
+                  height: 80,
+                  child: ListView.separated(
+                    key: ValueKey('review-photo-strip-${review.id}'),
+                    scrollDirection: Axis.horizontal,
+                    itemCount: review.photos.length,
+                    separatorBuilder: (_, _) => const SizedBox(width: 8),
+                    itemBuilder: (context, index) => SizedBox(
+                      width: 100,
+                      child: _PhotoTile(
+                        photo: review.photos[index],
+                        onPreview: () => _openPhotoPreview(
+                          context,
+                          review.photos,
+                          index,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -1223,6 +1261,29 @@ class _ReviewContentCard extends StatelessWidget {
             style: const TextStyle(fontSize: 12, height: 1.55),
           ),
         ],
+      ),
+    ),
+  );
+}
+
+class _OwnReviewBadge extends StatelessWidget {
+  const _OwnReviewBadge();
+
+  @override
+  Widget build(BuildContext context) => const DecoratedBox(
+    decoration: BoxDecoration(
+      color: Color(0xFFE3F2E7),
+      borderRadius: BorderRadius.all(Radius.circular(20)),
+    ),
+    child: Padding(
+      padding: EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      child: Text(
+        'Your review',
+        style: TextStyle(
+          color: AppColors.primary,
+          fontSize: 9,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     ),
   );
@@ -1354,10 +1415,17 @@ class _PhotosCard extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: photos
-                    .map(
+                  .map(
                       (photo) => _PhotoTile(
                         photo: photo,
                         onRemove: editable ? () => onRemove?.call(photo) : null,
+                        onPreview: editable
+                            ? null
+                            : () => _openPhotoPreview(
+                                context,
+                                photos,
+                                photos.indexOf(photo),
+                              ),
                       ),
                     )
                     .toList(),
@@ -1370,30 +1438,65 @@ class _PhotosCard extends StatelessWidget {
 }
 
 class _PhotoTile extends StatelessWidget {
-  const _PhotoTile({required this.photo, this.onRemove});
+  const _PhotoTile({required this.photo, this.onRemove, this.onPreview});
 
   final ReviewPhoto photo;
   final VoidCallback? onRemove;
+  final VoidCallback? onPreview;
 
   @override
-  Widget build(BuildContext context) => Stack(
-    children: [
-      ClipRRect(borderRadius: BorderRadius.circular(10), child: _buildImage()),
-      if (onRemove != null)
-        Positioned(
-          top: 2,
-          right: 2,
-          child: IconButton.filledTonal(
-            tooltip: 'Remove ${photo.name}',
-            onPressed: onRemove,
-            icon: const Icon(Icons.close, size: 15),
-            visualDensity: VisualDensity.compact,
-          ),
+  Widget build(BuildContext context) {
+    final canPreview = onPreview != null;
+    return Semantics(
+      button: canPreview,
+      label: canPreview ? 'Open ${photo.name} in full screen' : photo.name,
+      child: InkWell(
+        key: ValueKey('review-photo-${photo.id}'),
+        onTap: canPreview ? onPreview : null,
+        borderRadius: BorderRadius.circular(10),
+        child: Stack(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: _buildThumbnail(),
+            ),
+            if (canPreview)
+              const Positioned(
+                right: 5,
+                bottom: 5,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.all(4),
+                    child: Icon(
+                      Icons.zoom_in_rounded,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
+                ),
+              ),
+            if (onRemove != null)
+              Positioned(
+                top: 2,
+                right: 2,
+                child: IconButton.filledTonal(
+                  tooltip: 'Remove ${photo.name}',
+                  onPressed: onRemove,
+                  icon: const Icon(Icons.close, size: 15),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+          ],
         ),
-    ],
-  );
+      ),
+    );
+  }
 
-  Widget _buildImage() {
+  Widget _buildThumbnail() {
     const fallback = SizedBox(
       height: 80,
       width: 100,
@@ -1426,6 +1529,102 @@ class _PhotoTile extends StatelessWidget {
   }
 }
 
+void _openPhotoPreview(
+  BuildContext context,
+  List<ReviewPhoto> photos,
+  int initialIndex,
+) {
+  Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => _ReviewPhotoPreviewPage(
+        photos: photos,
+        initialIndex: initialIndex,
+      ),
+    ),
+  );
+}
+
+class _ReviewPhotoPreviewPage extends StatefulWidget {
+  const _ReviewPhotoPreviewPage({
+    required this.photos,
+    required this.initialIndex,
+  });
+
+  final List<ReviewPhoto> photos;
+  final int initialIndex;
+
+  @override
+  State<_ReviewPhotoPreviewPage> createState() =>
+      _ReviewPhotoPreviewPageState();
+}
+
+class _ReviewPhotoPreviewPageState extends State<_ReviewPhotoPreviewPage> {
+  late final PageController _pageController = PageController(
+    initialPage: widget.initialIndex,
+  );
+  late int _currentIndex = widget.initialIndex;
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: Colors.black,
+    appBar: AppBar(
+      backgroundColor: Colors.black,
+      foregroundColor: Colors.white,
+      title: Text('${_currentIndex + 1} of ${widget.photos.length}'),
+    ),
+    body: SafeArea(
+      child: PageView.builder(
+        controller: _pageController,
+        itemCount: widget.photos.length,
+        onPageChanged: (index) => setState(() => _currentIndex = index),
+        itemBuilder: (context, index) => Center(
+          child: InteractiveViewer(
+            minScale: 0.8,
+            maxScale: 4,
+            child: _buildPreviewImage(widget.photos[index]),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  Widget _buildPreviewImage(ReviewPhoto photo) {
+    const fallback = SizedBox(
+      height: 180,
+      width: 240,
+      child: ColoredBox(
+        color: Color(0xFF28342B),
+        child: Center(
+          child: Icon(Icons.broken_image_outlined, color: Colors.white),
+        ),
+      ),
+    );
+    final bytes = photo.bytes;
+    if (bytes != null) {
+      return Image.memory(
+        bytes,
+        fit: BoxFit.contain,
+        errorBuilder: (_, _, _) => fallback,
+      );
+    }
+    final signedUrl = photo.signedUrl;
+    if (signedUrl != null) {
+      return Image.network(
+        signedUrl,
+        fit: BoxFit.contain,
+        errorBuilder: (_, _, _) => fallback,
+      );
+    }
+    return fallback;
+  }
+}
+
 class _Stars extends StatelessWidget {
   const _Stars({required this.rating, required this.size});
   final int rating;
@@ -1445,6 +1644,11 @@ class _Stars extends StatelessWidget {
 }
 
 String _formatDate(DateTime date) {
+  final difference = DateTime.now().difference(date);
+  if (difference.inMinutes < 1) return 'Just now';
+  if (difference.inHours < 1) return '${difference.inMinutes}m ago';
+  if (difference.inDays < 1) return '${difference.inHours}h ago';
+  if (difference.inDays < 7) return '${difference.inDays}d ago';
   const months = [
     'Jan',
     'Feb',
