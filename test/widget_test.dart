@@ -250,7 +250,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('review-photo-photo-1')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Photo preview'), findsOneWidget);
+    expect(find.text('1 of 1'), findsOneWidget);
   });
 
   testWidgets('user can edit and delete their own review', (
@@ -292,6 +292,7 @@ void main() {
     expect(find.text('Delete Review?'), findsOneWidget);
     await tester.tap(find.text('Delete').last);
     await tester.pumpAndSettle();
+    expect(find.text('Review deleted.'), findsOneWidget);
     expect(find.text('No reviews written'), findsOneWidget);
   });
 }

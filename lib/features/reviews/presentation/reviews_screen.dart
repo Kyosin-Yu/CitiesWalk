@@ -91,6 +91,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
           _ReviewPage.list => _ReviewsListPage(
             destination: _destination,
             reviews: _reviewsProvider.reviews,
+            currentUserId: _reviewsProvider.currentUserId,
             isLoading: _reviewsProvider.isLoading,
             errorMessage: _reviewsProvider.errorMessage,
             onRetry: _reviewsProvider.loadReviews,
@@ -202,7 +203,15 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
     );
     if (confirmed == true && mounted) {
       final deleted = await _reviewsProvider.deleteMyReview();
-      if (!mounted || deleted || _reviewsProvider.errorMessage == null) return;
+      if (!mounted) return;
+      if (deleted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Review deleted.')),
+        );
+        _showPage(_ReviewPage.list);
+        return;
+      }
+      if (_reviewsProvider.errorMessage == null) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(_reviewsProvider.errorMessage!)));
@@ -248,6 +257,7 @@ class _ReviewsListPage extends StatelessWidget {
   const _ReviewsListPage({
     required this.destination,
     required this.reviews,
+    required this.currentUserId,
     required this.isLoading,
     required this.errorMessage,
     required this.onRetry,
@@ -263,6 +273,7 @@ class _ReviewsListPage extends StatelessWidget {
 
   final ReviewDestination destination;
   final List<PlaceReview> reviews;
+  final String currentUserId;
   final bool isLoading;
   final String? errorMessage;
   final Future<void> Function() onRetry;
@@ -400,6 +411,7 @@ class _ReviewsListPage extends StatelessWidget {
                     ...sorted.map(
                       (review) => _ReviewPreview(
                         review: review,
+                        isCurrentUsersReview: review.userId == currentUserId,
                         onTap: () => onReviewTap(review),
                       ),
                     ),
@@ -1111,8 +1123,13 @@ class _RatingFilterBar extends StatelessWidget {
 }
 
 class _ReviewPreview extends StatelessWidget {
-  const _ReviewPreview({required this.review, required this.onTap});
+  const _ReviewPreview({
+    required this.review,
+    required this.isCurrentUsersReview,
+    required this.onTap,
+  });
   final PlaceReview review;
+  final bool isCurrentUsersReview;
   final VoidCallback onTap;
   @override
   Widget build(BuildContext context) => Card(
@@ -1142,6 +1159,10 @@ class _ReviewPreview extends StatelessWidget {
                     fontSize: 12,
                   ),
                 ),
+                if (isCurrentUsersReview) ...[
+                  const SizedBox(width: 6),
+                  const _OwnReviewBadge(),
+                ],
                 const Spacer(),
                 Text(
                   _formatDate(review.createdAt),
@@ -1174,7 +1195,14 @@ class _ReviewPreview extends StatelessWidget {
                     separatorBuilder: (_, _) => const SizedBox(width: 8),
                     itemBuilder: (context, index) => SizedBox(
                       width: 100,
-                      child: _PhotoTile(photo: review.photos[index]),
+                      child: _PhotoTile(
+                        photo: review.photos[index],
+                        onPreview: () => _openPhotoPreview(
+                          context,
+                          review.photos,
+                          index,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -1233,6 +1261,29 @@ class _ReviewContentCard extends StatelessWidget {
             style: const TextStyle(fontSize: 12, height: 1.55),
           ),
         ],
+      ),
+    ),
+  );
+}
+
+class _OwnReviewBadge extends StatelessWidget {
+  const _OwnReviewBadge();
+
+  @override
+  Widget build(BuildContext context) => const DecoratedBox(
+    decoration: BoxDecoration(
+      color: Color(0xFFE3F2E7),
+      borderRadius: BorderRadius.all(Radius.circular(20)),
+    ),
+    child: Padding(
+      padding: EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      child: Text(
+        'Your review',
+        style: TextStyle(
+          color: AppColors.primary,
+          fontSize: 9,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     ),
   );
@@ -1364,10 +1415,17 @@ class _PhotosCard extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: photos
-                    .map(
+                  .map(
                       (photo) => _PhotoTile(
                         photo: photo,
                         onRemove: editable ? () => onRemove?.call(photo) : null,
+                        onPreview: editable
+                            ? null
+                            : () => _openPhotoPreview(
+                                context,
+                                photos,
+                                photos.indexOf(photo),
+                              ),
                       ),
                     )
                     .toList(),
@@ -1380,27 +1438,21 @@ class _PhotosCard extends StatelessWidget {
 }
 
 class _PhotoTile extends StatelessWidget {
-  const _PhotoTile({required this.photo, this.onRemove});
+  const _PhotoTile({required this.photo, this.onRemove, this.onPreview});
 
   final ReviewPhoto photo;
   final VoidCallback? onRemove;
+  final VoidCallback? onPreview;
 
   @override
   Widget build(BuildContext context) {
-    final canPreview =
-        onRemove == null && (photo.bytes != null || photo.signedUrl != null);
+    final canPreview = onPreview != null;
     return Semantics(
       button: canPreview,
       label: canPreview ? 'Open ${photo.name} in full screen' : photo.name,
       child: InkWell(
         key: ValueKey('review-photo-${photo.id}'),
-        onTap: canPreview
-            ? () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => _ReviewPhotoPreviewPage(photo: photo),
-                ),
-              )
-            : null,
+        onTap: canPreview ? onPreview : null,
         borderRadius: BorderRadius.circular(10),
         child: Stack(
           children: [
@@ -1477,10 +1529,46 @@ class _PhotoTile extends StatelessWidget {
   }
 }
 
-class _ReviewPhotoPreviewPage extends StatelessWidget {
-  const _ReviewPhotoPreviewPage({required this.photo});
+void _openPhotoPreview(
+  BuildContext context,
+  List<ReviewPhoto> photos,
+  int initialIndex,
+) {
+  Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => _ReviewPhotoPreviewPage(
+        photos: photos,
+        initialIndex: initialIndex,
+      ),
+    ),
+  );
+}
 
-  final ReviewPhoto photo;
+class _ReviewPhotoPreviewPage extends StatefulWidget {
+  const _ReviewPhotoPreviewPage({
+    required this.photos,
+    required this.initialIndex,
+  });
+
+  final List<ReviewPhoto> photos;
+  final int initialIndex;
+
+  @override
+  State<_ReviewPhotoPreviewPage> createState() =>
+      _ReviewPhotoPreviewPageState();
+}
+
+class _ReviewPhotoPreviewPageState extends State<_ReviewPhotoPreviewPage> {
+  late final PageController _pageController = PageController(
+    initialPage: widget.initialIndex,
+  );
+  late int _currentIndex = widget.initialIndex;
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -1488,20 +1576,25 @@ class _ReviewPhotoPreviewPage extends StatelessWidget {
     appBar: AppBar(
       backgroundColor: Colors.black,
       foregroundColor: Colors.white,
-      title: const Text('Photo preview'),
+      title: Text('${_currentIndex + 1} of ${widget.photos.length}'),
     ),
     body: SafeArea(
-      child: Center(
-        child: InteractiveViewer(
-          minScale: 0.8,
-          maxScale: 4,
-          child: _buildPreviewImage(),
+      child: PageView.builder(
+        controller: _pageController,
+        itemCount: widget.photos.length,
+        onPageChanged: (index) => setState(() => _currentIndex = index),
+        itemBuilder: (context, index) => Center(
+          child: InteractiveViewer(
+            minScale: 0.8,
+            maxScale: 4,
+            child: _buildPreviewImage(widget.photos[index]),
+          ),
         ),
       ),
     ),
   );
 
-  Widget _buildPreviewImage() {
+  Widget _buildPreviewImage(ReviewPhoto photo) {
     const fallback = SizedBox(
       height: 180,
       width: 240,
@@ -1551,6 +1644,11 @@ class _Stars extends StatelessWidget {
 }
 
 String _formatDate(DateTime date) {
+  final difference = DateTime.now().difference(date);
+  if (difference.inMinutes < 1) return 'Just now';
+  if (difference.inHours < 1) return '${difference.inMinutes}m ago';
+  if (difference.inDays < 1) return '${difference.inHours}h ago';
+  if (difference.inDays < 7) return '${difference.inDays}d ago';
   const months = [
     'Jan',
     'Feb',
