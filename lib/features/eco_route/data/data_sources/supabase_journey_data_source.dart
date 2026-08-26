@@ -123,23 +123,39 @@ class SupabaseJourneyDataSource {
     required int actualStepCount,
     required int actualCaloriesBurned,
     required double actualCarbonSavedKg,
-  }) => _client
-      .from('eco_journeys')
-      .update({
-        'status': 'completed',
-        ..._routeEstimateFields(finalRoute),
-        'actual_duration_minutes': actualDurationMinutes,
-        'actual_walking_distance_meters': (actualWalkingDistanceKm * 1000)
-            .round(),
-        'actual_transit_distance_meters': (actualTransitDistanceKm * 1000)
-            .round(),
-        'actual_step_count': actualStepCount,
-        'actual_calories_burned': actualCaloriesBurned,
-        'actual_carbon_saved_kg': actualCarbonSavedKg,
-        'ended_at': endedAt.toIso8601String(),
-        'updated_at': endedAt.toIso8601String(),
-      })
-      .eq('id', journeyId);
+  }) async {
+    await _client
+        .from('eco_journeys')
+        .update({
+          'status': 'completed',
+          ..._routeEstimateFields(finalRoute),
+          'actual_duration_minutes': actualDurationMinutes,
+          'actual_walking_distance_meters': (actualWalkingDistanceKm * 1000)
+              .round(),
+          'actual_transit_distance_meters': (actualTransitDistanceKm * 1000)
+              .round(),
+          'actual_step_count': actualStepCount,
+          'actual_calories_burned': actualCaloriesBurned,
+          'actual_carbon_saved_kg': actualCarbonSavedKg,
+          'ended_at': endedAt.toIso8601String(),
+          'updated_at': endedAt.toIso8601String(),
+        })
+        .eq('id', journeyId);
+
+    // The protected function owns the points policy and inserts the immutable
+    // transaction. Its existing insert trigger refreshes badges and the weekly
+    // leaderboard before this call returns.
+    final response = await _client.functions.invoke(
+      'rewards-process',
+      body: <String, String>{'journeyId': journeyId},
+    );
+    final reward = response.data;
+    if (reward is! Map || reward['points'] is! num) {
+      throw const FormatException(
+        'The Rewards service returned an invalid response.',
+      );
+    }
+  }
 
   Future<void> endJourneyEarly({
     required String journeyId,
