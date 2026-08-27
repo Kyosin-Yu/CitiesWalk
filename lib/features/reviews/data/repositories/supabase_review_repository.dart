@@ -2,6 +2,7 @@ import '../../../../core/models/destination_review_summary.dart';
 import '../../../../core/services/destination_review_summary_service.dart';
 import '../../business_logic/entities/place_review.dart';
 import '../../business_logic/entities/review_destination.dart';
+import '../../business_logic/entities/user_review.dart';
 import '../../business_logic/repositories/review_repository.dart';
 import '../data_sources/supabase_review_data_source.dart';
 
@@ -15,6 +16,10 @@ class SupabaseReviewRepository
   @override
   Future<List<PlaceReview>> fetchReviews(String destinationId) =>
       _dataSource.fetchReviews(destinationId);
+
+  @override
+  Future<List<UserReview>> fetchUserReviews(String userId) =>
+      _dataSource.fetchUserReviews(userId);
 
   @override
   Future<PlaceReview> addReview({

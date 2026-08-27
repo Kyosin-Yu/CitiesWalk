@@ -1,6 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/di/service_locator.dart';
+import '../../business_logic/providers/settings_controller.dart';
+import '../localization/settings_strings.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -10,186 +15,207 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  bool _pushNotifications = true;
-  bool _journeyAlerts = true;
-  bool _reviewResponses = false;
+  late final SettingsController _controller = sl<SettingsController>();
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_controller.load());
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        titleSpacing: 0,
-        leading: IconButton(
-          onPressed: () => Navigator.of(context).pop(),
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+    return ListenableBuilder(
+      listenable: _controller,
+      builder: (context, _) {
+        final strings = SettingsStrings.of(context);
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: AppBar(
+            backgroundColor: AppColors.background,
+            elevation: 0,
+            titleSpacing: 0,
+            leading: IconButton(
+              tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+              onPressed: () => Navigator.of(context).pop(),
+              icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+            ),
+            title: Text(
+              strings.settings,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ),
+          body: SafeArea(
+            top: false,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
+              child: _buildContent(strings),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildContent(SettingsStrings strings) {
+    final localeCode = _controller.settings.localeCode;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionTitle(strings.notifications),
+        const SizedBox(height: 8),
+        _SettingsCard(
+          children: [
+            _ToggleTile(
+              icon: Icons.notifications_none_rounded,
+              title: strings.pushNotifications,
+              subtitle: strings.notificationPending,
+              value: false,
+              onChanged: null,
+            ),
+            _ToggleTile(
+              icon: Icons.near_me_outlined,
+              title: strings.journeyAlerts,
+              subtitle: strings.notificationPending,
+              value: false,
+              onChanged: null,
+            ),
+            _ToggleTile(
+              icon: Icons.star_border_rounded,
+              title: strings.reviewResponses,
+              subtitle: strings.notificationPending,
+              value: false,
+              onChanged: null,
+            ),
+          ],
         ),
-        title: const Text(
-          'Settings',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
+        const SizedBox(height: 22),
+
+        _SectionTitle(strings.languageRegion),
+        const SizedBox(height: 8),
+        _SettingsCard(
+          children: [
+            _NavigationTile(
+              icon: Icons.language_rounded,
+              iconBackground: const Color(0xFFEAF2FF),
+              iconColor: const Color(0xFF3B82F6),
+              title: strings.language,
+              subtitle: _languageName(localeCode),
+              onTap: () => _showLanguagePicker(strings),
+            ),
+            _NavigationTile(
+              icon: Icons.location_on_outlined,
+              iconBackground: const Color(0xFFEAF2FF),
+              iconColor: const Color(0xFF3B82F6),
+              title: strings.cityRegion,
+              subtitle: 'Kuala Lumpur, Malaysia',
+              onTap: () => _showRegionInformation(strings),
+            ),
+          ],
+        ),
+        const SizedBox(height: 22),
+
+        _SectionTitle(strings.privacyData),
+        const SizedBox(height: 8),
+        _SettingsCard(
+          children: [
+            _NavigationTile(
+              icon: Icons.lock_outline_rounded,
+              iconBackground: const Color(0xFFF1EBFF),
+              iconColor: const Color(0xFF7C3AED),
+              title: strings.privacyPolicy,
+              subtitle: strings.privacySubtitle,
+              onTap: () {},
+            ),
+            _NavigationTile(
+              icon: Icons.directions_walk_rounded,
+              title: strings.locationData,
+              subtitle: strings.locationSubtitle,
+              onTap: () {},
+            ),
+            _NavigationTile(
+              icon: Icons.delete_outline_rounded,
+              iconBackground: const Color(0xFFFFEBEE),
+              iconColor: const Color(0xFFE53935),
+              title: strings.deleteAccount,
+              subtitle: strings.deleteSubtitle,
+              titleColor: const Color(0xFFE53935),
+              onTap: () async {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(strings.deletionPending)),
+                );
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+
+        const Center(
+          child: Text(
+            'CitiesWalk v2.1.0 · KL Edition 🌿',
+            style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
           ),
         ),
-      ),
-      body: SafeArea(
-        top: false,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
+      ],
+    );
+  }
+
+  String _languageName(String code) => switch (code) {
+    'ms' => 'Bahasa Melayu',
+    'zh' => '中文（简体）',
+    _ => 'English',
+  };
+
+  Future<void> _showLanguagePicker(SettingsStrings strings) async {
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: RadioGroup<String>(
+          groupValue: _controller.settings.localeCode,
+          onChanged: (value) => Navigator.of(sheetContext).pop(value),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              const _SectionTitle('NOTIFICATIONS'),
-              const SizedBox(height: 8),
-              _SettingsCard(
-                children: [
-                  _ToggleTile(
-                    icon: Icons.notifications_none_rounded,
-                    title: 'Push Notifications',
-                    subtitle: 'Journey tips, rewards & updates',
-                    value: _pushNotifications,
-                    onChanged: (value) {
-                      setState(() {
-                        _pushNotifications = value;
-                      });
-                    },
-                  ),
-                  _ToggleTile(
-                    icon: Icons.near_me_outlined,
-                    title: 'Journey Alerts',
-                    subtitle: 'Alerts during active journeys',
-                    value: _journeyAlerts,
-                    onChanged: (value) {
-                      setState(() {
-                        _journeyAlerts = value;
-                      });
-                    },
-                  ),
-                  _ToggleTile(
-                    icon: Icons.star_border_rounded,
-                    title: 'Review Responses',
-                    subtitle: 'When someone replies to your review',
-                    value: _reviewResponses,
-                    onChanged: (value) {
-                      setState(() {
-                        _reviewResponses = value;
-                      });
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 22),
-
-              const _SectionTitle('LANGUAGE & REGION'),
-              const SizedBox(height: 8),
-              _SettingsCard(
-                children: [
-                  _NavigationTile(
-                    icon: Icons.language_rounded,
-                    iconBackground: const Color(0xFFEAF2FF),
-                    iconColor: const Color(0xFF3B82F6),
-                    title: 'Language',
-                    subtitle: 'English',
-                    onTap: () {},
-                  ),
-                  _NavigationTile(
-                    icon: Icons.location_on_outlined,
-                    iconBackground: const Color(0xFFEAF2FF),
-                    iconColor: const Color(0xFF3B82F6),
-                    title: 'City / Region',
-                    subtitle: 'Kuala Lumpur, Malaysia',
-                    onTap: () {},
-                  ),
-                ],
-              ),
-              const SizedBox(height: 22),
-
-              const _SectionTitle('PRIVACY & DATA'),
-              const SizedBox(height: 8),
-              _SettingsCard(
-                children: [
-                  _NavigationTile(
-                    icon: Icons.lock_outline_rounded,
-                    iconBackground: const Color(0xFFF1EBFF),
-                    iconColor: const Color(0xFF7C3AED),
-                    title: 'Privacy Policy',
-                    subtitle: 'How we use your data',
-                    onTap: () {},
-                  ),
-                  _NavigationTile(
-                    icon: Icons.directions_walk_rounded,
-                    title: 'Location Data',
-                    subtitle: 'Used only during active journeys',
-                    onTap: () {},
-                  ),
-                  _NavigationTile(
-                    icon: Icons.delete_outline_rounded,
-                    iconBackground: const Color(0xFFFFEBEE),
-                    iconColor: const Color(0xFFE53935),
-                    title: 'Delete Account',
-                    subtitle: 'Permanently remove your data',
-                    titleColor: const Color(0xFFE53935),
-                    onTap: () async {
-                      final confirmed = await showDialog<bool>(
-                        context: context,
-                        builder: (dialogContext) {
-                          return AlertDialog(
-                            title: const Text('Delete Account'),
-                            content: const Text(
-                              'This will permanently remove your account and profile data. '
-                              'This action cannot be undone.',
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.of(dialogContext).pop(false);
-                                },
-                                child: const Text('Cancel'),
-                              ),
-                              FilledButton(
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: Colors.red,
-                                ),
-                                onPressed: () {
-                                  Navigator.of(dialogContext).pop(true);
-                                },
-                                child: const Text('Delete'),
-                              ),
-                            ],
-                          );
-                        },
-                      );
-
-                      if (confirmed == true && context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Account deletion will be implemented in a later phase.',
-                            ),
-                          ),
-                        );
-                      }
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-
-              const Center(
-                child: Text(
-                  'CitiesWalk v2.1.0 · KL Edition 🌿',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textSecondary,
-                  ),
+              for (final code in const ['en', 'ms', 'zh'])
+                RadioListTile<String>(
+                  value: code,
+                  title: Text(_languageName(code)),
                 ),
-              ),
+              const SizedBox(height: 8),
             ],
           ),
         ),
+      ),
+    );
+    if (selected == null || selected == _controller.settings.localeCode) return;
+    final saved = await _controller.setLocale(selected);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          saved ? SettingsStrings.of(context).saved : strings.saveFailed,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showRegionInformation(SettingsStrings strings) {
+    return showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(strings.cityRegion),
+        content: Text(strings.klPilot),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(MaterialLocalizations.of(context).okButtonLabel),
+          ),
+        ],
       ),
     );
   }
@@ -254,7 +280,7 @@ class _ToggleTile extends StatelessWidget {
   final String title;
   final String subtitle;
   final bool value;
-  final ValueChanged<bool> onChanged;
+  final ValueChanged<bool>? onChanged;
 
   @override
   Widget build(BuildContext context) {

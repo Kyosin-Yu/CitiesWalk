@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../business_logic/entities/place_review.dart';
 import '../../business_logic/entities/review_destination.dart';
+import '../../business_logic/entities/user_review.dart';
 import '../models/review_remote_model.dart';
 import '../../../../core/models/destination_review_summary.dart';
 
@@ -36,6 +37,35 @@ class SupabaseReviewDataSource {
           isMarkedHelpful: markedReviewIds.contains(row['id'] as String),
         ),
       ),
+    );
+  }
+
+  Future<List<UserReview>> fetchUserReviews(String userId) async {
+    _ensureAuthenticatedOwner(userId);
+    final rows = await _client
+        .from('destination_reviews')
+        .select()
+        .eq('user_id', userId)
+        .order('created_at', ascending: false);
+
+    return Future.wait(
+      (rows as List<dynamic>).map((value) async {
+        final row = Map<String, dynamic>.from(value as Map);
+        final reviewId = row['id'] as String;
+        return UserReview(
+          destination: ReviewDestination(
+            id: row['destination_id'] as String,
+            name: row['destination_name'] as String,
+            category: row['destination_category'] as String,
+          ),
+          review: await _mapReview(
+            row,
+            isMarkedHelpful: (await _fetchMarkedReviewIds([
+              reviewId,
+            ])).contains(reviewId),
+          ),
+        );
+      }),
     );
   }
 

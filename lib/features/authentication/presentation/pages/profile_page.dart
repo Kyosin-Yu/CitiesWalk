@@ -11,7 +11,14 @@ import '../../../eco_route/presentation/pages/my_journeys_page.dart';
 import 'setting_page.dart';
 
 class ProfilePage extends StatelessWidget {
-  const ProfilePage({super.key});
+  const ProfilePage({
+    super.key,
+    required this.onOpenMyReviews,
+    required this.onOpenMyBadges,
+  });
+
+  final VoidCallback onOpenMyReviews;
+  final VoidCallback onOpenMyBadges;
 
   @override
   Widget build(BuildContext context) {
@@ -83,17 +90,13 @@ class ProfilePage extends StatelessWidget {
                           icon: Icons.star_border_rounded,
                           title: 'My Reviews',
                           subtitle: 'View your community reviews',
-                          onTap: () {
-                            // Reviews integration will be added later.
-                          },
+                          onTap: onOpenMyReviews,
                         ),
                         _ProfileMenuItemData(
                           icon: Icons.workspace_premium_outlined,
                           title: 'My Badges',
                           subtitle: 'View your earned badges',
-                          onTap: () {
-                            // Rewards integration will be added later.
-                          },
+                          onTap: onOpenMyBadges,
                         ),
                       ],
                     ),

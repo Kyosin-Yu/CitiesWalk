@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../business_logic/entities/app_user.dart';
+import '../../business_logic/entities/authentication_state.dart';
 import '../../business_logic/repositories/auth_repository.dart';
 import '../data_sources/profile_data_source.dart';
 import '../data_sources/supabase_auth_data_source.dart';
@@ -237,6 +238,26 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<void> updatePassword({required String password}) async {
+    try {
+      final response = await _authDatasource.updatePassword(password: password);
+
+      if (response.user == null) {
+        throw const AppException('Unable to update password.');
+      }
+    } on AppException {
+      rethrow;
+    } on AuthException catch (e) {
+      throw AppException(e.message);
+    } catch (e, stackTrace) {
+      debugPrint('========== UPDATE PASSWORD ERROR ==========');
+      debugPrint(e.toString());
+      debugPrintStack(stackTrace: stackTrace);
+      throw const AppException('Unable to update password. Please try again.');
+    }
+  }
+
+  @override
   Future<void> resendEmailVerification() async {
     try {
       final user = _authDatasource.currentUser;
@@ -277,17 +298,27 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Stream<AppUser?> authStateChanges() {
+  Stream<AuthenticationState> authStateChanges() {
     return _authDatasource.authStateChanges().asyncMap((authState) async {
       final user = authState.session?.user;
 
       if (user == null) {
-        return null;
+        return const AuthenticationState(user: null);
       }
 
       final profile = await _profileDatasource.getProfile(user.id);
 
-      return await _buildAppUserWithImage(user: user, profile: profile);
+      final appUser = await _buildAppUserWithImage(
+        user: user,
+        profile: profile,
+      );
+
+      return AuthenticationState(
+        user: appUser,
+        event: authState.event == AuthChangeEvent.passwordRecovery
+            ? AuthenticationEvent.passwordRecovery
+            : AuthenticationEvent.sessionChanged,
+      );
     });
   }
 

@@ -1,4 +1,5 @@
 import '../entities/app_user.dart';
+import '../entities/authentication_state.dart';
 
 abstract class AuthRepository {
   Future<AppUser> signUp({
@@ -16,6 +17,8 @@ abstract class AuthRepository {
 
   Future<void> sendPasswordResetEmail({required String email});
 
+  Future<void> updatePassword({required String password});
+
   Future<void> resendEmailVerification();
 
   Future<AppUser?> getCurrentUser();
@@ -28,5 +31,5 @@ abstract class AuthRepository {
 
   Future<AppUser> updateProfileImage({required String localImagePath});
 
-  Stream<AppUser?> authStateChanges();
+  Stream<AuthenticationState> authStateChanges();
 }
