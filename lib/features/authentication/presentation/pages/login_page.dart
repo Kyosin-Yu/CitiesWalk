@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../../core/di/service_locator.dart';
@@ -20,6 +22,8 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
 
   bool _obscurePassword = true;
+  int _resetCooldownSeconds = 0;
+  Timer? _resetCooldownTimer;
 
   late final AuthController _authController;
 
@@ -33,6 +37,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void dispose() {
     _authController.removeListener(_onAuthStateChanged);
+    _resetCooldownTimer?.cancel();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -51,7 +56,8 @@ class _LoginPageState extends State<LoginPage> {
       _authController.clearError();
     }
 
-    if (_authController.currentUser != null) {
+    if (_authController.currentUser != null &&
+        !_authController.isPasswordRecovery) {
       Navigator.of(
         context,
       ).pushReplacement(MaterialPageRoute(builder: (_) => const AppShell()));
@@ -83,15 +89,43 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    await _authController.sendPasswordResetEmail(email: email);
+    final errorMessage = await _authController.sendPasswordResetEmail(
+      email: email,
+    );
 
-    if (mounted && _authController.errorMessage == null) {
+    if (!mounted) return;
+
+    if (errorMessage != null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Password reset email sent. Check your inbox.'),
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
+      return;
     }
+
+    _startResetCooldown();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Password reset email sent. Use the newest link in your inbox.',
+        ),
+      ),
+    );
+  }
+
+  void _startResetCooldown() {
+    _resetCooldownTimer?.cancel();
+    setState(() => _resetCooldownSeconds = 60);
+    _resetCooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted || _resetCooldownSeconds <= 1) {
+        timer.cancel();
+        if (mounted) setState(() => _resetCooldownSeconds = 0);
+        return;
+      }
+      setState(() => _resetCooldownSeconds--);
+    });
   }
 
   @override
@@ -173,10 +207,16 @@ class _LoginPageState extends State<LoginPage> {
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton(
-                          onPressed: _authController.isLoading
+                          onPressed:
+                              _authController.isLoading ||
+                                  _resetCooldownSeconds > 0
                               ? null
                               : _onForgotPassword,
-                          child: const Text('Forgot Password?'),
+                          child: Text(
+                            _resetCooldownSeconds > 0
+                                ? 'Resend in ${_resetCooldownSeconds}s'
+                                : 'Forgot Password?',
+                          ),
                         ),
                       ),
 

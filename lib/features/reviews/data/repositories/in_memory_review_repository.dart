@@ -2,6 +2,7 @@ import '../../../../core/models/destination_review_summary.dart';
 import '../../../../core/services/destination_review_summary_service.dart';
 import '../../business_logic/entities/place_review.dart';
 import '../../business_logic/entities/review_destination.dart';
+import '../../business_logic/entities/user_review.dart';
 import '../../business_logic/repositories/review_repository.dart';
 import '../datasources/review_seed_data.dart';
 
@@ -23,6 +24,23 @@ class InMemoryReviewRepository
   @override
   Future<List<PlaceReview>> fetchReviews(String destinationId) async {
     return List.unmodifiable(_reviewsByDestination[destinationId] ?? const []);
+  }
+
+  @override
+  Future<List<UserReview>> fetchUserReviews(String userId) async {
+    return [
+      for (final entry in _reviewsByDestination.entries)
+        for (final review in entry.value)
+          if (review.userId == userId)
+            UserReview(
+              destination: ReviewDestination(
+                id: entry.key,
+                name: entry.key,
+                category: 'Destination',
+              ),
+              review: review,
+            ),
+    ];
   }
 
   @override

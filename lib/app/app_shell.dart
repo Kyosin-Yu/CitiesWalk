@@ -26,6 +26,9 @@ import '../features/fitness/business_logic/repositories/fitness_repository.dart'
 import '../features/fitness/business_logic/repositories/health_activity_repository.dart';
 import '../features/fitness/presentation/pages/fitness_page.dart';
 import '../features/rewards/presentation/screens/rewards_hub_screen.dart';
+import '../features/rewards/presentation/screens/achievement_locker_screen.dart';
+import '../features/rewards/business_logic/providers/rewards_controller.dart';
+import '../features/rewards/business_logic/repositories/rewards_repository.dart';
 import '../features/reviews/business_logic/providers/reviews_provider.dart';
 import '../features/reviews/business_logic/entities/review_destination.dart';
 import '../features/reviews/data/data_sources/review_image_data_source.dart';
@@ -33,6 +36,7 @@ import '../features/reviews/data/repositories/review_image_repository_impl.dart'
 import '../features/reviews/data/repositories/supabase_review_repository.dart';
 import '../features/reviews/data/data_sources/supabase_review_data_source.dart';
 import '../features/reviews/presentation/reviews_screen.dart';
+import '../features/reviews/presentation/my_reviews_screen.dart';
 import 'home_dashboard.dart';
 
 class AppShell extends StatefulWidget {
@@ -99,7 +103,7 @@ class _AppShellState extends State<AppShell> {
       child: FitnessPage(onViewRewards: () => _selectDestination(3)),
     ),
     const RewardsHubScreen(),
-    const ProfilePage(),
+    ProfilePage(onOpenMyReviews: _openMyReviews, onOpenMyBadges: _openMyBadges),
   ];
 
   @override
@@ -243,6 +247,32 @@ class _AppShellState extends State<AppShell> {
     });
     _reviewSummaryVersion.value++;
     unawaited(_refreshHomeReviewSummaries());
+  }
+
+  void _openMyReviews() {
+    final user = sl<AuthController>().currentUser;
+    if (user == null) return;
+    Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => MyReviewsScreen(
+          repository: _reviewRepository,
+          imageRepository: _reviewImageRepository,
+          userId: user.id,
+          userName: user.fullName ?? 'CitiesWalk User',
+        ),
+      ),
+    );
+  }
+
+  void _openMyBadges() {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => ChangeNotifierProvider(
+          create: (_) => RewardsController(sl<RewardsRepository>())..load(),
+          child: const AchievementLockerScreen(),
+        ),
+      ),
+    );
   }
 
   @override

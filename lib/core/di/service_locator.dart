@@ -8,6 +8,10 @@ import '../../features/authentication/data/repositories/auth_repository_impl.dar
 import '../../features/authentication/data/data_sources/profile_data_source.dart';
 import '../../features/authentication/data/data_sources/supabase_auth_data_source.dart';
 import '../../features/authentication/business_logic/providers/auth_controller.dart';
+import '../../features/authentication/business_logic/providers/settings_controller.dart';
+import '../../features/authentication/business_logic/repositories/settings_repository.dart';
+import '../../features/authentication/data/data_sources/supabase_settings_data_source.dart';
+import '../../features/authentication/data/repositories/settings_repository_impl.dart';
 import '../../features/fitness/business_logic/repositories/fitness_repository.dart';
 import '../../features/fitness/business_logic/repositories/health_activity_repository.dart';
 import '../../features/fitness/data/data_sources/device_health_data_source.dart';
@@ -49,6 +53,16 @@ Future<void> setupServiceLocator() async {
 
   sl.registerLazySingleton<AuthController>(
     () => AuthController(sl<AuthRepository>()),
+  );
+
+  sl.registerLazySingleton<SupabaseSettingsDataSource>(
+    () => SupabaseSettingsDataSource(sl<SupabaseClient>()),
+  );
+  sl.registerLazySingleton<SettingsRepository>(
+    () => SettingsRepositoryImpl(sl<SupabaseSettingsDataSource>()),
+  );
+  sl.registerLazySingleton<SettingsController>(
+    () => SettingsController(sl<SettingsRepository>()),
   );
 
   sl.registerLazySingleton<SupabaseFitnessDataSource>(

@@ -4,16 +4,22 @@ import 'package:flutter/foundation.dart';
 
 import '../../../../core/errors/app_exception.dart';
 import '../entities/app_user.dart';
+import '../entities/authentication_state.dart';
 import '../repositories/auth_repository.dart';
 
 class AuthController extends ChangeNotifier {
   final AuthRepository _repository;
-  late final StreamSubscription<AppUser?> _authStateSubscription;
+  late final StreamSubscription<AuthenticationState> _authStateSubscription;
 
   AuthController(this._repository) {
     _authStateSubscription = _repository.authStateChanges().listen(
-      (user) {
-        _currentUser = user;
+      (state) {
+        _currentUser = state.user;
+        if (state.isPasswordRecovery) {
+          _isPasswordRecovery = true;
+        } else if (state.user == null) {
+          _isPasswordRecovery = false;
+        }
         _isLoading = false;
         _errorMessage = null;
         notifyListeners();
@@ -30,12 +36,14 @@ class AuthController extends ChangeNotifier {
 
   AppUser? _currentUser;
   bool _isLoading = false;
+  bool _isPasswordRecovery = false;
   String? _errorMessage;
 
   AppUser? get currentUser => _currentUser;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _currentUser != null;
+  bool get isPasswordRecovery => _isPasswordRecovery;
 
   void clearError() {
     _errorMessage = null;
@@ -119,19 +127,49 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  Future<void> sendPasswordResetEmail({required String email}) async {
+  Future<String?> sendPasswordResetEmail({required String email}) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
       await _repository.sendPasswordResetEmail(email: email);
+      return null;
     } on AppException catch (e) {
-      _errorMessage = e.message;
+      final message = e.message.toLowerCase().contains('rate limit')
+          ? 'Too many reset emails were requested. Please wait before trying again.'
+          : e.message;
+      return message;
     } finally {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<bool> updatePassword({required String password}) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _repository.updatePassword(password: password);
+      await _repository.signOut();
+      _currentUser = null;
+      _isPasswordRecovery = false;
+      return true;
+    } on AppException catch (e) {
+      _errorMessage = e.message;
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> cancelPasswordRecovery() async {
+    await signOut();
+    _isPasswordRecovery = false;
+    notifyListeners();
   }
 
   Future<void> checkCurrentUser() async {

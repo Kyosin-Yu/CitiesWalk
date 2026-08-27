@@ -114,7 +114,7 @@ Create the required local environment configuration using the template provided
 by the team. Do not commit API keys, passwords, service-role keys, or other
 secrets to GitHub.
 
-### Google authentication setup
+### Authentication deep-link setup
 
 Google login uses Supabase Auth and the mobile redirect URL
 `com.citieswalk.citieswalk://login-callback/`. Before testing it:
@@ -129,6 +129,13 @@ Google login uses Supabase Auth and the mobile redirect URL
 
 The Flutter app stores only the Supabase publishable key. Google credentials
 remain in Google Cloud and Supabase configuration.
+
+Password recovery uses the same mobile callback. Keep
+`com.citieswalk.citieswalk://login-callback/` as both the **Site URL** and an
+entry under **Authentication > URL Configuration > Redirect URLs** so a
+reset-email link can reopen CitiesWalk and show the new-password form. Test
+recovery emails on a device or emulator where CitiesWalk is installed, request
+only one email, and use the newest link.
 
 ### Android fitness data setup
 

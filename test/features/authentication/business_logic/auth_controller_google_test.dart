@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:citieswalk/features/authentication/business_logic/entities/app_user.dart';
+import 'package:citieswalk/features/authentication/business_logic/entities/authentication_state.dart';
 import 'package:citieswalk/features/authentication/business_logic/providers/auth_controller.dart';
 import 'package:citieswalk/features/authentication/business_logic/repositories/auth_repository.dart';
+import 'package:citieswalk/core/errors/app_exception.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -29,7 +31,7 @@ void main() {
       fullName: 'Google Walker',
     );
 
-    repository.emitUser(googleUser);
+    repository.emitState(const AuthenticationState(user: googleUser));
     await Future<void>.delayed(Duration.zero);
 
     expect(controller.currentUser, same(googleUser));
@@ -38,18 +40,83 @@ void main() {
     controller.dispose();
     await repository.dispose();
   });
+
+  test('password recovery event opens the recovery flow', () async {
+    final repository = _FakeAuthRepository();
+    final controller = AuthController(repository);
+    const user = AppUser(id: 'user', email: 'walker@example.com');
+
+    repository.emitState(
+      const AuthenticationState(
+        user: user,
+        event: AuthenticationEvent.passwordRecovery,
+      ),
+    );
+    await Future<void>.delayed(Duration.zero);
+
+    expect(controller.isPasswordRecovery, isTrue);
+    expect(controller.currentUser, same(user));
+
+    controller.dispose();
+    await repository.dispose();
+  });
+
+  test('updating a recovered password signs out and closes recovery', () async {
+    final repository = _FakeAuthRepository();
+    final controller = AuthController(repository);
+    const user = AppUser(id: 'user', email: 'walker@example.com');
+
+    repository.emitState(
+      const AuthenticationState(
+        user: user,
+        event: AuthenticationEvent.passwordRecovery,
+      ),
+    );
+    await Future<void>.delayed(Duration.zero);
+
+    final updated = await controller.updatePassword(password: 'new-password');
+
+    expect(updated, isTrue);
+    expect(repository.updatedPassword, 'new-password');
+    expect(repository.signOutCalls, 1);
+    expect(controller.isPasswordRecovery, isFalse);
+    expect(controller.currentUser, isNull);
+
+    controller.dispose();
+    await repository.dispose();
+  });
+
+  test('password reset rate limit returns an actionable message', () async {
+    final repository = _FakeAuthRepository()
+      ..resetError = 'email rate limit exceeded';
+    final controller = AuthController(repository);
+
+    final message = await controller.sendPasswordResetEmail(
+      email: 'walker@example.com',
+    );
+
+    expect(message, contains('Please wait'));
+    expect(controller.isLoading, isFalse);
+    expect(controller.errorMessage, isNull);
+
+    controller.dispose();
+    await repository.dispose();
+  });
 }
 
 class _FakeAuthRepository implements AuthRepository {
-  final _authStates = StreamController<AppUser?>.broadcast();
+  final _authStates = StreamController<AuthenticationState>.broadcast();
   int googleSignInCalls = 0;
+  int signOutCalls = 0;
+  String? updatedPassword;
+  String? resetError;
 
-  void emitUser(AppUser? user) => _authStates.add(user);
+  void emitState(AuthenticationState state) => _authStates.add(state);
 
   Future<void> dispose() => _authStates.close();
 
   @override
-  Stream<AppUser?> authStateChanges() => _authStates.stream;
+  Stream<AuthenticationState> authStateChanges() => _authStates.stream;
 
   @override
   Future<void> signInWithGoogle() async {
@@ -63,7 +130,16 @@ class _FakeAuthRepository implements AuthRepository {
   Future<void> resendEmailVerification() async {}
 
   @override
-  Future<void> sendPasswordResetEmail({required String email}) async {}
+  Future<void> sendPasswordResetEmail({required String email}) async {
+    if (resetError case final message?) {
+      throw AppException(message);
+    }
+  }
+
+  @override
+  Future<void> updatePassword({required String password}) async {
+    updatedPassword = password;
+  }
 
   @override
   Future<AppUser> signIn({required String email, required String password}) {
@@ -71,7 +147,9 @@ class _FakeAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> signOut() async {}
+  Future<void> signOut() async {
+    signOutCalls++;
+  }
 
   @override
   Future<AppUser> signUp({

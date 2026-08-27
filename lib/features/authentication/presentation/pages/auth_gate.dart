@@ -5,6 +5,7 @@ import '../../../../app/app_shell.dart';
 import '../../../../core/di/service_locator.dart';
 import '../../business_logic/providers/auth_controller.dart';
 import 'login_page.dart';
+import 'reset_password_page.dart';
 
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
@@ -35,6 +36,10 @@ class _AuthGateState extends State<AuthGate> {
         builder: (context, authController, _) {
           if (authController.isLoading) {
             return const _AuthLoadingScreen();
+          }
+
+          if (authController.isPasswordRecovery) {
+            return const ResetPasswordPage();
           }
 
           if (authController.isAuthenticated) {
