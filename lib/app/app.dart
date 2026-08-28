@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:provider/provider.dart';
 
 import '../core/di/service_locator.dart';
 import '../features/authentication/business_logic/providers/auth_controller.dart';
@@ -49,18 +50,21 @@ class _CitiesWalkAppState extends State<CitiesWalkApp> {
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: _settingsController,
-      builder: (context, _) => MaterialApp(
-        title: 'CitiesWalk',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
-        locale: Locale(_settingsController.settings.localeCode),
-        supportedLocales: const [Locale('en'), Locale('ms'), Locale('zh')],
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        home: const AuthGate(),
+      builder: (context, _) => ChangeNotifierProvider<AuthController>.value(
+        value: _authController,
+        child: MaterialApp(
+          title: 'CitiesWalk',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme,
+          locale: Locale(_settingsController.settings.localeCode),
+          supportedLocales: const [Locale('en'), Locale('ms'), Locale('zh')],
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          home: const AuthGate(),
+        ),
       ),
     );
   }

@@ -30,25 +30,22 @@ class _AuthGateState extends State<AuthGate> {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider<AuthController>.value(
-      value: _authController,
-      child: Consumer<AuthController>(
-        builder: (context, authController, _) {
-          if (authController.isLoading) {
-            return const _AuthLoadingScreen();
-          }
+    return Consumer<AuthController>(
+      builder: (context, authController, _) {
+        if (authController.isLoading) {
+          return const _AuthLoadingScreen();
+        }
 
-          if (authController.isPasswordRecovery) {
-            return const ResetPasswordPage();
-          }
+        if (authController.isPasswordRecovery) {
+          return const ResetPasswordPage();
+        }
 
-          if (authController.isAuthenticated) {
-            return const AppShell();
-          }
+        if (authController.isAuthenticated) {
+          return const AppShell();
+        }
 
-          return const LoginPage();
-        },
-      ),
+        return const LoginPage();
+      },
     );
   }
 }

@@ -10,7 +10,7 @@ class DeviceHealthDataSource {
 
   static const _types = [
     HealthDataType.STEPS,
-    HealthDataType.DISTANCE_WALKING_RUNNING,
+    HealthDataType.DISTANCE_DELTA,
     HealthDataType.ACTIVE_ENERGY_BURNED,
   ];
   static const _readPermissions = [
@@ -104,15 +104,25 @@ class DeviceHealthDataSource {
       now,
       includeManualEntry: false,
     );
-    final points = await _health.getHealthAggregateDataFromTypes(
-      types: const [
-        HealthDataType.DISTANCE_WALKING_RUNNING,
-        HealthDataType.ACTIVE_ENERGY_BURNED,
-      ],
-      startDate: start,
-      endDate: now,
-      includeManualEntry: false,
-    );
+    final points = <HealthDataPoint>[];
+    for (final type in const [
+      HealthDataType.DISTANCE_DELTA,
+      HealthDataType.ACTIVE_ENERGY_BURNED,
+    ]) {
+      try {
+        points.addAll(
+          await _health.getHealthDataFromTypes(
+            types: [type],
+            startTime: start,
+            endTime: now,
+            recordingMethodsToFilter: const [RecordingMethod.manual],
+          ),
+        );
+      } catch (error, stackTrace) {
+        debugPrint('Unable to read $type from Health Connect: $error');
+        debugPrint(stackTrace.toString());
+      }
+    }
 
     return DeviceHealthActivityModel(
       status: HealthIntegrationStatus.connected,
@@ -120,7 +130,7 @@ class DeviceHealthDataSource {
       stepsToday: steps,
       walkingDistanceMetersToday: _sum(
         points,
-        HealthDataType.DISTANCE_WALKING_RUNNING,
+        HealthDataType.DISTANCE_DELTA,
       )?.round(),
       activeCaloriesToday: _sum(
         points,

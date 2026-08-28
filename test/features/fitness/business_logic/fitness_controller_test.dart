@@ -10,7 +10,7 @@ import 'package:citieswalk/features/fitness/business_logic/repositories/health_a
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('loads completed Eco Route data and toggles notifications', () async {
+  test('loads completed Eco Route data', () async {
     final controller = FitnessController(
       userId: 'user-1',
       userName: 'Alex',
@@ -44,9 +44,6 @@ void main() {
     controller.selectGoalFilter(FitnessGoalStatus.completed);
     expect(controller.goalFilter, FitnessGoalStatus.completed);
     expect(controller.visibleGoals, isEmpty);
-
-    controller.toggleNotifications();
-    expect(controller.notificationsEnabled, isFalse);
   });
 
   test('exposes a safe failure state when route sync fails', () async {

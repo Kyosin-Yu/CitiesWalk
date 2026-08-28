@@ -60,9 +60,14 @@ class FitnessDashboardService {
         today,
       ),
       stepsToday: healthActivity?.stepsToday ?? _steps(todayJourneys),
+      journeyStepsToday: _steps(todayJourneys),
       stepsSource: healthActivity?.stepsToday != null
           ? FitnessMetricSource.recorded
           : _combinedSource(todayJourneys, (journey) => journey.stepsSource),
+      journeyStepsSource: _combinedSource(
+        todayJourneys,
+        (journey) => journey.stepsSource,
+      ),
       walkingDistanceTodayKm: healthActivity?.walkingDistanceMetersToday != null
           ? healthActivity!.walkingDistanceMetersToday! / 1000
           : _distanceKm(todayJourneys),

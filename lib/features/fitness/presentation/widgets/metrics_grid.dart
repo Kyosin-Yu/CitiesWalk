@@ -18,13 +18,27 @@ class MetricsGrid extends StatelessWidget {
     crossAxisSpacing: 10,
     children: [
       _MetricCard(
-        label: 'Steps Today',
-        value: dashboard.stepsToday?.toString() ?? '—',
-        unit: dashboard.stepsToday == null ? 'not tracked' : 'steps',
+        label: 'Journey Steps',
+        value: dashboard.journeyStepsSource == FitnessMetricSource.unavailable
+            ? '—'
+            : dashboard.journeyStepsToday.toString(),
+        unit: dashboard.journeyStepsSource == FitnessMetricSource.unavailable
+            ? 'not recorded'
+            : 'steps in CitiesWalk',
         icon: Icons.directions_walk_rounded,
         color: const Color(0xFF2E7D32),
         iconColor: const Color(0xFFE7F3E8),
-        source: dashboard.stepsSource,
+        source: dashboard.journeyStepsSource,
+      ),
+      _MetricCard(
+        label: 'Overall Steps Today',
+        value: dashboard.overallStepsToday?.toString() ?? '—',
+        unit: dashboard.overallStepsToday == null
+            ? 'Health Connect not linked'
+            : 'steps • Health Connect',
+        icon: Icons.health_and_safety_rounded,
+        color: const Color(0xFF1565C0),
+        iconColor: const Color(0xFFD9EFFF),
       ),
       _MetricCard(
         label: 'Walking Today',
