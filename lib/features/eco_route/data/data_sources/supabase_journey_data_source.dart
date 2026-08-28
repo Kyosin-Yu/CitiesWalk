@@ -192,22 +192,6 @@ class SupabaseJourneyDataSource {
       })
       .eq('id', journeyId);
 
-  Future<void> pauseJourney({required String journeyId}) => _client
-      .from('eco_journeys')
-      .update({
-        'status': 'paused',
-        'updated_at': DateTime.now().toUtc().toIso8601String(),
-      })
-      .eq('id', journeyId);
-
-  Future<void> resumeJourney({required String journeyId}) => _client
-      .from('eco_journeys')
-      .update({
-        'status': 'in_progress',
-        'updated_at': DateTime.now().toUtc().toIso8601String(),
-      })
-      .eq('id', journeyId);
-
   Future<void> recordTrackPoint({
     required String journeyId,
     required EcoLocation location,

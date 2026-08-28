@@ -56,6 +56,7 @@ class EcoRouteController extends ChangeNotifier {
   bool _hasUsableOrigin = false;
   EcoLocation? _currentJourneyLocation;
   EcoLocation? _lastTrackedLocation;
+  DateTime? _lastTrackedAt;
   EcoLocation? _lastPersistedLocation;
   double _trackedDistanceKm = 0;
   double _trackedWalkingDistanceKm = 0;
@@ -65,6 +66,9 @@ class EcoRouteController extends ChangeNotifier {
   double _liveCarbonSavedKg = 0;
   bool _isRerouting = false;
   bool _isCompletingJourney = false;
+  bool _arrivalConfirmed = false;
+  bool _isWalkingSpeedSuspicious = false;
+  int _consecutiveFastWalkingUpdates = 0;
   DateTime? _lastRerouteAt;
   EcoDestination? _pendingDestination;
   Map<String, DestinationReviewSummary> _reviewSummaries = const {};
@@ -73,7 +77,14 @@ class EcoRouteController extends ChangeNotifier {
   bool _retryLocationAfterSettings = false;
 
   static const _offRouteThresholdKm = 0.06;
-  static const _arrivalThresholdKm = 0.03;
+  // GPS must be within 15 metres of the selected destination before the
+  // journey can complete. This avoids finishing while the marker is still
+  // visibly short of the destination.
+  static const _arrivalThresholdKm = 0.015;
+  static const _arrivalConfirmationDuration = Duration(milliseconds: 600);
+  static const _walkingSpeedThresholdKmh = 12.0;
+  static const _minimumSpeedSampleSeconds = 1.0;
+  static const _fastWalkingUpdatesBeforePausing = 2;
   // Provisional MVP conversion for a GPS-derived walking estimate. This is
   // deliberately not presented as a hardware pedometer reading.
   static const _estimatedStepsPerWalkingKm = 1300;
@@ -101,6 +112,7 @@ class EcoRouteController extends ChangeNotifier {
   double get liveCarbonSavedKg => _liveCarbonSavedKg;
   bool get isRerouting => _isRerouting;
   bool get isCompletingJourney => _isCompletingJourney;
+  bool get isWalkingSpeedSuspicious => _isWalkingSpeedSuspicious;
   bool get canOpenLocationSettings => _locationSettingsAction != null;
   bool get isAtDestination {
     final route = _route;
@@ -136,10 +148,16 @@ class EcoRouteController extends ChangeNotifier {
   double get journeyProgress {
     final route = _route;
     if (route == null || route.totalDistanceKm <= 0) return 0;
-    if (isAtDestination) return 1;
+    if (_arrivalConfirmed ||
+        (isAtDestination && !_isWalkingSpeedSuspicious)) {
+      return 1;
+    }
     final currentLocation = _currentJourneyLocation;
     if (currentLocation == null) return 0;
-    return _routeProgressAt(currentLocation);
+    final progress = _routeProgressAt(currentLocation);
+    return _isWalkingSpeedSuspicious && isAtDestination
+        ? math.min(progress, .99)
+        : progress;
   }
 
   bool get isJourneyTracking => _journey?.status == EcoJourneyStatus.inProgress;
@@ -306,8 +324,7 @@ class EcoRouteController extends ChangeNotifier {
 
   Future<void> selectDestination(EcoDestination destination) async {
     final status = _journey?.status;
-    if (status == EcoJourneyStatus.inProgress ||
-        status == EcoJourneyStatus.paused) {
+    if (status == EcoJourneyStatus.inProgress) {
       _message =
           'Finish or cancel the active journey before planning a different destination.';
       notifyListeners();
@@ -405,8 +422,7 @@ class EcoRouteController extends ChangeNotifier {
 
   void clearRoute() {
     final status = _journey?.status;
-    if (status == EcoJourneyStatus.inProgress ||
-        status == EcoJourneyStatus.paused) {
+    if (status == EcoJourneyStatus.inProgress) {
       _message =
           'Journey tracking is still active. Return to tracking or cancel the journey to stop it.';
       notifyListeners();
@@ -489,16 +505,39 @@ class EcoRouteController extends ChangeNotifier {
   }
 
   void _recordLiveLocation(EcoLocation location) {
+    final recordedAt = DateTime.now().toUtc();
     final previous = _lastTrackedLocation;
+    final previousRecordedAt = _lastTrackedAt;
     if (previous != null) {
       final movementKm = _distanceBetween(previous, location);
       final nearestSegment = _nearestRouteSegment(location);
+      final elapsedSeconds = previousRecordedAt == null
+          ? 0.0
+          : recordedAt.difference(previousRecordedAt).inMilliseconds / 1000;
+      final walkingSpeedKmh = elapsedSeconds >= _minimumSpeedSampleSeconds
+          ? movementKm / elapsedSeconds * 3600
+          : 0.0;
+      final isFastWalking =
+          nearestSegment?.type == EcoRouteSegmentType.walk &&
+          walkingSpeedKmh > _walkingSpeedThresholdKmh;
+
+      if (isFastWalking) {
+        _consecutiveFastWalkingUpdates++;
+        if (_consecutiveFastWalkingUpdates >=
+            _fastWalkingUpdatesBeforePausing) {
+          _isWalkingSpeedSuspicious = true;
+        }
+      } else if (elapsedSeconds >= _minimumSpeedSampleSeconds) {
+        _consecutiveFastWalkingUpdates = 0;
+        _isWalkingSpeedSuspicious = false;
+      }
       // A train can cover more ground between GPS fixes than a walker. Keep a
       // wider, but still bounded, allowance for a point near a rail segment.
       final maximumPlausibleMovementKm =
           nearestSegment?.type == EcoRouteSegmentType.transit ? 2.0 : 0.35;
       // Ignore impossible jumps caused by a temporary poor GPS measurement.
-      if (movementKm <= maximumPlausibleMovementKm) {
+      if (movementKm <= maximumPlausibleMovementKm &&
+          !_isWalkingSpeedSuspicious) {
         _trackedDistanceKm += movementKm;
         if (nearestSegment?.type == EcoRouteSegmentType.walk) {
           _trackedWalkingDistanceKm += movementKm;
@@ -512,6 +551,7 @@ class EcoRouteController extends ChangeNotifier {
     }
     _currentJourneyLocation = location;
     _lastTrackedLocation = location;
+    _lastTrackedAt = recordedAt;
     notifyListeners();
 
     final journeyId = _journey?.id;
@@ -524,12 +564,12 @@ class EcoRouteController extends ChangeNotifier {
             .recordTrackPoint(
               journeyId: journeyId,
               location: location,
-              recordedAt: DateTime.now().toUtc(),
+              recordedAt: recordedAt,
             )
             .catchError((_) {}),
       );
     }
-    if (isAtDestination) {
+    if (isAtDestination && !_isWalkingSpeedSuspicious) {
       unawaited(_completeJourneyAtArrival());
     } else {
       unawaited(_rerouteIfNeeded(location));
@@ -624,10 +664,9 @@ class EcoRouteController extends ChangeNotifier {
     final selectedRoute = _route;
     if (selectedRoute == null) return;
     final activeJourney = _journey;
-    if (activeJourney?.status == EcoJourneyStatus.inProgress ||
-        activeJourney?.status == EcoJourneyStatus.paused) {
+    if (activeJourney?.status == EcoJourneyStatus.inProgress) {
       _message =
-          'A journey is already active. Resume it, end it early, or cancel it before starting another one.';
+          'A journey is already active. End it early or cancel it before starting another one.';
       notifyListeners();
       return;
     }
@@ -649,6 +688,7 @@ class EcoRouteController extends ChangeNotifier {
       _resetLiveTracking();
       _currentJourneyLocation = _origin;
       _lastTrackedLocation = _origin;
+      _lastTrackedAt = startedAt;
       _lastPersistedLocation = _origin;
       try {
         await journeyRepository.recordTrackPoint(
@@ -699,7 +739,10 @@ class EcoRouteController extends ChangeNotifier {
     if (journeyId == null) return;
 
     _isCompletingJourney = true;
+    _arrivalConfirmed = true;
     notifyListeners();
+    // Keep the tracker visible at 100% before the completion summary opens.
+    await Future<void>.delayed(_arrivalConfirmationDuration);
     final endedAt = DateTime.now().toUtc();
     try {
       await journeyRepository.completeJourney(
@@ -743,8 +786,7 @@ class EcoRouteController extends ChangeNotifier {
     final activeJourney = _journey;
     final journeyId = activeJourney?.id;
     if (journeyId == null ||
-        (activeJourney?.status != EcoJourneyStatus.inProgress &&
-            activeJourney?.status != EcoJourneyStatus.paused)) {
+        activeJourney?.status != EcoJourneyStatus.inProgress) {
       return false;
     }
 
@@ -794,8 +836,7 @@ class EcoRouteController extends ChangeNotifier {
     final activeJourney = _journey;
     final journeyId = activeJourney?.id;
     if (journeyId == null ||
-        (activeJourney?.status != EcoJourneyStatus.inProgress &&
-            activeJourney?.status != EcoJourneyStatus.paused)) {
+        activeJourney?.status != EcoJourneyStatus.inProgress) {
       return false;
     }
     try {
@@ -812,81 +853,10 @@ class EcoRouteController extends ChangeNotifier {
     }
   }
 
-  Future<void> pauseJourney() async {
-    final activeJourney = _journey;
-    if (activeJourney?.id == null ||
-        activeJourney?.status != EcoJourneyStatus.inProgress) {
-      return;
-    }
-    try {
-      await journeyRepository.pauseJourney(journeyId: activeJourney!.id!);
-      _journey = EcoJourney(
-        id: activeJourney.id,
-        userId: activeJourney.userId,
-        route: activeJourney.route,
-        status: EcoJourneyStatus.paused,
-        startedAt: activeJourney.startedAt,
-        actualWalkingDistanceKm: _trackedWalkingDistanceKm,
-        actualTransitDistanceKm: _trackedTransitDistanceKm,
-        actualStepCount: _estimatedStepCount,
-        actualCaloriesBurned: _liveCaloriesBurned.round(),
-        actualCarbonSavedKg: _liveCarbonSavedKg,
-      );
-    } catch (_) {
-      _message = 'Unable to pause this journey. Please try again.';
-    }
-    notifyListeners();
-  }
-
-  Future<void> resumeJourney() async {
-    final activeJourney = _journey;
-    if (activeJourney?.id == null ||
-        activeJourney?.status != EcoJourneyStatus.paused) {
-      return;
-    }
-    try {
-      await journeyRepository.resumeJourney(journeyId: activeJourney!.id!);
-      EcoLocation? resumeLocation = _currentJourneyLocation;
-      if (_isUsingDeviceLocation) {
-        try {
-          resumeLocation = await locationService.getCurrentLocation();
-        } catch (_) {
-          // Continue from the latest recorded point when the device cannot
-          // provide a fresh fix at the exact moment of resuming.
-        }
-      }
-      _journey = EcoJourney(
-        id: activeJourney.id,
-        userId: activeJourney.userId,
-        route: activeJourney.route,
-        status: EcoJourneyStatus.inProgress,
-        startedAt: activeJourney.startedAt,
-        actualWalkingDistanceKm: _trackedWalkingDistanceKm,
-        actualTransitDistanceKm: _trackedTransitDistanceKm,
-        actualStepCount: _estimatedStepCount,
-        actualCaloriesBurned: _liveCaloriesBurned.round(),
-        actualCarbonSavedKg: _liveCarbonSavedKg,
-      );
-      if (resumeLocation != null) {
-        _currentJourneyLocation = resumeLocation;
-        _lastTrackedLocation = resumeLocation;
-        if (isAtDestination) {
-          // Paused movement is deliberately not added to the tracked totals,
-          // but a fresh GPS fix can still prove that the traveller arrived.
-          unawaited(_completeJourneyAtArrival());
-        } else {
-          unawaited(_rerouteIfNeeded(resumeLocation));
-        }
-      }
-    } catch (_) {
-      _message = 'Unable to resume this journey. Please try again.';
-    }
-    notifyListeners();
-  }
-
   void _resetLiveTracking() {
     _currentJourneyLocation = null;
     _lastTrackedLocation = null;
+    _lastTrackedAt = null;
     _lastPersistedLocation = null;
     _trackedDistanceKm = 0;
     _trackedWalkingDistanceKm = 0;
@@ -895,6 +865,9 @@ class EcoRouteController extends ChangeNotifier {
     _liveCaloriesBurned = 0;
     _liveCarbonSavedKg = 0;
     _isCompletingJourney = false;
+    _arrivalConfirmed = false;
+    _isWalkingSpeedSuspicious = false;
+    _consecutiveFastWalkingUpdates = 0;
   }
 
   double _distanceSquared(EcoLocation location) {

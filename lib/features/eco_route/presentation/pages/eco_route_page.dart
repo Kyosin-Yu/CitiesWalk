@@ -227,9 +227,7 @@ class _EcoRoutePageState extends State<EcoRoutePage>
               Consumer<EcoRouteController>(
                 builder: (context, controller, _) {
                   final tracking =
-                      controller.journey?.status ==
-                          EcoJourneyStatus.inProgress ||
-                      controller.journey?.status == EcoJourneyStatus.paused;
+                      controller.journey?.status == EcoJourneyStatus.inProgress;
                   return _EcoRouteHeader(
                     showBack: controller.route != null,
                     onBack: tracking
@@ -268,12 +266,9 @@ class _EcoRoutePageState extends State<EcoRoutePage>
                     final activeJourney = controller.journey;
                     if (_showActiveTracking &&
                         controller.route != null &&
-                        (activeJourney?.status == EcoJourneyStatus.inProgress ||
-                            activeJourney?.status == EcoJourneyStatus.paused)) {
+                        activeJourney?.status == EcoJourneyStatus.inProgress) {
                       return _ActiveJourneyTrackingView(
                         route: controller.route!,
-                        isPaused:
-                            activeJourney?.status == EcoJourneyStatus.paused,
                         currentLocation: controller.currentJourneyLocation,
                         trackedWalkingDistanceKm:
                             controller.trackedWalkingDistanceKm,
@@ -286,10 +281,10 @@ class _EcoRoutePageState extends State<EcoRoutePage>
                         nextInstruction: controller.nextInstruction,
                         journeyProgress: controller.journeyProgress,
                         isRerouting: controller.isRerouting,
+                        isWalkingSpeedSuspicious:
+                            controller.isWalkingSpeedSuspicious,
                         onMinimize: () =>
                             setState(() => _showActiveTracking = false),
-                        onPause: controller.pauseJourney,
-                        onResume: controller.resumeJourney,
                         onEndEarly: () => _confirmEndEarly(controller),
                         onCancel: () => _confirmCancellation(controller),
                       );
@@ -342,6 +337,8 @@ class _EcoRoutePageState extends State<EcoRoutePage>
                                 nextInstruction: controller.nextInstruction,
                                 journeyProgress: controller.journeyProgress,
                                 isRerouting: controller.isRerouting,
+                                isWalkingSpeedSuspicious:
+                                    controller.isWalkingSpeedSuspicious,
                                 onPlanAnotherRoute: controller.clearRoute,
                                 reviewSummary:
                                     controller.selectedDestinationReviewSummary,
@@ -956,6 +953,7 @@ class _InlineRouteDetails extends StatelessWidget {
     required this.nextInstruction,
     required this.journeyProgress,
     required this.isRerouting,
+    required this.isWalkingSpeedSuspicious,
     required this.onPlanAnotherRoute,
     required this.reviewSummary,
     this.onOpenReviews,
@@ -975,6 +973,7 @@ class _InlineRouteDetails extends StatelessWidget {
   final String? nextInstruction;
   final double journeyProgress;
   final bool isRerouting;
+  final bool isWalkingSpeedSuspicious;
   final VoidCallback onPlanAnotherRoute;
   final DestinationReviewSummary reviewSummary;
   final VoidCallback? onOpenReviews;
@@ -1010,6 +1009,7 @@ class _InlineRouteDetails extends StatelessWidget {
         nextInstruction: nextInstruction,
         journeyProgress: journeyProgress,
         isRerouting: isRerouting,
+        isWalkingSpeedSuspicious: isWalkingSpeedSuspicious,
         onChangeRoute: onPlanAnotherRoute,
       ),
       const SizedBox(height: 12),
@@ -1294,6 +1294,7 @@ class _RoutePreview extends StatelessWidget {
     this.nextInstruction,
     this.journeyProgress = 0,
     this.isRerouting = false,
+    this.isWalkingSpeedSuspicious = false,
     required this.onChangeRoute,
   });
 
@@ -1311,6 +1312,7 @@ class _RoutePreview extends StatelessWidget {
   final String? nextInstruction;
   final double journeyProgress;
   final bool isRerouting;
+  final bool isWalkingSpeedSuspicious;
   final VoidCallback onChangeRoute;
 
   @override
@@ -1327,11 +1329,9 @@ class _RoutePreview extends StatelessWidget {
         _RouteEndpointsCard(route: route, onChangeRoute: onChangeRoute),
         const SizedBox(height: 12),
         EcoRouteMap(route: route, currentLocation: currentLocation),
-        if (journey?.status == EcoJourneyStatus.inProgress ||
-            journey?.status == EcoJourneyStatus.paused) ...[
+        if (journey?.status == EcoJourneyStatus.inProgress) ...[
           const SizedBox(height: 12),
           _LiveJourneyCard(
-            isPaused: journey?.status == EcoJourneyStatus.paused,
             trackedWalkingDistanceKm: trackedWalkingDistanceKm,
             trackedTransitDistanceKm: trackedTransitDistanceKm,
             estimatedStepCount: estimatedStepCount,
@@ -1341,6 +1341,7 @@ class _RoutePreview extends StatelessWidget {
             nextInstruction: nextInstruction,
             journeyProgress: journeyProgress,
             isRerouting: isRerouting,
+            isWalkingSpeedSuspicious: isWalkingSpeedSuspicious,
             destinationName: route.destination.name,
           ),
         ],
@@ -1415,8 +1416,7 @@ class _RoutePreview extends StatelessWidget {
             label: const Text('Journey ended early'),
           ),
           const SizedBox(height: 10),
-        ] else if (journey?.status == EcoJourneyStatus.inProgress ||
-            journey?.status == EcoJourneyStatus.paused) ...[
+        ] else if (journey?.status == EcoJourneyStatus.inProgress) ...[
           const SizedBox(height: 10),
           ElevatedButton.icon(
             onPressed: onOpenTracking,
@@ -1456,45 +1456,55 @@ class _DestinationPreviewCard extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(
-          height: 154,
-          width: double.infinity,
-          child: Image.network(
-            _photoUrl(destination),
-            fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => ColoredBox(
-              color: const Color(0xFFE5F4E7),
-              child: Icon(
-                _categoryIcon(destination),
-                color: AppColors.primary,
-                size: 46,
-              ),
-            ),
-          ),
-        ),
         Padding(
           padding: const EdgeInsets.all(14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                destination.category.toUpperCase(),
-                style: GoogleFonts.poppins(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primary,
-                  letterSpacing: .7,
-                ),
+              Row(
+                children: [
+                  Container(
+                    width: 46,
+                    height: 46,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE5F4E7),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(
+                      _categoryIcon(destination),
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          destination.category.toUpperCase(),
+                          style: GoogleFonts.poppins(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                            letterSpacing: .7,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          destination.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.poppins(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 3),
-              Text(
-                destination.name,
-                style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 12),
               Text(
                 destination.description,
                 maxLines: 2,
@@ -1510,17 +1520,6 @@ class _DestinationPreviewCard extends StatelessWidget {
       ],
     ),
   );
-
-  String _photoUrl(EcoDestination value) {
-    final name = value.name.toLowerCase();
-    if (name.contains('batu')) {
-      return 'https://images.unsplash.com/photo-1596422846543-75c6fc197f07?auto=format&fit=crop&w=1000&q=85';
-    }
-    if (name.contains('central') || name.contains('market')) {
-      return 'https://image.mom-mom.net/eyJrZXkiOiJwbGFjZXMvNjczNmE3ZDYyN2Y3Mjg1NDEwMjE5YTRhLkpQRyIsImVkaXRzIjp7InJlc2l6ZSI6eyJ3aWR0aCI6MTA4MCwid2l0aG91dEVubGFyZ2VtZW50Ijp0cnVlfX19';
-    }
-    return 'https://images.trvl-media.com/place/6152226/e4914450-59a7-4d6c-ab5f-d4a70bbcfe80.jpg';
-  }
 
   IconData _categoryIcon(EcoDestination value) {
     final category = value.category.toLowerCase();
@@ -1583,7 +1582,6 @@ class _DestinationReviewBrief extends StatelessWidget {
 
 class _LiveJourneyCard extends StatelessWidget {
   const _LiveJourneyCard({
-    required this.isPaused,
     required this.trackedWalkingDistanceKm,
     required this.trackedTransitDistanceKm,
     required this.estimatedStepCount,
@@ -1593,10 +1591,10 @@ class _LiveJourneyCard extends StatelessWidget {
     required this.nextInstruction,
     required this.journeyProgress,
     required this.isRerouting,
+    required this.isWalkingSpeedSuspicious,
     required this.destinationName,
   });
 
-  final bool isPaused;
   final double trackedWalkingDistanceKm;
   final double trackedTransitDistanceKm;
   final int estimatedStepCount;
@@ -1606,14 +1604,13 @@ class _LiveJourneyCard extends StatelessWidget {
   final String? nextInstruction;
   final double journeyProgress;
   final bool isRerouting;
+  final bool isWalkingSpeedSuspicious;
   final String destinationName;
 
   @override
   Widget build(BuildContext context) {
     final percentage = (journeyProgress * 100).round();
-    final encouragement = isPaused
-        ? 'Your journey is safe to resume whenever you are ready.'
-        : journeyProgress < .25
+    final encouragement = journeyProgress < .25
         ? 'Great start — every step makes this trip cleaner.'
         : journeyProgress < .75
         ? 'You are building a healthier, lower-carbon city journey.'
@@ -1639,8 +1636,8 @@ class _LiveJourneyCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
-                  isPaused
-                      ? Icons.pause_rounded
+                  isWalkingSpeedSuspicious
+                      ? Icons.speed_rounded
                       : isRerouting
                       ? Icons.route_rounded
                       : Icons.directions_walk_rounded,
@@ -1653,8 +1650,8 @@ class _LiveJourneyCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isPaused
-                          ? 'Journey paused'
+                      isWalkingSpeedSuspicious
+                          ? 'Walking pace check'
                           : isRerouting
                           ? 'Refreshing your route'
                           : 'Active city quest',
@@ -1732,7 +1729,9 @@ class _LiveJourneyCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              nextInstruction == null
+              isWalkingSpeedSuspicious
+                  ? 'Movement is faster than walking. Walking distance, steps and calories are paused until a normal walking pace is detected.'
+                  : nextInstruction == null
                   ? 'GPS is tracking your progress and route position.'
                   : 'Next step: $nextInstruction',
               maxLines: 2,
@@ -1796,7 +1795,6 @@ class _LiveQuestMetric extends StatelessWidget {
 class _ActiveJourneyTrackingView extends StatelessWidget {
   const _ActiveJourneyTrackingView({
     required this.route,
-    required this.isPaused,
     required this.currentLocation,
     required this.trackedWalkingDistanceKm,
     required this.trackedTransitDistanceKm,
@@ -1807,15 +1805,13 @@ class _ActiveJourneyTrackingView extends StatelessWidget {
     required this.nextInstruction,
     required this.journeyProgress,
     required this.isRerouting,
+    required this.isWalkingSpeedSuspicious,
     required this.onMinimize,
-    required this.onPause,
-    required this.onResume,
     required this.onEndEarly,
     required this.onCancel,
   });
 
   final EcoRoute route;
-  final bool isPaused;
   final EcoLocation? currentLocation;
   final double trackedWalkingDistanceKm;
   final double trackedTransitDistanceKm;
@@ -1826,9 +1822,8 @@ class _ActiveJourneyTrackingView extends StatelessWidget {
   final String? nextInstruction;
   final double journeyProgress;
   final bool isRerouting;
+  final bool isWalkingSpeedSuspicious;
   final VoidCallback onMinimize;
-  final VoidCallback onPause;
-  final VoidCallback onResume;
   final VoidCallback onEndEarly;
   final VoidCallback onCancel;
 
@@ -1843,16 +1838,14 @@ class _ActiveJourneyTrackingView extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isPaused ? 'Journey paused' : 'Live journey tracking',
+                  'Live journey tracking',
                   style: GoogleFonts.poppins(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 Text(
-                  isPaused
-                      ? 'Resume when you are ready to count movement again.'
-                      : 'Stay on the route; arrival is detected automatically.',
+                  'Stay on the route; arrival is detected automatically.',
                   style: GoogleFonts.poppins(
                     fontSize: 11,
                     color: AppColors.textSecondary,
@@ -1872,7 +1865,6 @@ class _ActiveJourneyTrackingView extends StatelessWidget {
       EcoRouteMap(route: route, currentLocation: currentLocation),
       const SizedBox(height: 14),
       _LiveJourneyCard(
-        isPaused: isPaused,
         trackedWalkingDistanceKm: trackedWalkingDistanceKm,
         trackedTransitDistanceKm: trackedTransitDistanceKm,
         estimatedStepCount: estimatedStepCount,
@@ -1882,6 +1874,7 @@ class _ActiveJourneyTrackingView extends StatelessWidget {
         nextInstruction: nextInstruction,
         journeyProgress: journeyProgress,
         isRerouting: isRerouting,
+        isWalkingSpeedSuspicious: isWalkingSpeedSuspicious,
         destinationName: route.destination.name,
       ),
       const SizedBox(height: 14),
@@ -1898,9 +1891,7 @@ class _ActiveJourneyTrackingView extends StatelessWidget {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                isPaused
-                    ? 'Paused movement is not counted. When you resume, tracking starts from your new GPS position and can refresh the route if needed.'
-                    : 'You can switch CitiesWalk tabs or minimize this screen without cancelling. Keep the app open while you want live GPS updates.',
+                'You can switch CitiesWalk tabs or minimize this screen without cancelling. Keep the app open while you want live GPS updates.',
                 style: GoogleFonts.poppins(fontSize: 11, height: 1.35),
               ),
             ),
@@ -1908,19 +1899,6 @@ class _ActiveJourneyTrackingView extends StatelessWidget {
         ),
       ),
       const SizedBox(height: 16),
-      if (isPaused)
-        ElevatedButton.icon(
-          onPressed: onResume,
-          icon: const Icon(Icons.play_circle_fill_rounded),
-          label: const Text('Resume tracking'),
-        )
-      else
-        OutlinedButton.icon(
-          onPressed: onPause,
-          icon: const Icon(Icons.pause_circle_outline_rounded),
-          label: const Text('Pause tracking'),
-        ),
-      const SizedBox(height: 10),
       OutlinedButton.icon(
         onPressed: onEndEarly,
         style: OutlinedButton.styleFrom(

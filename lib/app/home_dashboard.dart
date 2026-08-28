@@ -19,6 +19,7 @@ class HomeDashboard extends StatelessWidget {
     required this.userId,
     required this.journeyHistoryRepository,
     required this.historyRefreshSignal,
+    required this.onRefresh,
     required this.onNavigate,
     required this.onPlanAgain,
     this.onPlanDestination,
@@ -29,6 +30,7 @@ class HomeDashboard extends StatelessWidget {
   final String userId;
   final JourneyHistoryRepository journeyHistoryRepository;
   final ValueListenable<int> historyRefreshSignal;
+  final Future<void> Function() onRefresh;
   final ValueChanged<int> onNavigate;
   final ValueChanged<EcoJourneyHistoryItem> onPlanAgain;
   final ValueChanged<EcoDestination>? onPlanDestination;
@@ -42,11 +44,13 @@ class HomeDashboard extends StatelessWidget {
       bottom: false,
       child: Column(
         children: [
-          const _HomeHeader(),
+          _HomeHeader(onRefresh: onRefresh),
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 112),
-              children: [
+            child: RefreshIndicator(
+              onRefresh: onRefresh,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 112),
+                children: [
                 _WelcomeCard(onPlanRoute: () => onNavigate(1)),
                 const SizedBox(height: 24),
                 const _SectionTitle('Today’s eco impact'),
@@ -83,7 +87,8 @@ class HomeDashboard extends StatelessWidget {
                   refreshSignal: historyRefreshSignal,
                   onPlanAgain: onPlanAgain,
                 ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
@@ -93,7 +98,9 @@ class HomeDashboard extends StatelessWidget {
 }
 
 class _HomeHeader extends StatelessWidget {
-  const _HomeHeader();
+  const _HomeHeader({required this.onRefresh});
+
+  final Future<void> Function() onRefresh;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -146,12 +153,13 @@ class _HomeHeader extends StatelessWidget {
               ),
             ),
             IconButton(
-              onPressed: () {},
+              tooltip: 'Refresh dashboard',
+              onPressed: onRefresh,
               style: IconButton.styleFrom(
                 backgroundColor: Colors.white.withValues(alpha: .14),
                 foregroundColor: Colors.white,
               ),
-              icon: const Icon(Icons.notifications_none_rounded),
+              icon: const Icon(Icons.refresh_rounded),
             ),
           ],
         ),
