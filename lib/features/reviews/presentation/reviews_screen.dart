@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:citieswalk/core/localization/localized_material.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../business_logic/entities/place_review.dart';
@@ -757,9 +757,9 @@ class _ReviewEditorPageState extends State<_ReviewEditorPage> {
                       maxLines: 7,
                       maxLength: 500,
                       onChanged: (_) => setState(() {}),
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         border: InputBorder.none,
-                        hintText: 'Share your experience...',
+                        hintText: context.tr('Share your experience...'),
                       ),
                     ),
                   ],

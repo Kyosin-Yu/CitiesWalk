@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:citieswalk/core/localization/localized_material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../business_logic/entities/fitness_dashboard.dart';

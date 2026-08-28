@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:citieswalk/core/localization/localized_material.dart';
 
 import '../../../../core/di/service_locator.dart';
 import '../../../../core/utils/validators.dart';
@@ -164,10 +164,10 @@ class _LoginPageState extends State<LoginPage> {
                       // Email
                       TextFormField(
                         controller: _emailController,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          prefixIcon: Icon(Icons.email_outlined),
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          labelText: context.tr('Email'),
+                          prefixIcon: const Icon(Icons.email_outlined),
+                          border: const OutlineInputBorder(),
                         ),
                         keyboardType: TextInputType.emailAddress,
                         textInputAction: TextInputAction.next,
@@ -180,7 +180,7 @@ class _LoginPageState extends State<LoginPage> {
                       TextFormField(
                         controller: _passwordController,
                         decoration: InputDecoration(
-                          labelText: 'Password',
+                          labelText: context.tr('Password'),
                           prefixIcon: const Icon(Icons.lock_outline),
                           border: const OutlineInputBorder(),
                           suffixIcon: IconButton(

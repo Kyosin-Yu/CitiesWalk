@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:citieswalk/core/localization/localized_material.dart';
 
 import '../../../../core/di/service_locator.dart';
 import '../../../../core/utils/validators.dart';
@@ -119,10 +119,10 @@ class _RegisterPageState extends State<RegisterPage> {
                       // Full Name
                       TextFormField(
                         controller: _fullNameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Full Name',
-                          prefixIcon: Icon(Icons.person_outline),
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          labelText: context.tr('Full Name'),
+                          prefixIcon: const Icon(Icons.person_outline),
+                          border: const OutlineInputBorder(),
                         ),
                         textInputAction: TextInputAction.next,
                         validator: Validators.validateFullName,
@@ -133,10 +133,10 @@ class _RegisterPageState extends State<RegisterPage> {
                       // Email
                       TextFormField(
                         controller: _emailController,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          prefixIcon: Icon(Icons.email_outlined),
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          labelText: context.tr('Email'),
+                          prefixIcon: const Icon(Icons.email_outlined),
+                          border: const OutlineInputBorder(),
                         ),
                         keyboardType: TextInputType.emailAddress,
                         textInputAction: TextInputAction.next,
@@ -149,7 +149,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       TextFormField(
                         controller: _passwordController,
                         decoration: InputDecoration(
-                          labelText: 'Password',
+                          labelText: context.tr('Password'),
                           prefixIcon: const Icon(Icons.lock_outline),
                           border: const OutlineInputBorder(),
                           suffixIcon: IconButton(
@@ -176,7 +176,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       TextFormField(
                         controller: _confirmPasswordController,
                         decoration: InputDecoration(
-                          labelText: 'Confirm Password',
+                          labelText: context.tr('Confirm Password'),
                           prefixIcon: const Icon(Icons.lock_outline),
                           border: const OutlineInputBorder(),
                           suffixIcon: IconButton(
@@ -208,10 +208,10 @@ class _RegisterPageState extends State<RegisterPage> {
                       // Phone Number (optional)
                       TextFormField(
                         controller: _phoneNumberController,
-                        decoration: const InputDecoration(
-                          labelText: 'Phone Number (optional)',
-                          prefixIcon: Icon(Icons.phone_outlined),
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          labelText: context.tr('Phone Number (optional)'),
+                          prefixIcon: const Icon(Icons.phone_outlined),
+                          border: const OutlineInputBorder(),
                         ),
                         keyboardType: TextInputType.phone,
                         textInputAction: TextInputAction.done,

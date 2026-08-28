@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:citieswalk/core/localization/localized_material.dart';
 
 import '../../../../core/di/service_locator.dart';
 import '../../business_logic/providers/auth_controller.dart';

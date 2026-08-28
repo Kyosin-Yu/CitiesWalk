@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:citieswalk/core/localization/localized_material.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/di/service_locator.dart';

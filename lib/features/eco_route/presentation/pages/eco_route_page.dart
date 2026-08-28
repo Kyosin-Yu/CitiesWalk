@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:citieswalk/core/localization/localized_material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
@@ -867,7 +867,7 @@ class _DestinationSearchState extends State<_DestinationSearch> {
       onSubmitted: _submitSearch,
       textInputAction: TextInputAction.search,
       decoration: InputDecoration(
-        hintText: 'Search an address, park, food, landmark…',
+        hintText: context.tr('Search an address, park, food, landmark…'),
         prefixIcon: const Icon(Icons.search_rounded),
         suffixIcon: IconButton(
           tooltip: 'Search',

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:citieswalk/core/localization/localized_material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../app/theme/app_colors.dart';
