@@ -44,7 +44,7 @@ class HomeDashboard extends StatelessWidget {
       bottom: false,
       child: Column(
         children: [
-          _HomeHeader(onRefresh: onRefresh),
+          const _HomeHeader(),
           Expanded(
             child: RefreshIndicator(
               onRefresh: onRefresh,
@@ -98,13 +98,11 @@ class HomeDashboard extends StatelessWidget {
 }
 
 class _HomeHeader extends StatelessWidget {
-  const _HomeHeader({required this.onRefresh});
-
-  final Future<void> Function() onRefresh;
+  const _HomeHeader();
 
   @override
   Widget build(BuildContext context) => Container(
-    height: 124,
+    height: 130,
     padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
     decoration: const BoxDecoration(
       color: AppColors.primary,
@@ -112,9 +110,10 @@ class _HomeHeader extends StatelessWidget {
     ),
     child: Stack(
       children: [
-        Positioned(right: -40, top: -72, child: _ring(160)),
-        Positioned(right: 18, top: -32, child: _ring(98)),
+        Positioned(right: -34, top: -66, child: _ring(156)),
+        Positioned(right: 22, top: -34, child: _ring(100)),
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
               width: 44,
@@ -132,8 +131,8 @@ class _HomeHeader extends StatelessWidget {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  const SizedBox(height: 2),
                   Text(
                     'CitiesWalk',
                     style: GoogleFonts.poppins(
@@ -151,15 +150,6 @@ class _HomeHeader extends StatelessWidget {
                   ),
                 ],
               ),
-            ),
-            IconButton(
-              tooltip: 'Refresh dashboard',
-              onPressed: onRefresh,
-              style: IconButton.styleFrom(
-                backgroundColor: Colors.white.withValues(alpha: .14),
-                foregroundColor: Colors.white,
-              ),
-              icon: const Icon(Icons.refresh_rounded),
             ),
           ],
         ),
