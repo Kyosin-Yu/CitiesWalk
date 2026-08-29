@@ -9,10 +9,7 @@ void main() {
     );
 
     expect(find.text('Health Connect support'), findsOneWidget);
-    expect(
-      find.textContaining('daily steps, walking distance and active calories'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('overall daily steps'), findsOneWidget);
     expect(find.text('How to link'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('health-connect-tutorial-button')));

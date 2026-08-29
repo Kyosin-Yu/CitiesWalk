@@ -56,7 +56,7 @@ class HealthConnectCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Link Health Connect to use daily steps, walking distance and active calories in Fitness summaries.',
+                    'Link Health Connect to show your overall daily steps alongside CitiesWalk journey activity.',
                     style: GoogleFonts.poppins(
                       fontSize: 9,
                       height: 1.45,
@@ -119,12 +119,12 @@ class _HealthConnectTutorial extends StatelessWidget {
     (
       title: 'Enable sharing',
       description:
-          'In that health app, connect to Health Connect and allow it to write steps, distance and calories.',
+          'In that health app, connect to Health Connect and allow it to write steps.',
     ),
     (
       title: 'Allow CitiesWalk access',
       description:
-          'In Health Connect → App permissions → CitiesWalk, allow read access for steps, distance and active calories.',
+          'In Health Connect → App permissions → CitiesWalk, allow read access for steps.',
     ),
     (
       title: 'Return and refresh',

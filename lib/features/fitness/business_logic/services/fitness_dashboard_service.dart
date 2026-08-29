@@ -68,17 +68,16 @@ class FitnessDashboardService {
         todayJourneys,
         (journey) => journey.stepsSource,
       ),
-      walkingDistanceTodayKm: healthActivity?.walkingDistanceMetersToday != null
-          ? healthActivity!.walkingDistanceMetersToday! / 1000
-          : _distanceKm(todayJourneys),
-      walkingSource: healthActivity?.walkingDistanceMetersToday != null
-          ? FitnessMetricSource.recorded
-          : _combinedSource(todayJourneys, (journey) => journey.distanceSource),
-      caloriesTodayKcal:
-          healthActivity?.activeCaloriesToday ?? _calories(todayJourneys),
-      caloriesSource: healthActivity?.activeCaloriesToday != null
-          ? FitnessMetricSource.recorded
-          : _combinedSource(todayJourneys, (journey) => journey.caloriesSource),
+      walkingDistanceTodayKm: _distanceKm(todayJourneys),
+      walkingSource: _combinedSource(
+        todayJourneys,
+        (journey) => journey.distanceSource,
+      ),
+      caloriesTodayKcal: _calories(todayJourneys),
+      caloriesSource: _combinedSource(
+        todayJourneys,
+        (journey) => journey.caloriesSource,
+      ),
       carbonSavedTodayKg: _carbon(todayJourneys),
       carbonSource: _combinedSource(
         todayJourneys,
