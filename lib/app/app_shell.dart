@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:citieswalk/core/localization/localized_material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -132,31 +132,31 @@ class _AppShellState extends State<AppShell> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: _selectDestination,
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded),
-            label: 'Home',
+            icon: const Icon(Icons.home_outlined),
+            selectedIcon: const Icon(Icons.home_rounded),
+            label: context.tr('Home'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.explore_outlined),
-            selectedIcon: Icon(Icons.explore_rounded),
-            label: 'Explore',
+            icon: const Icon(Icons.explore_outlined),
+            selectedIcon: const Icon(Icons.explore_rounded),
+            label: context.tr('Explore'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.directions_walk_outlined),
-            selectedIcon: Icon(Icons.directions_walk_rounded),
-            label: 'Fitness',
+            icon: const Icon(Icons.directions_walk_outlined),
+            selectedIcon: const Icon(Icons.directions_walk_rounded),
+            label: context.tr('Fitness'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.star_outline_rounded),
-            selectedIcon: Icon(Icons.star_rounded),
-            label: 'Rewards',
+            icon: const Icon(Icons.star_outline_rounded),
+            selectedIcon: const Icon(Icons.star_rounded),
+            label: context.tr('Rewards'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.person_outline_rounded),
-            selectedIcon: Icon(Icons.person_rounded),
-            label: 'Profile',
+            icon: const Icon(Icons.person_outline_rounded),
+            selectedIcon: const Icon(Icons.person_rounded),
+            label: context.tr('Profile'),
           ),
         ],
       ),

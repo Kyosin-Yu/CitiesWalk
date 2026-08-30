@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:citieswalk/core/localization/localized_material.dart';
 
 import '../../../../core/di/service_locator.dart';
 import '../../../../core/utils/validators.dart';
@@ -99,7 +99,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                       obscureText: _obscurePassword,
                       autofillHints: const [AutofillHints.newPassword],
                       decoration: InputDecoration(
-                        labelText: 'New password',
+                        labelText: context.tr('New password'),
                         prefixIcon: const Icon(Icons.lock_outline),
                         border: const OutlineInputBorder(),
                         suffixIcon: IconButton(
@@ -124,10 +124,10 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                       controller: _confirmPasswordController,
                       obscureText: _obscurePassword,
                       autofillHints: const [AutofillHints.newPassword],
-                      decoration: const InputDecoration(
-                        labelText: 'Confirm new password',
-                        prefixIcon: Icon(Icons.lock_outline),
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: context.tr('Confirm new password'),
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        border: const OutlineInputBorder(),
                       ),
                       validator: (value) {
                         final passwordError = Validators.validatePassword(

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:citieswalk/core/localization/localized_material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -46,9 +46,9 @@ class _FitnessGoalDialogState extends State<FitnessGoalDialog> {
           children: [
             DropdownButtonFormField<FitnessGoalMetric>(
               initialValue: _metric,
-              decoration: const InputDecoration(
-                labelText: 'Metric',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: context.tr('Metric'),
+                border: const OutlineInputBorder(),
               ),
               items: [
                 for (final metric in FitnessGoalMetric.values)
@@ -62,9 +62,9 @@ class _FitnessGoalDialogState extends State<FitnessGoalDialog> {
             const SizedBox(height: 16),
             DropdownButtonFormField<FitnessGoalPeriod>(
               initialValue: _period,
-              decoration: const InputDecoration(
-                labelText: 'Period',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: context.tr('Period'),
+                border: const OutlineInputBorder(),
               ),
               items: [
                 for (final period in FitnessGoalPeriod.values)
@@ -85,7 +85,7 @@ class _FitnessGoalDialogState extends State<FitnessGoalDialog> {
                 FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
               ],
               decoration: InputDecoration(
-                labelText: 'Target',
+                labelText: context.tr('Target'),
                 suffixText: _metric.unit,
                 border: const OutlineInputBorder(),
               ),

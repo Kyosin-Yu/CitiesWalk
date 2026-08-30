@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:citieswalk/core/localization/localized_material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../features/eco_route/business_logic/entities/eco_journey_history_item.dart';

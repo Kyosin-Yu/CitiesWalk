@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:citieswalk/core/localization/localized_material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../app/theme/app_colors.dart';
@@ -215,7 +215,7 @@ class _LockerHeader extends StatelessWidget {
                                   ),
                                 ),
                                 TextSpan(
-                                  text: ' of $total',
+                                  text: '${context.tr(' of ')}$total',
                                   style: const TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w600,
