@@ -6,6 +6,8 @@ class AppUser {
   final String? profileImage;
   final String? bio;
   final bool publicProfile;
+  final DateTime? deletionRequestedAt;
+  final DateTime? permanentlyDeleteAt;
 
   const AppUser({
     required this.id,
@@ -15,5 +17,11 @@ class AppUser {
     this.profileImage,
     this.bio,
     this.publicProfile = true,
+    this.deletionRequestedAt,
+    this.permanentlyDeleteAt,
   });
+
+  bool get isPendingDeletion => permanentlyDeleteAt != null;
+  bool get canRecoverAccount =>
+      permanentlyDeleteAt?.isAfter(DateTime.now()) ?? false;
 }

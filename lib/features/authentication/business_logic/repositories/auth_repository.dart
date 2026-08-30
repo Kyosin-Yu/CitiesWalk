@@ -1,5 +1,6 @@
 import '../entities/app_user.dart';
 import '../entities/authentication_state.dart';
+import '../entities/account_deletion.dart';
 
 abstract class AuthRepository {
   Future<AppUser> signUp({
@@ -30,6 +31,12 @@ abstract class AuthRepository {
   });
 
   Future<AppUser> updateProfileImage({required String localImagePath});
+
+  Future<AccountDeletion> requestAccountDeletion();
+
+  Future<void> cancelAccountDeletion();
+
+  Future<void> finalizeAccountDeletion();
 
   Stream<AuthenticationState> authStateChanges();
 }

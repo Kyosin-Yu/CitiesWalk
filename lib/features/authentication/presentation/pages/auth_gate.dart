@@ -6,6 +6,7 @@ import '../../../../core/di/service_locator.dart';
 import '../../business_logic/providers/auth_controller.dart';
 import 'login_page.dart';
 import 'reset_password_page.dart';
+import 'account_recovery_page.dart';
 
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
@@ -38,6 +39,10 @@ class _AuthGateState extends State<AuthGate> {
 
         if (authController.isPasswordRecovery) {
           return const ResetPasswordPage();
+        }
+
+        if (authController.currentUser?.isPendingDeletion ?? false) {
+          return const AccountRecoveryPage();
         }
 
         if (authController.isAuthenticated) {

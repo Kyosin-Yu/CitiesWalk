@@ -9,6 +9,9 @@ import '../../features/authentication/data/data_sources/profile_data_source.dart
 import '../../features/authentication/data/data_sources/supabase_auth_data_source.dart';
 import '../../features/authentication/business_logic/providers/auth_controller.dart';
 import '../../features/authentication/business_logic/providers/settings_controller.dart';
+import '../../features/authentication/business_logic/providers/location_data_controller.dart';
+import '../../features/authentication/business_logic/repositories/location_settings_repository.dart';
+import '../../features/authentication/data/repositories/device_location_settings_repository.dart';
 import '../../features/authentication/business_logic/repositories/settings_repository.dart';
 import '../../features/authentication/data/data_sources/supabase_settings_data_source.dart';
 import '../../features/authentication/data/repositories/settings_repository_impl.dart';
@@ -63,6 +66,12 @@ Future<void> setupServiceLocator() async {
   );
   sl.registerLazySingleton<SettingsController>(
     () => SettingsController(sl<SettingsRepository>()),
+  );
+  sl.registerLazySingleton<LocationSettingsRepository>(
+    DeviceLocationSettingsRepository.new,
+  );
+  sl.registerFactory<LocationDataController>(
+    () => LocationDataController(sl<LocationSettingsRepository>()),
   );
 
   sl.registerLazySingleton<SupabaseFitnessDataSource>(

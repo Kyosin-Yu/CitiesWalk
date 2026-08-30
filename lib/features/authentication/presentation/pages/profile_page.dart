@@ -3,6 +3,7 @@ import 'edit_profile_page.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/di/service_locator.dart';
 import '../../business_logic/providers/auth_controller.dart';
+import '../../business_logic/providers/profile_stats_controller.dart';
 import 'login_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../eco_route/data/data_sources/supabase_journey_data_source.dart';
@@ -15,10 +16,12 @@ class ProfilePage extends StatelessWidget {
     super.key,
     required this.onOpenMyReviews,
     required this.onOpenMyBadges,
+    required this.statsController,
   });
 
   final VoidCallback onOpenMyReviews;
   final VoidCallback onOpenMyBadges;
+  final ProfileStatsController statsController;
 
   @override
   Widget build(BuildContext context) {
@@ -32,170 +35,207 @@ class ProfilePage extends StatelessWidget {
           builder: (context, _) {
             final user = authController.currentUser;
 
-            return SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 24),
-              child: Column(
-                children: [
-                  _ProfileHeader(
-                    fullName: user?.fullName ?? 'CitiesWalk User',
-                    email: user?.email ?? '',
-                    profileImage: user?.profileImage,
-                  ),
-                  const SizedBox(height: 18),
-                  const _ProfileStats(),
-                  const SizedBox(height: 20),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: _EditProfileButton(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const EditProfilePage(),
-                          ),
-                        );
-                      },
+            return RefreshIndicator(
+              color: AppColors.primary,
+              onRefresh: () =>
+                  _refreshProfile(context, authController, user?.id),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.only(bottom: 24),
+                child: Column(
+                  children: [
+                    _ProfileHeader(
+                      fullName: user?.fullName ?? 'CitiesWalk User',
+                      email: user?.email ?? '',
+                      profileImage: user?.profileImage,
                     ),
-                  ),
-                  const SizedBox(height: 14),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: _ProfileMenuCard(
-                      items: [
-                        _ProfileMenuItemData(
-                          icon: Icons.near_me_outlined,
-                          title: 'My Journeys',
-                          subtitle: 'View your completed journeys',
-                          onTap: () {
-                            final user = authController.currentUser;
+                    const SizedBox(height: 18),
+                    ListenableBuilder(
+                      listenable: statsController,
+                      builder: (context, _) => _ProfileStats(
+                        controller: statsController,
+                        onRetry: user == null
+                            ? null
+                            : () => statsController.load(userId: user.id),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: _EditProfileButton(
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const EditProfilePage(),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: _ProfileMenuCard(
+                        items: [
+                          _ProfileMenuItemData(
+                            icon: Icons.near_me_outlined,
+                            title: 'My Journeys',
+                            subtitle: 'View your completed journeys',
+                            onTap: () {
+                              final user = authController.currentUser;
 
-                            if (user == null) {
-                              return;
-                            }
+                              if (user == null) {
+                                return;
+                              }
 
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => MyJourneysPage(
-                                  userId: user.id,
-                                  repository: SupabaseJourneyRepository(
-                                    SupabaseJourneyDataSource(
-                                      sl<SupabaseClient>(),
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => MyJourneysPage(
+                                    userId: user.id,
+                                    repository: SupabaseJourneyRepository(
+                                      SupabaseJourneyDataSource(
+                                        sl<SupabaseClient>(),
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                        _ProfileMenuItemData(
-                          icon: Icons.star_border_rounded,
-                          title: 'My Reviews',
-                          subtitle: 'View your community reviews',
-                          onTap: onOpenMyReviews,
-                        ),
-                        _ProfileMenuItemData(
-                          icon: Icons.workspace_premium_outlined,
-                          title: 'My Badges',
-                          subtitle: 'View your earned badges',
-                          onTap: onOpenMyBadges,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: _ProfileMenuCard(
-                      items: [
-                        _ProfileMenuItemData(
-                          icon: Icons.settings_outlined,
-                          title: 'Settings',
-                          subtitle: 'Notifications, language, privacy',
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => const SettingsPage(),
-                              ),
-                            );
-                          },
-                        ),
-                        _ProfileMenuItemData(
-                          icon: Icons.logout_rounded,
-                          title: 'Log Out',
-                          subtitle: 'Sign out of your account',
-                          isDestructive: true,
-                          onTap: () async {
-                            final shouldLogout = await showDialog<bool>(
-                              context: context,
-                              builder: (dialogContext) {
-                                return AlertDialog(
-                                  title: const Text('Log Out'),
-                                  content: const Text(
-                                    'Are you sure you want to log out of your account?',
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () {
-                                        Navigator.of(dialogContext).pop(false);
-                                      },
-                                      child: const Text('Cancel'),
-                                    ),
-                                    FilledButton(
-                                      onPressed: () {
-                                        Navigator.of(dialogContext).pop(true);
-                                      },
-                                      child: const Text('Log Out'),
-                                    ),
-                                  ],
-                                );
-                              },
-                            );
-
-                            if (shouldLogout != true) {
-                              return;
-                            }
-
-                            await authController.signOut();
-
-                            if (!context.mounted) {
-                              return;
-                            }
-
-                            if (authController.errorMessage != null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(authController.errorMessage!),
                                 ),
                               );
-
-                              return;
-                            }
-
-                            Navigator.of(context).pushAndRemoveUntil(
-                              MaterialPageRoute(
-                                builder: (_) => const LoginPage(),
-                              ),
-                              (route) => false,
-                            );
-                          },
-                        ),
-                      ],
+                            },
+                          ),
+                          _ProfileMenuItemData(
+                            icon: Icons.star_border_rounded,
+                            title: 'My Reviews',
+                            subtitle: 'View your community reviews',
+                            onTap: onOpenMyReviews,
+                          ),
+                          _ProfileMenuItemData(
+                            icon: Icons.workspace_premium_outlined,
+                            title: 'My Badges',
+                            subtitle: 'View your earned badges',
+                            onTap: onOpenMyBadges,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'CitiesWalk v2.1.0 · KL Edition 🌿',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: AppColors.textSecondary,
+                    const SizedBox(height: 12),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: _ProfileMenuCard(
+                        items: [
+                          _ProfileMenuItemData(
+                            icon: Icons.settings_outlined,
+                            title: 'Settings',
+                            subtitle: 'Notifications, language, privacy',
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const SettingsPage(),
+                                ),
+                              );
+                            },
+                          ),
+                          _ProfileMenuItemData(
+                            icon: Icons.logout_rounded,
+                            title: 'Log Out',
+                            subtitle: 'Sign out of your account',
+                            isDestructive: true,
+                            onTap: () async {
+                              final shouldLogout = await showDialog<bool>(
+                                context: context,
+                                builder: (dialogContext) {
+                                  return AlertDialog(
+                                    title: const Text('Log Out'),
+                                    content: const Text(
+                                      'Are you sure you want to log out of your account?',
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () {
+                                          Navigator.of(
+                                            dialogContext,
+                                          ).pop(false);
+                                        },
+                                        child: const Text('Cancel'),
+                                      ),
+                                      FilledButton(
+                                        onPressed: () {
+                                          Navigator.of(dialogContext).pop(true);
+                                        },
+                                        child: const Text('Log Out'),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
+
+                              if (shouldLogout != true) {
+                                return;
+                              }
+
+                              await authController.signOut();
+
+                              if (!context.mounted) {
+                                return;
+                              }
+
+                              if (authController.errorMessage != null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(authController.errorMessage!),
+                                  ),
+                                );
+
+                                return;
+                              }
+
+                              Navigator.of(context).pushAndRemoveUntil(
+                                MaterialPageRoute(
+                                  builder: (_) => const LoginPage(),
+                                ),
+                                (route) => false,
+                              );
+                            },
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 16),
+                    const Text(
+                      'CitiesWalk v2.1.0 · KL Edition 🌿',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             );
           },
         ),
       ),
     );
+  }
+
+  Future<void> _refreshProfile(
+    BuildContext context,
+    AuthController authController,
+    String? userId,
+  ) async {
+    if (userId == null) return;
+
+    await Future.wait([
+      authController.refreshCurrentUser(),
+      statsController.load(userId: userId),
+    ]);
+
+    if (!context.mounted) return;
+    final error = statsController.errorMessage ?? authController.errorMessage;
+    if (error != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error)));
+    }
   }
 }
 
@@ -319,7 +359,10 @@ class _ProfileHeader extends StatelessWidget {
 }
 
 class _ProfileStats extends StatelessWidget {
-  const _ProfileStats();
+  const _ProfileStats({required this.controller, required this.onRetry});
+
+  final ProfileStatsController controller;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -330,23 +373,57 @@ class _ProfileStats extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0xFFE0E0E0)),
       ),
-      child: const Row(
+      child: Column(
         children: [
-          Expanded(
-            child: _StatItem(value: '24', label: 'Journeys'),
+          Row(
+            children: [
+              Expanded(
+                child: _StatItem(
+                  value: controller.stats?.journeyCount.toString() ?? '—',
+                  label: 'Journeys',
+                ),
+              ),
+              const _VerticalDivider(),
+              Expanded(
+                child: _StatItem(
+                  value: controller.stats?.reviewCount.toString() ?? '—',
+                  label: 'Reviews',
+                ),
+              ),
+              const _VerticalDivider(),
+              Expanded(
+                child: _StatItem(
+                  value: controller.stats?.badgeCount.toString() ?? '—',
+                  label: 'Badges',
+                ),
+              ),
+              const _VerticalDivider(),
+              Expanded(
+                child: _StatItem(
+                  value: controller.stats?.points.toString() ?? '—',
+                  label: 'Points',
+                ),
+              ),
+            ],
           ),
-          _VerticalDivider(),
-          Expanded(
-            child: _StatItem(value: '1', label: 'Reviews'),
-          ),
-          _VerticalDivider(),
-          Expanded(
-            child: _StatItem(value: '7', label: 'Badges'),
-          ),
-          _VerticalDivider(),
-          Expanded(
-            child: _StatItem(value: '3.2k', label: 'Points'),
-          ),
+          if (controller.isLoading)
+            const LinearProgressIndicator(minHeight: 2)
+          else if (controller.errorMessage != null)
+            Semantics(
+              label: controller.errorMessage,
+              button: true,
+              child: InkWell(
+                onTap: onRetry,
+                child: const Padding(
+                  padding: EdgeInsets.only(bottom: 8),
+                  child: Icon(
+                    Icons.refresh_rounded,
+                    size: 18,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );

@@ -143,7 +143,19 @@ class _LoginPageState extends State<LoginPage> {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 20),
+
+                      Semantics(
+                        label: 'CitiesWalk logo',
+                        image: true,
+                        child: Image.asset(
+                          'assets/branding/citieswalk_logo_full.png',
+                          height: 150,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
 
                       Text(
                         'Welcome Back',

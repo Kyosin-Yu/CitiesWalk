@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../business_logic/entities/app_user.dart';
 import '../../business_logic/entities/authentication_state.dart';
+import '../../business_logic/entities/account_deletion.dart';
 import '../../business_logic/repositories/auth_repository.dart';
 import '../data_sources/profile_data_source.dart';
 import '../data_sources/supabase_auth_data_source.dart';
@@ -74,9 +75,16 @@ class AuthRepositoryImpl implements AuthRepository {
         throw const AppException('Login failed.');
       }
 
-      final profile = await _profileDatasource.getProfile(user.id);
+      final results = await Future.wait([
+        _profileDatasource.getProfile(user.id),
+        _profileDatasource.getAccountDeletion(user.id),
+      ]);
 
-      return await _buildAppUserWithImage(user: user, profile: profile);
+      return await _buildAppUserWithImage(
+        user: user,
+        profile: results[0],
+        deletion: results[1],
+      );
     } on AppException {
       rethrow;
     } on AuthException catch (e) {
@@ -116,6 +124,7 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<AppUser> _buildAppUserWithImage({
     required User user,
     Map<String, dynamic>? profile,
+    Map<String, dynamic>? deletion,
   }) async {
     final baseUser = _buildAppUser(user: user, profile: profile);
 
@@ -133,6 +142,8 @@ class AuthRepositoryImpl implements AuthRepository {
       profileImage: imageUrl,
       bio: baseUser.bio,
       publicProfile: baseUser.publicProfile,
+      deletionRequestedAt: _dateTime(deletion?['requested_at']),
+      permanentlyDeleteAt: _dateTime(deletion?['permanently_delete_at']),
     );
   }
 
@@ -183,6 +194,58 @@ class AuthRepositoryImpl implements AuthRepository {
       throw AppException(e.message);
     } catch (_) {
       throw const AppException('Something went wrong. Please try again.');
+    }
+  }
+
+  @override
+  Future<AccountDeletion> requestAccountDeletion() async {
+    try {
+      final row = await _profileDatasource.requestAccountDeletion();
+      return AccountDeletion(
+        requestedAt: DateTime.parse(row['requested_at'] as String).toLocal(),
+        permanentlyDeleteAt: DateTime.parse(
+          row['permanently_delete_at'] as String,
+        ).toLocal(),
+      );
+    } on AuthException catch (error) {
+      throw AppException(error.message);
+    } catch (error, stackTrace) {
+      debugPrint('========== REQUEST ACCOUNT DELETION ERROR ==========');
+      debugPrint(error.toString());
+      debugPrintStack(stackTrace: stackTrace);
+      throw const AppException('Unable to schedule account deletion.');
+    }
+  }
+
+  @override
+  Future<void> cancelAccountDeletion() async {
+    try {
+      await _profileDatasource.cancelAccountDeletion();
+    } on AuthException catch (error) {
+      throw AppException(error.message);
+    } catch (error, stackTrace) {
+      debugPrint('========== CANCEL ACCOUNT DELETION ERROR ==========');
+      debugPrint(error.toString());
+      debugPrintStack(stackTrace: stackTrace);
+      throw const AppException('Unable to recover this account.');
+    }
+  }
+
+  @override
+  Future<void> finalizeAccountDeletion() async {
+    try {
+      await _authDatasource.finalizeAccountDeletion();
+    } on FunctionException catch (error) {
+      throw AppException(
+        error.details?.toString() ??
+            error.reasonPhrase ??
+            'Unable to permanently delete this account.',
+      );
+    } catch (error, stackTrace) {
+      debugPrint('========== FINALIZE ACCOUNT DELETION ERROR ==========');
+      debugPrint(error.toString());
+      debugPrintStack(stackTrace: stackTrace);
+      throw const AppException('Unable to permanently delete this account.');
     }
   }
 
@@ -285,9 +348,16 @@ class AuthRepositoryImpl implements AuthRepository {
         return null;
       }
 
-      final profile = await _profileDatasource.getProfile(user.id);
+      final results = await Future.wait([
+        _profileDatasource.getProfile(user.id),
+        _profileDatasource.getAccountDeletion(user.id),
+      ]);
 
-      return await _buildAppUserWithImage(user: user, profile: profile);
+      return await _buildAppUserWithImage(
+        user: user,
+        profile: results[0],
+        deletion: results[1],
+      );
     } catch (e, stackTrace) {
       debugPrint('========== GET CURRENT USER ERROR ==========');
       debugPrint(e.toString());
@@ -306,11 +376,15 @@ class AuthRepositoryImpl implements AuthRepository {
         return const AuthenticationState(user: null);
       }
 
-      final profile = await _profileDatasource.getProfile(user.id);
+      final results = await Future.wait([
+        _profileDatasource.getProfile(user.id),
+        _profileDatasource.getAccountDeletion(user.id),
+      ]);
 
       final appUser = await _buildAppUserWithImage(
         user: user,
-        profile: profile,
+        profile: results[0],
+        deletion: results[1],
       );
 
       return AuthenticationState(
@@ -371,5 +445,10 @@ class AuthRepositoryImpl implements AuthRepository {
     }
 
     return null;
+  }
+
+  DateTime? _dateTime(dynamic value) {
+    final text = value?.toString();
+    return text == null ? null : DateTime.tryParse(text)?.toLocal();
   }
 }

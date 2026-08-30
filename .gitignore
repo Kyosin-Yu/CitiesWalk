@@ -61,3 +61,4 @@ android/local.properties
 
 # Supabase Edge Function local secrets
 supabase/functions/.env
+supabase/.temp/
