@@ -10,7 +10,7 @@ import 'package:citieswalk/features/fitness/business_logic/repositories/health_a
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('loads completed Eco Route data and toggles notifications', () async {
+  test('loads completed Eco Route data', () async {
     final controller = FitnessController(
       userId: 'user-1',
       userName: 'Alex',
@@ -44,9 +44,6 @@ void main() {
     controller.selectGoalFilter(FitnessGoalStatus.completed);
     expect(controller.goalFilter, FitnessGoalStatus.completed);
     expect(controller.visibleGoals, isEmpty);
-
-    controller.toggleNotifications();
-    expect(controller.notificationsEnabled, isFalse);
   });
 
   test('exposes a safe failure state when route sync fails', () async {
@@ -138,35 +135,32 @@ void main() {
     expect(repository.routeFetchCount, 1);
   });
 
-  test(
-    'connects Health Connect and refreshes today dashboard metrics',
-    () async {
-      final healthRepository = _FakeHealthActivityRepository();
-      final controller = FitnessController(
-        userId: 'user-1',
-        userName: 'Alex',
-        repository: _FakeFitnessRepository(),
-        healthActivityRepository: healthRepository,
-      );
+  test('connects Health Connect and refreshes only overall steps', () async {
+    final healthRepository = _FakeHealthActivityRepository();
+    final controller = FitnessController(
+      userId: 'user-1',
+      userName: 'Alex',
+      repository: _FakeFitnessRepository(),
+      healthActivityRepository: healthRepository,
+    );
 
-      await controller.loadDashboard();
-      expect(
-        controller.healthIntegrationStatus,
-        HealthIntegrationStatus.permissionRequired,
-      );
+    await controller.loadDashboard();
+    expect(
+      controller.healthIntegrationStatus,
+      HealthIntegrationStatus.permissionRequired,
+    );
 
-      await controller.connectHealth();
+    await controller.connectHealth();
 
-      expect(
-        controller.healthIntegrationStatus,
-        HealthIntegrationStatus.connected,
-      );
-      expect(controller.dashboard?.stepsToday, 6400);
-      expect(controller.dashboard?.walkingDistanceTodayKm, 4.9);
-      expect(controller.dashboard?.caloriesTodayKcal, 320);
-      expect(controller.dashboard?.weeklyCarbonSavedKg, .6);
-    },
-  );
+    expect(
+      controller.healthIntegrationStatus,
+      HealthIntegrationStatus.connected,
+    );
+    expect(controller.dashboard?.stepsToday, 6400);
+    expect(controller.dashboard?.walkingDistanceTodayKm, 2.4);
+    expect(controller.dashboard?.caloriesTodayKcal, 180);
+    expect(controller.dashboard?.weeklyCarbonSavedKg, .6);
+  });
 }
 
 class _FakeFitnessRepository implements FitnessRepository {

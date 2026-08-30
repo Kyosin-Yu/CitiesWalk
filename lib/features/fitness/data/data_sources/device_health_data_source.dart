@@ -8,16 +8,8 @@ import '../../business_logic/entities/health_activity.dart';
 class DeviceHealthDataSource {
   DeviceHealthDataSource({Health? health}) : _health = health ?? Health();
 
-  static const _types = [
-    HealthDataType.STEPS,
-    HealthDataType.DISTANCE_WALKING_RUNNING,
-    HealthDataType.ACTIVE_ENERGY_BURNED,
-  ];
-  static const _readPermissions = [
-    HealthDataAccess.READ,
-    HealthDataAccess.READ,
-    HealthDataAccess.READ,
-  ];
+  static const _types = [HealthDataType.STEPS];
+  static const _readPermissions = [HealthDataAccess.READ];
 
   final Health _health;
   bool _isConfigured = false;
@@ -104,39 +96,11 @@ class DeviceHealthDataSource {
       now,
       includeManualEntry: false,
     );
-    final points = await _health.getHealthAggregateDataFromTypes(
-      types: const [
-        HealthDataType.DISTANCE_WALKING_RUNNING,
-        HealthDataType.ACTIVE_ENERGY_BURNED,
-      ],
-      startDate: start,
-      endDate: now,
-      includeManualEntry: false,
-    );
 
     return DeviceHealthActivityModel(
       status: HealthIntegrationStatus.connected,
       syncedAt: now,
       stepsToday: steps,
-      walkingDistanceMetersToday: _sum(
-        points,
-        HealthDataType.DISTANCE_WALKING_RUNNING,
-      )?.round(),
-      activeCaloriesToday: _sum(
-        points,
-        HealthDataType.ACTIVE_ENERGY_BURNED,
-      )?.round(),
     );
-  }
-
-  double? _sum(List<HealthDataPoint> points, HealthDataType type) {
-    final matching = points.where((point) => point.type == type).toList();
-    if (matching.isEmpty) return null;
-    return matching.fold<double>(0, (sum, point) {
-      final value = point.value;
-      return value is NumericHealthValue
-          ? sum + value.numericValue.toDouble()
-          : sum;
-    });
   }
 }

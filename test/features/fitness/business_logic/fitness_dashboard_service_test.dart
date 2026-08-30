@@ -44,6 +44,8 @@ void main() {
 
     expect(dashboard.walkingDistanceTodayKm, 1.5);
     expect(dashboard.stepsToday, 1950);
+    expect(dashboard.journeyStepsToday, 1950);
+    expect(dashboard.overallStepsToday, isNull);
     expect(dashboard.caloriesTodayKcal, 100);
     expect(dashboard.carbonSavedTodayKg, .4);
     expect(dashboard.weeklyWalkingDistanceKm, 4);
@@ -89,7 +91,7 @@ void main() {
   });
 
   test(
-    'uses Health Connect as the source for today without double counting',
+    'uses Health Connect only for overall steps without replacing journey metrics',
     () {
       const service = FitnessDashboardService();
       final dashboard = service.build(
@@ -109,18 +111,22 @@ void main() {
             estimatedCarbonSavedKg: .4,
             startedAt: DateTime(2026, 8, 19, 9),
             completedAt: DateTime(2026, 8, 19, 10),
+            stepCount: 1900,
+            stepsSource: FitnessMetricSource.recorded,
           ),
         ],
       );
 
       expect(dashboard.stepsToday, 6200);
-      expect(dashboard.walkingDistanceTodayKm, 4.8);
-      expect(dashboard.caloriesTodayKcal, 310);
+      expect(dashboard.journeyStepsToday, 1900);
+      expect(dashboard.overallStepsToday, 6200);
+      expect(dashboard.walkingDistanceTodayKm, 1.5);
+      expect(dashboard.caloriesTodayKcal, 100);
       expect(dashboard.carbonSavedTodayKg, .4);
       expect(dashboard.weeklyWalkingDistanceKm, 1.5);
       expect(dashboard.stepsSource, FitnessMetricSource.recorded);
-      expect(dashboard.walkingSource, FitnessMetricSource.recorded);
-      expect(dashboard.caloriesSource, FitnessMetricSource.recorded);
+      expect(dashboard.walkingSource, FitnessMetricSource.estimated);
+      expect(dashboard.caloriesSource, FitnessMetricSource.estimated);
     },
   );
 

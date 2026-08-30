@@ -44,10 +44,6 @@ abstract interface class JourneyRepository {
     required EcoRoute route,
   });
 
-  Future<void> pauseJourney({required String journeyId});
-
-  Future<void> resumeJourney({required String journeyId});
-
   Future<void> recordTrackPoint({
     required String journeyId,
     required EcoLocation location,

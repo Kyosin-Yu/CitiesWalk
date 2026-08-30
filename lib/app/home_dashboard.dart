@@ -19,6 +19,7 @@ class HomeDashboard extends StatelessWidget {
     required this.userId,
     required this.journeyHistoryRepository,
     required this.historyRefreshSignal,
+    required this.onRefresh,
     required this.onNavigate,
     required this.onPlanAgain,
     this.onPlanDestination,
@@ -29,6 +30,7 @@ class HomeDashboard extends StatelessWidget {
   final String userId;
   final JourneyHistoryRepository journeyHistoryRepository;
   final ValueListenable<int> historyRefreshSignal;
+  final Future<void> Function() onRefresh;
   final ValueChanged<int> onNavigate;
   final ValueChanged<EcoJourneyHistoryItem> onPlanAgain;
   final ValueChanged<EcoDestination>? onPlanDestination;
@@ -44,9 +46,11 @@ class HomeDashboard extends StatelessWidget {
         children: [
           const _HomeHeader(),
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 112),
-              children: [
+            child: RefreshIndicator(
+              onRefresh: onRefresh,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 112),
+                children: [
                 _WelcomeCard(onPlanRoute: () => onNavigate(1)),
                 const SizedBox(height: 24),
                 const _SectionTitle('Today’s eco impact'),
@@ -83,7 +87,8 @@ class HomeDashboard extends StatelessWidget {
                   refreshSignal: historyRefreshSignal,
                   onPlanAgain: onPlanAgain,
                 ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
@@ -97,7 +102,7 @@ class _HomeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    height: 124,
+    height: 130,
     padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
     decoration: const BoxDecoration(
       color: AppColors.primary,
@@ -105,9 +110,10 @@ class _HomeHeader extends StatelessWidget {
     ),
     child: Stack(
       children: [
-        Positioned(right: -40, top: -72, child: _ring(160)),
-        Positioned(right: 18, top: -32, child: _ring(98)),
+        Positioned(right: -34, top: -66, child: _ring(156)),
+        Positioned(right: 22, top: -34, child: _ring(100)),
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
               width: 44,
@@ -125,8 +131,8 @@ class _HomeHeader extends StatelessWidget {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  const SizedBox(height: 2),
                   Text(
                     'CitiesWalk',
                     style: GoogleFonts.poppins(
@@ -144,14 +150,6 @@ class _HomeHeader extends StatelessWidget {
                   ),
                 ],
               ),
-            ),
-            IconButton(
-              onPressed: () {},
-              style: IconButton.styleFrom(
-                backgroundColor: Colors.white.withValues(alpha: .14),
-                foregroundColor: Colors.white,
-              ),
-              icon: const Icon(Icons.notifications_none_rounded),
             ),
           ],
         ),

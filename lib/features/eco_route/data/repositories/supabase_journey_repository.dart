@@ -84,14 +84,6 @@ class SupabaseJourneyRepository
   }) => _dataSource.updateRouteEstimates(journeyId: journeyId, route: route);
 
   @override
-  Future<void> pauseJourney({required String journeyId}) =>
-      _dataSource.pauseJourney(journeyId: journeyId);
-
-  @override
-  Future<void> resumeJourney({required String journeyId}) =>
-      _dataSource.resumeJourney(journeyId: journeyId);
-
-  @override
   Future<void> recordTrackPoint({
     required String journeyId,
     required EcoLocation location,

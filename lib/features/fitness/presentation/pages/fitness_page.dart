@@ -2,6 +2,7 @@ import 'package:citieswalk/core/localization/localized_material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../authentication/business_logic/providers/auth_controller.dart';
 import '../../business_logic/providers/fitness_controller.dart';
 import '../widgets/carbon_savings_chart.dart';
 import '../widgets/fitness_goals_section.dart';
@@ -22,6 +23,7 @@ class FitnessPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<FitnessController>();
+    final currentUser = context.watch<AuthController>().currentUser;
     final dashboard = controller.dashboard;
 
     if ((controller.status == FitnessStatus.initial ||
@@ -72,11 +74,12 @@ class FitnessPage extends StatelessWidget {
         child: Column(
           children: [
             FitnessHeader(
-              userName: dashboard.userName,
+              userName: currentUser?.fullName?.trim().isNotEmpty == true
+                  ? currentUser!.fullName!.trim()
+                  : dashboard.userName,
               streakDays: dashboard.streakDays,
-              notificationsEnabled: controller.notificationsEnabled,
+              profileImageUrl: currentUser?.profileImage,
               onHistoryTapped: () => _openHistory(context, controller),
-              onNotificationsTapped: controller.toggleNotifications,
             ),
             Expanded(
               child: RefreshIndicator(

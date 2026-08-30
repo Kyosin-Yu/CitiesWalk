@@ -586,10 +586,19 @@ function groupSteps(steps: Record<string, unknown>[]) {
     grouped.push({ ...step })
   }
 
+  const hasTransit = grouped.some((segment) => segment.type === 'transit')
+
   return grouped.map((segment, index) => {
     if (segment.type !== 'walk') return segment
     const isFirst = index === 0
     const isLast = index === grouped.length - 1
+    if (!hasTransit) {
+      return {
+        ...segment,
+        title: 'Walk to destination',
+        detail: 'Follow the pedestrian route to your destination.',
+      }
+    }
     return {
       ...segment,
       title: isFirst ? 'Walk to boarding station' : isLast ? 'Walk to destination' : 'Walk between stations',

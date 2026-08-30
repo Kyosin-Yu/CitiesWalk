@@ -69,7 +69,7 @@ class _TripHistoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    height: 146,
+    constraints: const BoxConstraints(minHeight: 146),
     clipBehavior: Clip.antiAlias,
     decoration: BoxDecoration(
       color: AppColors.surface,
@@ -84,43 +84,36 @@ class _TripHistoryCard extends StatelessWidget {
     ),
     child: Row(
       children: [
-        SizedBox(
-          width: 108,
-          height: double.infinity,
-          child: Image.network(
-            _imageFor(trip.destinationName),
-            fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => const ColoredBox(
-              color: AppColors.primary,
-              child: Icon(Icons.landscape_rounded, color: Colors.white),
-            ),
-          ),
-        ),
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 13, 10, 10),
+            padding: const EdgeInsets.fromLTRB(14, 13, 14, 10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  trip.destinationName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.poppins(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
                 Row(
                   children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE5F4E7),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.route_rounded,
+                        color: AppColors.primary,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        trip.destinationCategory ?? 'Eco journey',
+                        trip.destinationName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.poppins(
-                          fontSize: 10,
-                          color: AppColors.textSecondary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
@@ -137,7 +130,17 @@ class _TripHistoryCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const Spacer(),
+                const SizedBox(height: 6),
+                Text(
+                  trip.destinationCategory ?? 'Eco journey',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    fontSize: 10,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 12),
                 Text(
                   '${trip.durationMinutes} min · ${(trip.walkingDistanceMeters / 1000).toStringAsFixed(1)} km walked · ${trip.stepCount} steps',
                   style: GoogleFonts.poppins(
@@ -174,17 +177,6 @@ class _TripHistoryCard extends StatelessWidget {
       ],
     ),
   );
-
-  String _imageFor(String name) {
-    final lowerCaseName = name.toLowerCase();
-    if (lowerCaseName.contains('batu')) {
-      return 'https://images.unsplash.com/photo-1596422846543-75c6fc197f07?auto=format&fit=crop&w=700&q=80';
-    }
-    if (lowerCaseName.contains('market') || lowerCaseName.contains('pasar')) {
-      return 'https://image.mom-mom.net/eyJrZXkiOiJwbGFjZXMvNjczNmE3ZDYyN2Y3Mjg1NDEwMjE5YTRhLkpQRyIsImVkaXRzIjp7InJlc2l6ZSI6eyJ3aWR0aCI6MTA4MCwid2l0aG91dEVubGFyZ2VtZW50Ijp0cnVlfX19';
-    }
-    return 'https://images.trvl-media.com/place/6152226/e4914450-59a7-4d6c-ab5f-d4a70bbcfe80.jpg';
-  }
 }
 
 class _HistoryNotice extends StatelessWidget {

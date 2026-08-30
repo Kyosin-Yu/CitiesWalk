@@ -83,6 +83,7 @@ class _AppShellState extends State<AppShell> {
         SupabaseJourneyDataSource(sl<SupabaseClient>()),
       ),
       historyRefreshSignal: _journeyHistoryVersion,
+      onRefresh: _refreshHomeDashboard,
       onNavigate: _selectDestination,
       onPlanAgain: _planSavedTripAgain,
       onPlanDestination: _planHomeDestination,
@@ -179,6 +180,14 @@ class _AppShellState extends State<AppShell> {
   void _refreshJourneyHistory() {
     _journeyHistoryVersion.value++;
     unawaited(_fitnessController.refresh());
+  }
+
+  Future<void> _refreshHomeDashboard() async {
+    _journeyHistoryVersion.value++;
+    await Future.wait([
+      _fitnessController.refresh(),
+      _refreshHomeReviewSummaries(),
+    ]);
   }
 
   void _planHomeDestination(EcoDestination destination) {

@@ -44,7 +44,6 @@ class FitnessController extends ChangeNotifier {
   List<FitnessRecentBadge> _recentBadges = const [];
   String? _errorMessage;
   String? _goalErrorMessage;
-  bool _notificationsEnabled = true;
   bool _isRefreshing = false;
   bool _refreshPending = false;
   bool _isGoalMutationInProgress = false;
@@ -71,7 +70,6 @@ class FitnessController extends ChangeNotifier {
   List<FitnessRecentBadge> get recentBadges => List.unmodifiable(_recentBadges);
   String? get errorMessage => _errorMessage;
   String? get goalErrorMessage => _goalErrorMessage;
-  bool get notificationsEnabled => _notificationsEnabled;
   bool get isRefreshing => _isRefreshing;
   bool get isGoalMutationInProgress => _isGoalMutationInProgress;
   FitnessHistoryPeriod get historyPeriod => _historyPeriod;
@@ -279,11 +277,6 @@ class FitnessController extends ChangeNotifier {
     debugPrint(stackTrace.toString());
     _healthIntegrationStatus = HealthIntegrationStatus.error;
     _healthMessage = 'Unable to sync Health Connect. Please try again.';
-  }
-
-  void toggleNotifications() {
-    _notificationsEnabled = !_notificationsEnabled;
-    notifyListeners();
   }
 
   bool isHistoryDateSelectable(DateTime date) =>
