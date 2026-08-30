@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:citieswalk/features/authentication/business_logic/entities/app_user.dart';
+import 'package:citieswalk/features/authentication/business_logic/entities/account_deletion.dart';
 import 'package:citieswalk/features/authentication/business_logic/entities/authentication_state.dart';
 import 'package:citieswalk/features/authentication/business_logic/providers/auth_controller.dart';
 import 'package:citieswalk/features/authentication/business_logic/repositories/auth_repository.dart';
@@ -102,6 +103,33 @@ void main() {
     controller.dispose();
     await repository.dispose();
   });
+
+  test('account deletion is scheduled before a global sign out', () async {
+    final repository = _FakeAuthRepository();
+    final controller = AuthController(repository);
+
+    final success = await controller.requestAccountDeletion();
+
+    expect(success, isTrue);
+    expect(repository.deletionRequests, 1);
+    expect(repository.signOutCalls, 1);
+    controller.dispose();
+    await repository.dispose();
+  });
+
+  test('recovers an account during the recovery period', () async {
+    final repository = _FakeAuthRepository()
+      ..currentUser = const AppUser(id: 'user-1', email: 'walker@example.com');
+    final controller = AuthController(repository);
+
+    final success = await controller.recoverAccount();
+
+    expect(success, isTrue);
+    expect(repository.cancellationCalls, 1);
+    expect(controller.currentUser?.id, 'user-1');
+    controller.dispose();
+    await repository.dispose();
+  });
 }
 
 class _FakeAuthRepository implements AuthRepository {
@@ -110,6 +138,9 @@ class _FakeAuthRepository implements AuthRepository {
   int signOutCalls = 0;
   String? updatedPassword;
   String? resetError;
+  AppUser? currentUser;
+  int deletionRequests = 0;
+  int cancellationCalls = 0;
 
   void emitState(AuthenticationState state) => _authStates.add(state);
 
@@ -124,7 +155,29 @@ class _FakeAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<AppUser?> getCurrentUser() async => null;
+  Future<AccountDeletion> requestAccountDeletion() {
+    deletionRequests++;
+    return Future.value(
+      AccountDeletion(
+        requestedAt: DateTime(2026, 8, 30),
+        permanentlyDeleteAt: DateTime(2026, 9, 29),
+      ),
+    );
+  }
+
+  @override
+  Future<void> cancelAccountDeletion() {
+    cancellationCalls++;
+    return Future.value();
+  }
+
+  @override
+  Future<void> finalizeAccountDeletion() {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AppUser?> getCurrentUser() async => currentUser;
 
   @override
   Future<void> resendEmailVerification() async {}

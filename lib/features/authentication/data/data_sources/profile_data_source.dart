@@ -37,6 +37,26 @@ class ProfileDataSource {
     return response;
   }
 
+  Future<Map<String, dynamic>?> getAccountDeletion(String id) async {
+    return _client
+        .from('account_deletion_requests')
+        .select('requested_at, permanently_delete_at')
+        .eq('user_id', id)
+        .maybeSingle();
+  }
+
+  Future<Map<String, dynamic>> requestAccountDeletion() async {
+    final rows = await _client.rpc('request_account_deletion');
+    final values = (rows as List<dynamic>).cast<Map<String, dynamic>>();
+    if (values.isEmpty) {
+      throw const AuthException('Unable to schedule account deletion.');
+    }
+    return values.single;
+  }
+
+  Future<void> cancelAccountDeletion() =>
+      _client.rpc('cancel_account_deletion');
+
   Future<void> updateProfile({
     required String id,
     String? fullName,

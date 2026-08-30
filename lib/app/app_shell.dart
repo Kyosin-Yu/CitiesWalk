@@ -10,6 +10,8 @@ import '../core/services/eco_points_service.dart';
 import '../core/models/destination_review_summary.dart';
 import '../core/services/destination_review_summary_service.dart';
 import '../features/authentication/business_logic/providers/auth_controller.dart';
+import '../features/authentication/business_logic/providers/profile_stats_controller.dart';
+import '../features/authentication/data/repositories/profile_stats_repository_impl.dart';
 import '../features/authentication/presentation/pages/profile_page.dart';
 import '../features/eco_route/business_logic/entities/eco_destination.dart';
 import '../features/eco_route/business_logic/providers/eco_route_controller.dart';
@@ -72,6 +74,18 @@ class _AppShellState extends State<AppShell> {
       SupabaseReviewRepository(SupabaseReviewDataSource(sl<SupabaseClient>()));
   late final ReviewImageRepositoryImpl _reviewImageRepository =
       ReviewImageRepositoryImpl(ReviewImageDataSource());
+  late final SupabaseJourneyRepository _journeyRepository =
+      SupabaseJourneyRepository(
+        SupabaseJourneyDataSource(sl<SupabaseClient>()),
+      );
+  late final ProfileStatsController _profileStatsController =
+      ProfileStatsController(
+        ProfileStatsRepositoryImpl(
+          _journeyRepository,
+          _reviewRepository,
+          sl<RewardsRepository>(),
+        ),
+      );
   final Map<String, ReviewsProvider> _reviewProviders = {};
   ReviewDestination? _activeReviewDestination;
   ReviewsProvider? _activeReviewsProvider;
@@ -104,7 +118,11 @@ class _AppShellState extends State<AppShell> {
       child: FitnessPage(onViewRewards: () => _selectDestination(3)),
     ),
     const RewardsHubScreen(),
-    ProfilePage(onOpenMyReviews: _openMyReviews, onOpenMyBadges: _openMyBadges),
+    ProfilePage(
+      onOpenMyReviews: _openMyReviews,
+      onOpenMyBadges: _openMyBadges,
+      statsController: _profileStatsController,
+    ),
   ];
 
   @override
@@ -113,6 +131,11 @@ class _AppShellState extends State<AppShell> {
     _fitnessController.addListener(_syncHomeFitnessDashboard);
     unawaited(_fitnessController.loadDashboard());
     unawaited(_refreshHomeReviewSummaries());
+    unawaited(
+      _profileStatsController.load(
+        userId: sl<AuthController>().currentUser!.id,
+      ),
+    );
   }
 
   void _syncHomeFitnessDashboard() {
@@ -172,6 +195,13 @@ class _AppShellState extends State<AppShell> {
     if (index == 2) {
       unawaited(_fitnessController.refresh());
     }
+    if (index == 4) {
+      unawaited(
+        _profileStatsController.load(
+          userId: sl<AuthController>().currentUser!.id,
+        ),
+      );
+    }
     setState(() {
       _selectedIndex = index;
     });
@@ -180,6 +210,11 @@ class _AppShellState extends State<AppShell> {
   void _refreshJourneyHistory() {
     _journeyHistoryVersion.value++;
     unawaited(_fitnessController.refresh());
+    unawaited(
+      _profileStatsController.load(
+        userId: sl<AuthController>().currentUser!.id,
+      ),
+    );
   }
 
   Future<void> _refreshHomeDashboard() async {
@@ -261,16 +296,21 @@ class _AppShellState extends State<AppShell> {
   void _openMyReviews() {
     final user = sl<AuthController>().currentUser;
     if (user == null) return;
-    Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder: (_) => MyReviewsScreen(
-          repository: _reviewRepository,
-          imageRepository: _reviewImageRepository,
-          userId: user.id,
-          userName: user.fullName ?? 'CitiesWalk User',
-        ),
-      ),
-    );
+    Navigator.of(context)
+        .push<void>(
+          MaterialPageRoute(
+            builder: (_) => MyReviewsScreen(
+              repository: _reviewRepository,
+              imageRepository: _reviewImageRepository,
+              userId: user.id,
+              userName: user.fullName ?? 'CitiesWalk User',
+            ),
+          ),
+        )
+        .then((_) {
+          if (!mounted) return;
+          unawaited(_profileStatsController.load(userId: user.id));
+        });
   }
 
   void _openMyBadges() {
@@ -294,6 +334,7 @@ class _AppShellState extends State<AppShell> {
     _homeFitnessDashboard.dispose();
     _reviewSummaryVersion.dispose();
     _homeReviewSummaries.dispose();
+    _profileStatsController.dispose();
     for (final provider in _reviewProviders.values) {
       provider.dispose();
     }

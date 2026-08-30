@@ -21,6 +21,18 @@ void main() {
     expect(repository.savedSettings?.localeCode, 'zh');
   });
 
+  test('saves the Kuala Lumpur pilot region', () async {
+    final repository = _FakeSettingsRepository(
+      const UserSettings(regionCode: 'my-kul'),
+    );
+    final controller = SettingsController(repository);
+
+    final saved = await controller.setRegion('my-kul');
+
+    expect(saved, isTrue);
+    expect(repository.savedSettings?.regionCode, 'my-kul');
+  });
+
   test('restores the previous settings when saving fails', () async {
     final repository = _FakeSettingsRepository(const UserSettings());
     final controller = SettingsController(repository);

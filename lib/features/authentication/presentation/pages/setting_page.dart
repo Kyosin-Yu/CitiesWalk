@@ -6,6 +6,10 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/di/service_locator.dart';
 import '../../business_logic/providers/settings_controller.dart';
 import '../localization/settings_strings.dart';
+import '../../business_logic/providers/location_data_controller.dart';
+import '../../business_logic/providers/auth_controller.dart';
+import 'location_data_page.dart';
+import 'privacy_information_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -66,35 +70,6 @@ class _SettingsPageState extends State<SettingsPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionTitle(strings.notifications),
-        const SizedBox(height: 8),
-        _SettingsCard(
-          children: [
-            _ToggleTile(
-              icon: Icons.notifications_none_rounded,
-              title: strings.pushNotifications,
-              subtitle: strings.notificationPending,
-              value: false,
-              onChanged: null,
-            ),
-            _ToggleTile(
-              icon: Icons.near_me_outlined,
-              title: strings.journeyAlerts,
-              subtitle: strings.notificationPending,
-              value: false,
-              onChanged: null,
-            ),
-            _ToggleTile(
-              icon: Icons.star_border_rounded,
-              title: strings.reviewResponses,
-              subtitle: strings.notificationPending,
-              value: false,
-              onChanged: null,
-            ),
-          ],
-        ),
-        const SizedBox(height: 22),
-
         _SectionTitle(strings.languageRegion),
         const SizedBox(height: 8),
         _SettingsCard(
@@ -113,7 +88,7 @@ class _SettingsPageState extends State<SettingsPage> {
               iconColor: const Color(0xFF3B82F6),
               title: strings.cityRegion,
               subtitle: 'Kuala Lumpur, Malaysia',
-              onTap: () => _showRegionInformation(strings),
+              onTap: () => _showRegionPicker(strings),
             ),
           ],
         ),
@@ -129,26 +104,32 @@ class _SettingsPageState extends State<SettingsPage> {
               iconColor: const Color(0xFF7C3AED),
               title: strings.privacyPolicy,
               subtitle: strings.privacySubtitle,
-              onTap: () {},
+              onTap: () => Navigator.of(context).push<void>(
+                MaterialPageRoute(
+                  builder: (_) => const PrivacyInformationPage(),
+                ),
+              ),
             ),
             _NavigationTile(
               icon: Icons.directions_walk_rounded,
               title: strings.locationData,
               subtitle: strings.locationSubtitle,
-              onTap: () {},
+              onTap: () => Navigator.of(context).push<void>(
+                MaterialPageRoute(
+                  builder: (_) => LocationDataPage(
+                    controller: sl<LocationDataController>(),
+                  ),
+                ),
+              ),
             ),
             _NavigationTile(
               icon: Icons.delete_outline_rounded,
               iconBackground: const Color(0xFFFFEBEE),
               iconColor: const Color(0xFFE53935),
               title: strings.deleteAccount,
-              subtitle: strings.deleteSubtitle,
+              subtitle: '30-day recovery before permanent deletion',
               titleColor: const Color(0xFFE53935),
-              onTap: () async {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(strings.deletionPending)),
-                );
-              },
+              onTap: _confirmAccountDeletion,
             ),
           ],
         ),
@@ -204,18 +185,67 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Future<void> _showRegionInformation(SettingsStrings strings) {
-    return showDialog<void>(
+  Future<void> _showRegionPicker(SettingsStrings strings) async {
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: RadioGroup<String>(
+          groupValue: _controller.settings.regionCode,
+          onChanged: (value) => Navigator.of(sheetContext).pop(value),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RadioListTile<String>(
+                value: 'my-kul',
+                title: const Text('Kuala Lumpur, Malaysia'),
+                subtitle: Text(strings.klPilot),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (selected == null) return;
+    final saved = await _controller.setRegion(selected);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(saved ? strings.saved : strings.saveFailed)),
+    );
+  }
+
+  Future<void> _confirmAccountDeletion() async {
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(strings.cityRegion),
-        content: Text(strings.klPilot),
+        title: const Text('Schedule account deletion?'),
+        content: const Text(
+          'You will be signed out immediately. Your account and data will be kept for 30 days, during which you can sign in and recover everything. After that date, deletion is permanent.',
+        ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(MaterialLocalizations.of(context).okButtonLabel),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Schedule deletion'),
           ),
         ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final authController = sl<AuthController>();
+    final success = await authController.requestAccountDeletion();
+    if (!mounted || success) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          authController.errorMessage ?? 'Unable to schedule account deletion.',
+        ),
       ),
     );
   }
@@ -262,44 +292,6 @@ class _SettingsCard extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _ToggleTile extends StatelessWidget {
-  const _ToggleTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.value,
-    required this.onChanged,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final bool value;
-  final ValueChanged<bool>? onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Row(
-        children: [
-          _SettingsIcon(icon: icon),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _SettingsText(title: title, subtitle: subtitle),
-          ),
-          Switch(
-            value: value,
-            activeThumbColor: Colors.white,
-            activeTrackColor: AppColors.primary,
-            onChanged: onChanged,
-          ),
-        ],
       ),
     );
   }

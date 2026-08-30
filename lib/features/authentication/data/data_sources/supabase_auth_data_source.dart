@@ -36,7 +36,11 @@ class SupabaseAuthDataSource {
   }
 
   Future<void> signOut() {
-    return _client.auth.signOut();
+    return _client.auth.signOut(scope: SignOutScope.global);
+  }
+
+  Future<void> finalizeAccountDeletion() async {
+    await _client.functions.invoke('finalize-account-deletion');
   }
 
   Future<void> sendPasswordResetEmail({required String email}) {

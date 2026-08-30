@@ -58,6 +58,34 @@ class AppTranslations {
     'Rewards': 'Ganjaran',
     'Profile': 'Profil',
     'Settings': 'Tetapan',
+    'Privacy & Data': 'Privasi & Data',
+    'Account and profile': 'Akaun dan profil',
+    'Journeys and location': 'Perjalanan dan lokasi',
+    'Reviews and rewards': 'Ulasan dan ganjaran',
+    'Your controls': 'Kawalan anda',
+    'This page describes the current app behaviour. Your team should review and publish the final legal privacy policy before public release.':
+        'Halaman ini menerangkan tingkah laku aplikasi semasa. Pasukan anda perlu menyemak dan menerbitkan dasar privasi undang-undang terakhir sebelum pelancaran awam.',
+    'CitiesWalk stores your account identity, profile details, and language and region preferences so your account works across devices.':
+        'CitiesWalk menyimpan identiti akaun, butiran profil serta pilihan bahasa dan wilayah supaya akaun anda berfungsi pada semua peranti.',
+    'Location is requested for route planning and active journey tracking. Journey origins, destinations, progress points, and journey results may be saved to your account.':
+        'Lokasi diminta untuk perancangan laluan dan penjejakan perjalanan aktif. Asal, destinasi, titik kemajuan dan hasil perjalanan mungkin disimpan dalam akaun anda.',
+    'Reviews, uploaded review photos, points, badges, and leaderboard information are stored when you use those features.':
+        'Ulasan, foto ulasan yang dimuat naik, mata, lencana dan maklumat papan pendahulu disimpan apabila anda menggunakan ciri tersebut.',
+    'You can change device permissions in system settings and permanently delete your CitiesWalk account from Settings.':
+        'Anda boleh menukar kebenaran peranti dalam tetapan sistem dan memadam akaun CitiesWalk anda secara kekal daripada Tetapan.',
+    'When location is used': 'Bila lokasi digunakan',
+    'What is saved': 'Data yang disimpan',
+    'CitiesWalk uses precise location when you request nearby routes and while an active journey is being tracked. Background location is not requested.':
+        'CitiesWalk menggunakan lokasi tepat apabila anda meminta laluan berdekatan dan semasa perjalanan aktif dijejaki. Lokasi latar belakang tidak diminta.',
+    'Journey origins, destinations, route progress points, distance, duration, and calculated journey results are saved to your account in Supabase.':
+        'Asal, destinasi, titik kemajuan laluan, jarak, tempoh dan hasil perjalanan yang dikira disimpan dalam akaun Supabase anda.',
+    'Allow location access': 'Benarkan akses lokasi',
+    'Open app settings': 'Buka tetapan aplikasi',
+    'Turn on device location': 'Hidupkan lokasi peranti',
+    'Checking location access…': 'Memeriksa akses lokasi…',
+    'Location access is ready': 'Akses lokasi sedia digunakan',
+    'Location access needs attention': 'Akses lokasi memerlukan perhatian',
+    'Unable to read location settings.': 'Tidak dapat membaca tetapan lokasi.',
     'My Journeys': 'Perjalanan Saya',
     'View your completed journeys': 'Lihat perjalanan anda yang selesai',
     'My Reviews': 'Ulasan Saya',
@@ -274,6 +302,23 @@ class AppTranslations {
     'Post anonymously': 'Hantar tanpa nama',
     'Progress': 'Kemajuan',
     'Public Profile': 'Profil Awam',
+    'Turn this off to appear as Anonymous on the leaderboard.':
+        'Matikan pilihan ini untuk dipaparkan sebagai Tanpa Nama pada papan pendahulu.',
+    '30-day recovery before permanent deletion':
+        'Pemulihan 30 hari sebelum pemadaman kekal',
+    'Schedule account deletion?': 'Jadualkan pemadaman akaun?',
+    'You will be signed out immediately. Your account and data will be kept for 30 days, during which you can sign in and recover everything. After that date, deletion is permanent.':
+        'Anda akan dilog keluar serta-merta. Akaun dan data anda akan disimpan selama 30 hari; dalam tempoh itu anda boleh log masuk dan memulihkan semuanya. Selepas tarikh tersebut, pemadaman adalah kekal.',
+    'Schedule deletion': 'Jadualkan pemadaman',
+    'Account scheduled for deletion': 'Akaun dijadualkan untuk dipadam',
+    'Account recovery period expired': 'Tempoh pemulihan akaun telah tamat',
+    'Your account will be permanently deleted on {date}. Recover it now to keep your profile and data.':
+        'Akaun anda akan dipadam secara kekal pada {date}. Pulihkannya sekarang untuk mengekalkan profil dan data anda.',
+    'The 30-day recovery period ended on {date}. This account is ready for permanent deletion.':
+        'Tempoh pemulihan 30 hari berakhir pada {date}. Akaun ini sedia untuk dipadam secara kekal.',
+    'Recover my account': 'Pulihkan akaun saya',
+    'Delete permanently': 'Padam secara kekal',
+    'Keep deletion scheduled': 'Kekalkan jadual pemadaman',
     'Rail + walk': 'Rel + berjalan kaki',
     'Rankings': 'Kedudukan',
     'Recent Activity': 'Aktiviti Terkini',
@@ -371,6 +416,34 @@ class AppTranslations {
     'Rewards': '奖励',
     'Profile': '个人资料',
     'Settings': '设置',
+    'Privacy & Data': '隐私与数据',
+    'Account and profile': '账户与个人资料',
+    'Journeys and location': '旅程与位置',
+    'Reviews and rewards': '评论与奖励',
+    'Your controls': '您的控制选项',
+    'This page describes the current app behaviour. Your team should review and publish the final legal privacy policy before public release.':
+        '此页面说明应用目前的行为。公开发布前，您的团队应审核并发布最终的法律隐私政策。',
+    'CitiesWalk stores your account identity, profile details, and language and region preferences so your account works across devices.':
+        'CitiesWalk 会保存您的账户身份、个人资料以及语言和地区偏好，以便账户可在不同设备上使用。',
+    'Location is requested for route planning and active journey tracking. Journey origins, destinations, progress points, and journey results may be saved to your account.':
+        '路线规划和活动旅程追踪会请求位置权限。旅程起点、目的地、进度点和旅程结果可能保存到您的账户。',
+    'Reviews, uploaded review photos, points, badges, and leaderboard information are stored when you use those features.':
+        '使用相关功能时，评论、上传的评论照片、积分、徽章和排行榜信息会被保存。',
+    'You can change device permissions in system settings and permanently delete your CitiesWalk account from Settings.':
+        '您可以在系统设置中更改设备权限，也可以在“设置”中永久删除 CitiesWalk 账户。',
+    'When location is used': '何时使用位置',
+    'What is saved': '保存哪些数据',
+    'CitiesWalk uses precise location when you request nearby routes and while an active journey is being tracked. Background location is not requested.':
+        '当您请求附近路线或追踪活动旅程时，CitiesWalk 会使用精确位置。应用不会请求后台位置权限。',
+    'Journey origins, destinations, route progress points, distance, duration, and calculated journey results are saved to your account in Supabase.':
+        '旅程起点、目的地、路线进度点、距离、时长和计算结果会保存到您的 Supabase 账户。',
+    'Allow location access': '允许位置访问',
+    'Open app settings': '打开应用设置',
+    'Turn on device location': '开启设备位置服务',
+    'Checking location access…': '正在检查位置权限…',
+    'Location access is ready': '位置权限已就绪',
+    'Location access needs attention': '位置权限需要处理',
+    'Unable to read location settings.': '无法读取位置设置。',
     'My Journeys': '我的旅程',
     'View your completed journeys': '查看已完成的旅程',
     'My Reviews': '我的评论',
@@ -566,6 +639,22 @@ class AppTranslations {
     'Post anonymously': '匿名发布',
     'Progress': '进度',
     'Public Profile': '公开个人资料',
+    'Turn this off to appear as Anonymous on the leaderboard.':
+        '关闭此选项后，您将在排行榜中显示为“匿名”。',
+    '30-day recovery before permanent deletion': '永久删除前可在 30 天内恢复',
+    'Schedule account deletion?': '安排删除账户？',
+    'You will be signed out immediately. Your account and data will be kept for 30 days, during which you can sign in and recover everything. After that date, deletion is permanent.':
+        '您将立即退出登录。账户和数据会保留 30 天，在此期间您可以登录并恢复全部内容。超过该日期后，删除将无法恢复。',
+    'Schedule deletion': '安排删除',
+    'Account scheduled for deletion': '账户已安排删除',
+    'Account recovery period expired': '账户恢复期已结束',
+    'Your account will be permanently deleted on {date}. Recover it now to keep your profile and data.':
+        '您的账户将在 {date} 永久删除。现在恢复即可保留个人资料和数据。',
+    'The 30-day recovery period ended on {date}. This account is ready for permanent deletion.':
+        '30 天恢复期已于 {date} 结束。此账户已可永久删除。',
+    'Recover my account': '恢复我的账户',
+    'Delete permanently': '永久删除',
+    'Keep deletion scheduled': '保留删除安排',
     'Rail + walk': '轨道交通 + 步行',
     'Rankings': '排名',
     'Recent Activity': '最近活动',

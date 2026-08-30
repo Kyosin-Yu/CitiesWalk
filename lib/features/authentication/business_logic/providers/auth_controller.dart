@@ -243,4 +243,56 @@ class AuthController extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  Future<bool> requestAccountDeletion() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      await _repository.requestAccountDeletion();
+      await _repository.signOut();
+      _currentUser = null;
+      return true;
+    } on AppException catch (error) {
+      _errorMessage = error.message;
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> recoverAccount() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      await _repository.cancelAccountDeletion();
+      _currentUser = await _repository.getCurrentUser();
+      return _currentUser != null;
+    } on AppException catch (error) {
+      _errorMessage = error.message;
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> finalizeAccountDeletion() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      await _repository.finalizeAccountDeletion();
+      _currentUser = null;
+      return true;
+    } on AppException catch (error) {
+      _errorMessage = error.message;
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 }

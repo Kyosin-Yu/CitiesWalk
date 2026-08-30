@@ -240,6 +240,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       color: AppColors.textPrimary,
                     ),
                   ),
+                  subtitle: const Text(
+                    'Turn this off to appear as Anonymous on the leaderboard.',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
                   value: _publicProfile,
                   activeThumbColor: Colors.white,
                   activeTrackColor: AppColors.primary,
