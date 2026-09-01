@@ -135,6 +135,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
           ),
           _ReviewPage.mine => _MyReviewsPage(
             review: _reviewsProvider.myReview,
+            canEdit: _reviewsProvider.canEditMyReview,
             onBack: () => _showPage(_ReviewPage.list),
             onEdit: () {
               _reviewsProvider.beginDraft(
@@ -577,11 +578,13 @@ class _SubmittedPage extends StatelessWidget {
 class _MyReviewsPage extends StatelessWidget {
   const _MyReviewsPage({
     required this.review,
+    required this.canEdit,
     required this.onBack,
     required this.onEdit,
     required this.onDelete,
   });
   final PlaceReview? review;
+  final bool canEdit;
   final VoidCallback onBack;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -607,6 +610,7 @@ class _MyReviewsPage extends StatelessWidget {
                 )
               : _MyReviewCard(
                   review: review!,
+                  canEdit: canEdit,
                   onEdit: onEdit,
                   onDelete: onDelete,
                 ),
@@ -743,7 +747,7 @@ class _ReviewEditorPageState extends State<_ReviewEditorPage> {
                         ),
                         const Spacer(),
                         Text(
-                          '${_controller.text.length}/500',
+                          '${_controller.text.length}/${ReviewsProvider.maxReviewCharacters}',
                           style: const TextStyle(
                             fontSize: 10,
                             color: AppColors.textSecondary,
@@ -755,7 +759,7 @@ class _ReviewEditorPageState extends State<_ReviewEditorPage> {
                       controller: _controller,
                       minLines: 5,
                       maxLines: 7,
-                      maxLength: 500,
+                      maxLength: ReviewsProvider.maxReviewCharacters,
                       onChanged: (_) => setState(() {}),
                       decoration: InputDecoration(
                         border: InputBorder.none,
@@ -1292,10 +1296,12 @@ class _OwnReviewBadge extends StatelessWidget {
 class _MyReviewCard extends StatelessWidget {
   const _MyReviewCard({
     required this.review,
+    required this.canEdit,
     required this.onEdit,
     required this.onDelete,
   });
   final PlaceReview review;
+  final bool canEdit;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
   @override
@@ -1330,26 +1336,35 @@ class _MyReviewCard extends StatelessWidget {
             child: Text(review.comment),
           ),
         ),
-        const Divider(),
-        Row(
-          children: [
-            Expanded(
-              child: TextButton.icon(
-                onPressed: onEdit,
-                icon: const Icon(Icons.edit_outlined, size: 15),
-                label: const Text('Edit'),
+        if (canEdit) ...[
+          const Divider(),
+          Row(
+            children: [
+              Expanded(
+                child: TextButton.icon(
+                  onPressed: onEdit,
+                  icon: const Icon(Icons.edit_outlined, size: 15),
+                  label: const Text('Edit'),
+                ),
               ),
-            ),
-            Expanded(
-              child: TextButton.icon(
-                onPressed: onDelete,
-                icon: const Icon(Icons.delete_outline, size: 15),
-                label: const Text('Delete'),
-                style: TextButton.styleFrom(foregroundColor: AppColors.error),
+              Expanded(
+                child: TextButton.icon(
+                  onPressed: onDelete,
+                  icon: const Icon(Icons.delete_outline, size: 15),
+                  label: const Text('Delete'),
+                  style: TextButton.styleFrom(foregroundColor: AppColors.error),
+                ),
               ),
+            ],
+          ),
+        ] else
+          const Padding(
+            padding: EdgeInsets.fromLTRB(12, 10, 12, 12),
+            child: Text(
+              'This review can no longer be edited after 30 days.',
+              style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
             ),
-          ],
-        ),
+          ),
       ],
     ),
   );

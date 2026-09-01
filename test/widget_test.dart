@@ -33,6 +33,57 @@ void main() {
     expect(summary.averageRating, closeTo(4.33, 0.01));
   });
 
+  test('reviews reject more than 2500 characters', () async {
+    final destination = reviewDestinations.first;
+    final provider = ReviewsProvider(
+      InMemoryReviewRepository(),
+      ReviewImageRepositoryImpl(ReviewImageDataSource()),
+      destination,
+    );
+    await provider.loadReviews();
+
+    final submitted = await provider.submitReview(
+      rating: 5,
+      comment: 'a' * (ReviewsProvider.maxReviewCharacters + 1),
+      isAnonymous: false,
+    );
+
+    expect(submitted, isFalse);
+    expect(
+      provider.errorMessage,
+      'A review can contain up to 2500 characters.',
+    );
+  });
+
+  test('reviews older than 30 days cannot be edited or deleted', () async {
+    final destination = reviewDestinations.first;
+    final repository = InMemoryReviewRepository();
+    await repository.addReview(
+      destination: destination,
+      review: PlaceReview(
+        id: 'expired-review',
+        userId: 'my-review',
+        authorName: 'You',
+        rating: 4,
+        comment: 'An older review.',
+        createdAt: DateTime.now().subtract(const Duration(days: 31)),
+      ),
+    );
+    final provider = ReviewsProvider(
+      repository,
+      ReviewImageRepositoryImpl(ReviewImageDataSource()),
+      destination,
+    );
+    await provider.loadReviews();
+
+    expect(provider.canEditMyReview, isFalse);
+    expect(await provider.deleteMyReview(), isFalse);
+    expect(
+      provider.errorMessage,
+      'Reviews can only be edited or deleted within 30 days.',
+    );
+  });
+
   test(
     'a user can add and remove one helpful mark from another review',
     () async {
