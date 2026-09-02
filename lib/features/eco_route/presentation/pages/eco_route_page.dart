@@ -1693,7 +1693,7 @@ class _LiveJourneyCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '${remainingDistanceKm.toStringAsFixed(1)} km remaining · $encouragement',
+            '${remainingDistanceKm.toStringAsFixed(2)} km remaining · $encouragement',
             style: GoogleFonts.poppins(
               fontSize: 11,
               color: AppColors.textSecondary,
