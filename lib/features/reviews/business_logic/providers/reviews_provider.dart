@@ -10,6 +10,8 @@ import '../repositories/review_repository.dart';
 class ReviewsProvider extends ChangeNotifier {
   static const maxPhotosPerReview = 5;
   static const maxPhotoBytes = 5 * 1024 * 1024;
+  static const maxReviewCharacters = 2500;
+  static const reviewEditWindow = Duration(days: 30);
   ReviewsProvider(
     this._repository,
     this._imageRepository,
@@ -43,6 +45,11 @@ class ReviewsProvider extends ChangeNotifier {
   bool get isSelectingPhotos => _isSelectingPhotos;
   bool get isLoading => _isLoading;
   bool get isSaving => _isSaving;
+  bool get canEditMyReview {
+    final review = _myReview;
+    if (review == null) return false;
+    return DateTime.now().isBefore(review.createdAt.add(reviewEditWindow));
+  }
   bool isUpdatingHelpful(String reviewId) =>
       _helpfulReviewIdsBeingUpdated.contains(reviewId);
   DestinationReviewSummary get summary {
@@ -181,6 +188,11 @@ class ReviewsProvider extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+    if (!canEditMyReview) {
+      _errorMessage = 'Reviews can only be edited or deleted within 30 days.';
+      notifyListeners();
+      return false;
+    }
     if (validationError != null) {
       _errorMessage = validationError;
       notifyListeners();
@@ -190,7 +202,6 @@ class ReviewsProvider extends ChangeNotifier {
     final updatedReview = review.copyWith(
       rating: rating,
       comment: comment.trim(),
-      createdAt: DateTime.now(),
       isAnonymous: isAnonymous,
       photos: _draftPhotos,
     );
@@ -220,6 +231,11 @@ class ReviewsProvider extends ChangeNotifier {
   Future<bool> deleteMyReview() async {
     final review = _myReview;
     if (review == null) {
+      return false;
+    }
+    if (!canEditMyReview) {
+      _errorMessage = 'Reviews can only be edited or deleted within 30 days.';
+      notifyListeners();
       return false;
     }
     _isSaving = true;
@@ -283,6 +299,9 @@ class ReviewsProvider extends ChangeNotifier {
     }
     if (comment.trim().isEmpty) {
       return 'Please write a review before submitting.';
+    }
+    if (comment.trim().length > maxReviewCharacters) {
+      return 'A review can contain up to $maxReviewCharacters characters.';
     }
     return null;
   }
