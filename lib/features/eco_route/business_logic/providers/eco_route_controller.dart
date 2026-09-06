@@ -148,16 +148,15 @@ class EcoRouteController extends ChangeNotifier {
   double get journeyProgress {
     final route = _route;
     if (route == null || route.totalDistanceKm <= 0) return 0;
-    if (_arrivalConfirmed ||
-        (isAtDestination && !_isWalkingSpeedSuspicious)) {
+    if (_arrivalConfirmed || (isAtDestination && !_isWalkingSpeedSuspicious)) {
       return 1;
     }
     final currentLocation = _currentJourneyLocation;
     if (currentLocation == null) return 0;
     final progress = _routeProgressAt(currentLocation);
-    return _isWalkingSpeedSuspicious && isAtDestination
-        ? math.min(progress, .99)
-        : progress;
+    // Route projection and percentage rounding must not imply arrival.
+    // Only the arrival check above may expose 100% to the tracking UI.
+    return math.min(progress, .99);
   }
 
   bool get isJourneyTracking => _journey?.status == EcoJourneyStatus.inProgress;
@@ -473,18 +472,19 @@ class EcoRouteController extends ChangeNotifier {
     // Keep a client-side guard as well as the Edge Function filter. This
     // prevents an outdated deployed function or an API result outside the
     // requested ring from appearing under an incorrect distance label.
-    _destinations = fetchedDestinations
-        .where(
-          (destination) => _selectedNearbyDistance.includes(
-            nearbyDistanceKm(destination),
-          ),
-        )
-        .toList(growable: false)
-      ..sort(
-        (first, second) => _distanceSquared(
-          first.location,
-        ).compareTo(_distanceSquared(second.location)),
-      );
+    _destinations =
+        fetchedDestinations
+            .where(
+              (destination) => _selectedNearbyDistance.includes(
+                nearbyDistanceKm(destination),
+              ),
+            )
+            .toList(growable: false)
+          ..sort(
+            (first, second) => _distanceSquared(
+              first.location,
+            ).compareTo(_distanceSquared(second.location)),
+          );
     await _refreshDestinationReviewSummaries();
   }
 

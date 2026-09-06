@@ -207,6 +207,33 @@ void main() {
     });
 
     test(
+      'caps endpoint projection at 99 percent outside arrival radius',
+      () async {
+        await controller.initialise();
+        await controller.selectDestination(controller.destinations.first);
+        await controller.startJourney();
+
+        final destination = controller.route!.destination.location;
+        // About 22 metres north of the destination: near the end of the route,
+        // but outside the 15-metre arrival radius.
+        locationService.emit(
+          EcoLocation(
+            latitude: destination.latitude + .0002,
+            longitude: destination.longitude,
+            label: 'Beyond destination',
+          ),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+
+        expect(controller.isAtDestination, isFalse);
+        expect(controller.journeyProgress, .99);
+        expect((controller.journeyProgress * 100).round(), 99);
+        expect(controller.journey!.status, EcoJourneyStatus.inProgress);
+        expect(journeyRepository.completedAt, isNull);
+      },
+    );
+
+    test(
       'shows 100 percent progress before completing at the destination',
       () async {
         await controller.initialise();
