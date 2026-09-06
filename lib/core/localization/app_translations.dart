@@ -63,8 +63,6 @@ class AppTranslations {
     'Journeys and location': 'Perjalanan dan lokasi',
     'Reviews and rewards': 'Ulasan dan ganjaran',
     'Your controls': 'Kawalan anda',
-    'This page describes the current app behaviour. Your team should review and publish the final legal privacy policy before public release.':
-        'Halaman ini menerangkan tingkah laku aplikasi semasa. Pasukan anda perlu menyemak dan menerbitkan dasar privasi undang-undang terakhir sebelum pelancaran awam.',
     'CitiesWalk stores your account identity, profile details, and language and region preferences so your account works across devices.':
         'CitiesWalk menyimpan identiti akaun, butiran profil serta pilihan bahasa dan wilayah supaya akaun anda berfungsi pada semua peranti.',
     'Location is requested for route planning and active journey tracking. Journey origins, destinations, progress points, and journey results may be saved to your account.':
@@ -421,8 +419,6 @@ class AppTranslations {
     'Journeys and location': '旅程与位置',
     'Reviews and rewards': '评论与奖励',
     'Your controls': '您的控制选项',
-    'This page describes the current app behaviour. Your team should review and publish the final legal privacy policy before public release.':
-        '此页面说明应用目前的行为。公开发布前，您的团队应审核并发布最终的法律隐私政策。',
     'CitiesWalk stores your account identity, profile details, and language and region preferences so your account works across devices.':
         'CitiesWalk 会保存您的账户身份、个人资料以及语言和地区偏好，以便账户可在不同设备上使用。',
     'Location is requested for route planning and active journey tracking. Journey origins, destinations, progress points, and journey results may be saved to your account.':

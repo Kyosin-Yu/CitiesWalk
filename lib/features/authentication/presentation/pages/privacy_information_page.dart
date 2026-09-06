@@ -13,8 +13,6 @@ class PrivacyInformationPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: const [
-          _NoticeCard(),
-          SizedBox(height: 16),
           _PrivacySection(
             icon: Icons.person_outline_rounded,
             title: 'Account and profile',
@@ -40,25 +38,6 @@ class PrivacyInformationPage extends StatelessWidget {
                 'You can change device permissions in system settings and permanently delete your CitiesWalk account from Settings.',
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _NoticeCard extends StatelessWidget {
-  const _NoticeCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE8F5E9),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: const Text(
-        'This page describes the current app behaviour. Your team should review and publish the final legal privacy policy before public release.',
-        style: TextStyle(height: 1.45, color: AppColors.textPrimary),
       ),
     );
   }
