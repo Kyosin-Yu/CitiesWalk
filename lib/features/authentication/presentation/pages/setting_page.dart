@@ -240,7 +240,11 @@ class _SettingsPageState extends State<SettingsPage> {
 
     final authController = sl<AuthController>();
     final success = await authController.requestAccountDeletion();
-    if (!mounted || success) return;
+    if (!mounted) return;
+    if (success) {
+      Navigator.of(context).popUntil((route) => route.isFirst);
+      return;
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(

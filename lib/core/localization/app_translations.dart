@@ -135,6 +135,9 @@ class AppTranslations {
     'Join CitiesWalk and explore sustainably':
         'Sertai CitiesWalk dan teroka secara lestari',
     'Full Name': 'Nama Penuh',
+    'Username': 'Nama pengguna',
+    '3–20 characters: start with a letter; use letters, numbers, or underscores.':
+        '3–20 aksara: bermula dengan huruf; gunakan huruf, nombor atau garis bawah.',
     'Phone Number (Optional)': 'Nombor Telefon (Pilihan)',
     'Phone Number (optional)': 'Nombor Telefon (pilihan)',
     'Confirm Password': 'Sahkan Kata Laluan',
@@ -487,6 +490,9 @@ class AppTranslations {
     'Create Account': '创建账户',
     'Join CitiesWalk and explore sustainably': '加入 CitiesWalk，以可持续方式探索',
     'Full Name': '姓名',
+    'Username': '用户名',
+    '3–20 characters: start with a letter; use letters, numbers, or underscores.':
+        '3–20 个字符：以英文字母开头，仅使用英文字母、数字或下划线。',
     'Phone Number (Optional)': '电话号码（可选）',
     'Phone Number (optional)': '电话号码（可选）',
     'Confirm Password': '确认密码',

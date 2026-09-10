@@ -369,6 +369,13 @@ class _RankRow extends StatelessWidget {
           const SizedBox(width: 10),
           CircleAvatar(
             radius: 20,
+            foregroundImage: entry.profileImageUrl == null
+                ? null
+                : NetworkImage(entry.profileImageUrl!),
+            onForegroundImageError: entry.profileImageUrl == null
+                ? null
+                : (error, stack) =>
+                      debugPrint('Leaderboard image failed: $error'),
             backgroundColor: AppColors.accent.withValues(alpha: 0.3),
             child: Text(
               entry.initials,
@@ -466,6 +473,13 @@ class _CurrentUserBar extends StatelessWidget {
           const SizedBox(width: 10),
           CircleAvatar(
             radius: 18,
+            foregroundImage: entry.profileImageUrl == null
+                ? null
+                : NetworkImage(entry.profileImageUrl!),
+            onForegroundImageError: entry.profileImageUrl == null
+                ? null
+                : (error, stack) =>
+                      debugPrint('Leaderboard image failed: $error'),
             backgroundColor: const Color(0xFF86CB8A),
             child: Text(
               entry.initials,

@@ -3,7 +3,7 @@ import 'package:citieswalk/core/localization/localized_material.dart';
 import '../../../../core/di/service_locator.dart';
 import '../../../../core/utils/validators.dart';
 import '../../business_logic/providers/auth_controller.dart';
-import 'login_page.dart';
+import 'auth_gate.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -66,7 +66,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
       Navigator.of(
         context,
-      ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginPage()));
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const AuthGate()));
     }
   }
 
@@ -116,16 +116,22 @@ class _RegisterPageState extends State<RegisterPage> {
 
                       const SizedBox(height: 32),
 
-                      // Full Name
+                      // Username is stored in the existing profile name field.
                       TextFormField(
                         controller: _fullNameController,
                         decoration: InputDecoration(
-                          labelText: context.tr('Full Name'),
+                          labelText: context.tr('Username'),
+                          helperText: context.tr(
+                            '3–20 characters: start with a letter; use letters, numbers, or underscores.',
+                          ),
+                          helperMaxLines: 3,
+                          errorMaxLines: 2,
                           prefixIcon: const Icon(Icons.person_outline),
                           border: const OutlineInputBorder(),
                         ),
                         textInputAction: TextInputAction.next,
-                        validator: Validators.validateFullName,
+                        autocorrect: false,
+                        validator: Validators.validateUsername,
                       ),
 
                       const SizedBox(height: 16),
@@ -251,7 +257,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             onPressed: () {
                               Navigator.of(context).pushReplacement(
                                 MaterialPageRoute(
-                                  builder: (_) => const LoginPage(),
+                                  builder: (_) => const AuthGate(),
                                 ),
                               );
                             },

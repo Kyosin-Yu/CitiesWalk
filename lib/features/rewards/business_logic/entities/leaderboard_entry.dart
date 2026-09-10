@@ -7,6 +7,7 @@ class LeaderboardEntry {
     required this.achievement,
     required this.initials,
     this.isCurrentUser = false,
+    this.profileImageUrl,
   });
 
   final int rank;
@@ -15,6 +16,7 @@ class LeaderboardEntry {
   final String achievement;
   final String initials;
   final bool isCurrentUser;
+  final String? profileImageUrl;
 
   bool get isRanked => rank > 0;
 }

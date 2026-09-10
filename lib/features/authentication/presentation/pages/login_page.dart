@@ -6,7 +6,6 @@ import '../../../../core/di/service_locator.dart';
 import '../../../../core/utils/validators.dart';
 import '../../business_logic/providers/auth_controller.dart';
 import 'register_page.dart';
-import '../../../../app/app_shell.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -55,13 +54,6 @@ class _LoginPageState extends State<LoginPage> {
       );
       _authController.clearError();
     }
-
-    if (_authController.currentUser != null &&
-        !_authController.isPasswordRecovery) {
-      Navigator.of(
-        context,
-      ).pushReplacement(MaterialPageRoute(builder: (_) => const AppShell()));
-    }
   }
 
   Future<void> _onLogin() async {
@@ -80,12 +72,11 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _onForgotPassword() async {
     final email = _emailController.text.trim();
 
-    if (email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Enter your email first, then tap Forgot Password.'),
-        ),
-      );
+    final validationError = Validators.validateEmail(email);
+    if (validationError != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(validationError)));
       return;
     }
 
@@ -109,7 +100,7 @@ class _LoginPageState extends State<LoginPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text(
-          'Password reset email sent. Use the newest link in your inbox.',
+          'Reset requested. If this email is registered, check your inbox and spam folder for the reset link.',
         ),
       ),
     );
@@ -221,11 +212,14 @@ class _LoginPageState extends State<LoginPage> {
                         child: TextButton(
                           onPressed:
                               _authController.isLoading ||
+                                  _authController.isSendingPasswordReset ||
                                   _resetCooldownSeconds > 0
                               ? null
                               : _onForgotPassword,
                           child: Text(
-                            _resetCooldownSeconds > 0
+                            _authController.isSendingPasswordReset
+                                ? 'Sending reset email…'
+                                : _resetCooldownSeconds > 0
                                 ? 'Resend in ${_resetCooldownSeconds}s'
                                 : 'Forgot Password?',
                           ),

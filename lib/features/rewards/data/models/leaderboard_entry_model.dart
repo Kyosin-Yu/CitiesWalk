@@ -9,6 +9,7 @@ class LeaderboardEntryModel {
     required this.achievement,
     required this.initials,
     this.isCurrentUser = false,
+    this.profileImageUrl,
   });
 
   final int rank;
@@ -17,6 +18,7 @@ class LeaderboardEntryModel {
   final String achievement;
   final String initials;
   final bool isCurrentUser;
+  final String? profileImageUrl;
 
   LeaderboardEntry toEntity() => LeaderboardEntry(
     rank: rank,
@@ -25,6 +27,21 @@ class LeaderboardEntryModel {
     achievement: achievement,
     initials: initials,
     isCurrentUser: isCurrentUser,
+    profileImageUrl: profileImageUrl,
+  );
+
+  LeaderboardEntryModel withProfile({
+    required String name,
+    required bool publicProfile,
+    String? imageUrl,
+  }) => LeaderboardEntryModel(
+    rank: rank,
+    name: publicProfile ? name : 'Anonymous',
+    points: points,
+    achievement: achievement,
+    initials: publicProfile ? _initialsFor(name) : 'A',
+    isCurrentUser: isCurrentUser,
+    profileImageUrl: publicProfile ? imageUrl : null,
   );
 
   factory LeaderboardEntryModel.fromSupabaseRow(Map<String, dynamic> row) =>
