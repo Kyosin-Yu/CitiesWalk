@@ -5,7 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../business_logic/entities/place_review.dart';
 import '../../business_logic/entities/review_photo_moderation_result.dart';
 
-/// Calls the protected Edge Function that checks an image with SafeSearch.
+/// Calls the shared Edge Function that checks an image with SafeSearch.
 class ReviewImageModerationDataSource {
   const ReviewImageModerationDataSource(this._client);
 
@@ -20,7 +20,7 @@ class ReviewImageModerationDataSource {
     }
 
     final response = await _client.functions.invoke(
-      'review-image-moderation',
+      'image-moderation',
       body: <String, dynamic>{
         'image': base64Encode(bytes),
         'contentType': photo.contentType,
