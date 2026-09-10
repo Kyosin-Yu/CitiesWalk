@@ -49,5 +49,24 @@ void main() {
     expect(entry.name, 'Anonymous');
     expect(entry.initials, 'A');
     expect(entry.isCurrentUser, isFalse);
+    expect(entry.profileImagePath, isNull);
+  });
+
+  test('keeps a public leaderboard image path separate from its signed URL', () {
+    final entry = LeaderboardEntryModel.fromLeaderboardRow(const {
+      'user_id': null,
+      'display_name': 'Public walker',
+      'initials': 'PW',
+      'profile_image_path': 'user-id/profile.jpg',
+      'total_points': 373,
+      'rank': 7,
+    }, currentUserId: 'current-user');
+
+    final signed = entry
+        .withProfileImageUrl('https://example.com/signed-profile.jpg')
+        .toEntity();
+
+    expect(entry.profileImagePath, 'user-id/profile.jpg');
+    expect(signed.profileImageUrl, 'https://example.com/signed-profile.jpg');
   });
 }

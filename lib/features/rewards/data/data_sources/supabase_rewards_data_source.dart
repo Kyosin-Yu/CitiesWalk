@@ -71,17 +71,29 @@ class SupabaseRewardsDataSource implements RewardsDataSource {
       );
     }
 
-    return entries
-        .map(
-          (entry) => entry.isCurrentUser
-              ? entry.withProfile(
-                  name: name,
-                  publicProfile: publicProfile,
-                  imageUrl: imageUrl,
-                )
-              : entry,
-        )
-        .toList();
+    return Future.wait(
+      entries.map((entry) async {
+        if (entry.isCurrentUser) {
+          return entry.withProfile(
+            name: name,
+            publicProfile: publicProfile,
+            imageUrl: imageUrl,
+          );
+        }
+        final imagePath = entry.profileImagePath;
+        if (imagePath == null) return entry;
+        try {
+          final publicImageUrl = await _client.storage
+              .from('profile-images')
+              .createSignedUrl(imagePath, 3600);
+          return entry.withProfileImageUrl(publicImageUrl);
+        } catch (error, stackTrace) {
+          debugPrint('Unable to load public leaderboard profile image: $error');
+          debugPrintStack(stackTrace: stackTrace);
+          return entry;
+        }
+      }),
+    );
   }
 
   @override
