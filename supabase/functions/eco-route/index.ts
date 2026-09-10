@@ -243,7 +243,25 @@ async function searchPlacesForCategory(
   }
   const placeTypes = nearbyPlaceTypes(category)
   if (placeTypes != null) {
-    return searchNearbyPlacesByType(origin, apiKey, radiusKm, placeTypes)
+    const nearbyPlaces = await searchNearbyPlacesByType(
+      origin,
+      apiKey,
+      radiusKm,
+      placeTypes,
+    )
+    if (category !== 'transit') return nearbyPlaces
+
+    // Some Malaysian rail stations are recorded with the broad
+    // `transit_station` type or rank outside Nearby Search's closest results.
+    // Combine the type search with a rail-focused text search so named LRT,
+    // MRT, Monorail, and KTM stations remain discoverable.
+    const namedRailStations = await searchPlaces(
+      nearbyQuery(category),
+      origin,
+      apiKey,
+      radiusKm,
+    )
+    return deduplicatePlaces([...nearbyPlaces, ...namedRailStations])
   }
   return searchPlaces(nearbyQuery(category), origin, apiKey, radiusKm)
 }
@@ -870,6 +888,7 @@ function nearbyPlaceTypes(category: string): string[] | null {
       'subway_station',
       'light_rail_station',
       'train_station',
+      'transit_station',
     ],
   }
   return categoryTypes[category] ?? null
