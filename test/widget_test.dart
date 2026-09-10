@@ -212,7 +212,7 @@ void main() {
     expect(find.text('Add photos'), findsOneWidget);
     expect(
       find.text(
-        'You can select up to 5 JPEG, PNG, or WebP photos (5 MB each).',
+        'You can select up to 5 JPEG, PNG, or WebP photos (5 MB each). Photos are checked for inappropriate content before they are added.',
       ),
       findsOneWidget,
     );

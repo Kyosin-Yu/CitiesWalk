@@ -34,6 +34,7 @@ import '../features/rewards/business_logic/repositories/rewards_repository.dart'
 import '../features/reviews/business_logic/providers/reviews_provider.dart';
 import '../features/reviews/business_logic/entities/review_destination.dart';
 import '../features/reviews/data/data_sources/review_image_data_source.dart';
+import '../features/reviews/data/data_sources/review_image_moderation_data_source.dart';
 import '../features/reviews/data/repositories/review_image_repository_impl.dart';
 import '../features/reviews/data/repositories/supabase_review_repository.dart';
 import '../features/reviews/data/data_sources/supabase_review_data_source.dart';
@@ -73,7 +74,12 @@ class _AppShellState extends State<AppShell> {
   late final SupabaseReviewRepository _reviewRepository =
       SupabaseReviewRepository(SupabaseReviewDataSource(sl<SupabaseClient>()));
   late final ReviewImageRepositoryImpl _reviewImageRepository =
-      ReviewImageRepositoryImpl(ReviewImageDataSource());
+      ReviewImageRepositoryImpl(
+        ReviewImageDataSource(),
+        moderationDataSource: ReviewImageModerationDataSource(
+          sl<SupabaseClient>(),
+        ),
+      );
   late final SupabaseJourneyRepository _journeyRepository =
       SupabaseJourneyRepository(
         SupabaseJourneyDataSource(sl<SupabaseClient>()),
