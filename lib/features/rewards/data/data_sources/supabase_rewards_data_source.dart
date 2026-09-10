@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../../../core/services/eco_points_service.dart';
 import '../models/badge_model.dart';
@@ -36,13 +37,26 @@ class SupabaseRewardsDataSource implements RewardsDataSource {
         )
         .toList(growable: true);
 
+    final profile = await _client
+        .from('profiles')
+        .select('full_name, public_profile, profile_image')
+        .eq('id', userId)
+        .maybeSingle();
+    final name = _nonEmptyString(profile?['full_name']) ?? 'You';
+    final publicProfile = profile?['public_profile'] == true;
+    final imagePath = _nonEmptyString(profile?['profile_image']);
+    String? imageUrl;
+    if (publicProfile && imagePath != null) {
+      try {
+        imageUrl = await _client.storage
+            .from('profile-images')
+            .createSignedUrl(imagePath, 3600);
+      } catch (error, stackTrace) {
+        debugPrint('Unable to load leaderboard profile image: $error');
+        debugPrintStack(stackTrace: stackTrace);
+      }
+    }
     if (!entries.any((entry) => entry.isCurrentUser)) {
-      final profile = await _client
-          .from('profiles')
-          .select('full_name')
-          .eq('id', userId)
-          .maybeSingle();
-      final name = _nonEmptyString(profile?['full_name']) ?? 'You';
       entries.add(
         LeaderboardEntryModel(
           rank: 0,
@@ -57,7 +71,17 @@ class SupabaseRewardsDataSource implements RewardsDataSource {
       );
     }
 
-    return entries;
+    return entries
+        .map(
+          (entry) => entry.isCurrentUser
+              ? entry.withProfile(
+                  name: name,
+                  publicProfile: publicProfile,
+                  imageUrl: imageUrl,
+                )
+              : entry,
+        )
+        .toList();
   }
 
   @override

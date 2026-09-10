@@ -86,6 +86,13 @@ class _PodiumPlace extends StatelessWidget {
               backgroundColor: medalColor,
               child: CircleAvatar(
                 radius: isWinner ? 24 : 21,
+                foregroundImage: entry.profileImageUrl == null
+                    ? null
+                    : NetworkImage(entry.profileImageUrl!),
+                onForegroundImageError: entry.profileImageUrl == null
+                    ? null
+                    : (error, stack) =>
+                          debugPrint('Leaderboard image failed: $error'),
                 backgroundColor: AppColors.accent.withValues(alpha: 0.35),
                 child: Text(
                   entry.initials,

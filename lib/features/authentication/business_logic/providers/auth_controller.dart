@@ -36,11 +36,13 @@ class AuthController extends ChangeNotifier {
 
   AppUser? _currentUser;
   bool _isLoading = false;
+  bool _isSendingPasswordReset = false;
   bool _isPasswordRecovery = false;
   String? _errorMessage;
 
   AppUser? get currentUser => _currentUser;
   bool get isLoading => _isLoading;
+  bool get isSendingPasswordReset => _isSendingPasswordReset;
   String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _currentUser != null;
   bool get isPasswordRecovery => _isPasswordRecovery;
@@ -128,7 +130,10 @@ class AuthController extends ChangeNotifier {
   }
 
   Future<String?> sendPasswordResetEmail({required String email}) async {
-    _isLoading = true;
+    if (_isSendingPasswordReset) {
+      return 'A reset email request is already in progress.';
+    }
+    _isSendingPasswordReset = true;
     _errorMessage = null;
     notifyListeners();
 
@@ -141,7 +146,7 @@ class AuthController extends ChangeNotifier {
           : e.message;
       return message;
     } finally {
-      _isLoading = false;
+      _isSendingPasswordReset = false;
       notifyListeners();
     }
   }

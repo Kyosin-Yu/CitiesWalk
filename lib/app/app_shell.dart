@@ -187,6 +187,9 @@ class _AppShellState extends State<AppShell> {
   }
 
   void _selectDestination(int index) {
+    if (index == 3) {
+      _pages[3] = RewardsHubScreen(key: UniqueKey());
+    }
     if (_activeReviewsProvider != null) {
       _activeReviewDestination = null;
       _activeReviewsProvider = null;
