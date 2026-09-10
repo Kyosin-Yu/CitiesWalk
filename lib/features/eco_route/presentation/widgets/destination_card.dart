@@ -98,7 +98,7 @@ class DestinationCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 3),
                           Text(
-                            '${nearbyDistanceKm.toStringAsFixed(1)} km away',
+                            '${nearbyDistanceKm.toStringAsFixed(2)} km away',
                             style: GoogleFonts.poppins(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
