@@ -5,6 +5,7 @@ import '../entities/place_review.dart';
 import '../entities/review_destination.dart';
 import '../repositories/review_image_repository.dart';
 import '../repositories/review_repository.dart';
+import '../services/review_text_moderation_service.dart';
 
 /// ChangeNotifier state for the Community Reviews presentation layer.
 class ReviewsProvider extends ChangeNotifier {
@@ -18,6 +19,7 @@ class ReviewsProvider extends ChangeNotifier {
     this._destination, {
     this.currentUserId = _fallbackCurrentUserId,
     this.currentUserName = 'You',
+    this._textModerationService = const ReviewTextModerationService(),
   }) {
     loadReviews();
   }
@@ -29,6 +31,7 @@ class ReviewsProvider extends ChangeNotifier {
   final ReviewDestination _destination;
   final String currentUserId;
   final String currentUserName;
+  final ReviewTextModerationService _textModerationService;
   List<PlaceReview> _reviews = const [];
   PlaceReview? _myReview;
   String? _errorMessage;
@@ -50,6 +53,7 @@ class ReviewsProvider extends ChangeNotifier {
     if (review == null) return false;
     return DateTime.now().isBefore(review.createdAt.add(reviewEditWindow));
   }
+
   bool isUpdatingHelpful(String reviewId) =>
       _helpfulReviewIdsBeingUpdated.contains(reviewId);
   DestinationReviewSummary get summary {
@@ -97,22 +101,33 @@ class ReviewsProvider extends ChangeNotifier {
 
     try {
       final photos = await _imageRepository.pickPhotos();
-      final acceptedPhotos = photos
-          .where((photo) => (photo.bytes?.lengthInBytes ?? 0) <= maxPhotoBytes)
-          .toList();
-      final rejectedCount = photos.length - acceptedPhotos.length;
       final remainingSlots = maxPhotosPerReview - _draftPhotos.length;
       if (remainingSlots <= 0) {
         _errorMessage = 'A review can have up to $maxPhotosPerReview photos.';
         return;
       }
-      _draftPhotos = List.unmodifiable([
-        ..._draftPhotos,
-        ...acceptedPhotos.take(remainingSlots),
-      ]);
-      if (rejectedCount > 0 || acceptedPhotos.length > remainingSlots) {
+      final acceptedPhotos = <ReviewPhoto>[];
+      var rejectedForSizeOrType = false;
+      String? moderationMessage;
+      for (final photo in photos.take(remainingSlots)) {
+        if (!_isSupportedPhoto(photo) ||
+            (photo.bytes?.lengthInBytes ?? 0) > maxPhotoBytes) {
+          rejectedForSizeOrType = true;
+          continue;
+        }
+        final moderation = await _imageRepository.moderatePhoto(photo);
+        if (!moderation.isApproved) {
+          moderationMessage ??= moderation.message;
+          continue;
+        }
+        acceptedPhotos.add(photo);
+      }
+      _draftPhotos = List.unmodifiable([..._draftPhotos, ...acceptedPhotos]);
+      if (moderationMessage != null) {
+        _errorMessage = moderationMessage;
+      } else if (rejectedForSizeOrType || photos.length > remainingSlots) {
         _errorMessage =
-            'Photos must be 5 MB or smaller. Up to $maxPhotosPerReview photos can be added.';
+            'Photos must be JPEG, PNG, or WebP and 5 MB or smaller. Up to $maxPhotosPerReview photos can be added.';
       }
     } catch (error, stackTrace) {
       debugPrint('Review photo selection failed: $error');
@@ -303,6 +318,16 @@ class ReviewsProvider extends ChangeNotifier {
     if (comment.trim().length > maxReviewCharacters) {
       return 'A review can contain up to $maxReviewCharacters characters.';
     }
+    final contentError = _textModerationService.validate(comment);
+    if (contentError != null) {
+      return contentError;
+    }
     return null;
   }
+
+  bool _isSupportedPhoto(ReviewPhoto photo) => const <String>{
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+  }.contains(photo.contentType);
 }

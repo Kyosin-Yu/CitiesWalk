@@ -1411,7 +1411,7 @@ class _PhotosCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             const Text(
-              'You can select up to 5 JPEG, PNG, or WebP photos (5 MB each).',
+              'You can select up to 5 JPEG, PNG, or WebP photos (5 MB each). Photos are checked for inappropriate content before they are added.',
               style: TextStyle(fontSize: 10, color: AppColors.textSecondary),
             ),
           ],
