@@ -257,7 +257,19 @@ async function searchOuterBandPlaces(
 ) {
   const ringRadiusKm = (minimumRadiusKm + maximumRadiusKm) / 2
   const searchRadiusKm = (maximumRadiusKm - minimumRadiusKm) / 2 + 0.35
-  const ringCenters = [0, 90, 180, 270].map((bearingDegrees) =>
+  // Search every compass and intercardinal direction. Four cardinal centres
+  // left gaps at the north-east, south-east, south-west, and north-west
+  // portions of the selected distance ring.
+  const ringCenters = [
+    0,
+    45,
+    90,
+    135,
+    180,
+    225,
+    270,
+    315,
+  ].map((bearingDegrees) =>
     pointAtDistance(origin, ringRadiusKm, bearingDegrees),
   )
   const groups = await Promise.all(
